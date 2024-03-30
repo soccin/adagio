@@ -5,4 +5,6 @@
 export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
 export TMPDIR=/scratch/socci
 
+export PATH=$PWD/bin:$PATH
+
 alias clean='rm -vrf out* work/ .nextflow.log* trace* report.html timeline.html fileTracking.tsv bamMapping.tsv'
