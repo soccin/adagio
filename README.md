@@ -6,8 +6,7 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 
 ## Install
 
-Make sure to clone with `--recurse-submodules`
+- Make sure to clone with `--recurse-submodules`.
 
-
-
+- See `docs/installation.md` for more info. Specifically need to install nextflow in `bin`.
 

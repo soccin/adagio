@@ -17,3 +17,5 @@ Currently using a forked version of the `develop` branch of [Tempo](http://githu
 git clone https://github.com/soccin/tempo
 ```
 
+But if you cloned with `--recurse-submodules` then you do not need to clone it separately.
+
