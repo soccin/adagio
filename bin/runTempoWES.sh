@@ -48,7 +48,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --workflows="snv,qc,facets" \
     --mapping $MAPPING \
     --pairing $PAIRING \
-    --outdir $ODIR
+    --outdir $ODIR \
     > $LOG
     2> ${LOG/.log/.err}
 
