@@ -8,7 +8,9 @@ OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
 
-. $ADIR/SETENVRC
+export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
+export TMPDIR=/scratch/socci
+export PATH=$ADIR/bin:$PATH
 
 if [ "$#" != "3" ]; then
     echo
@@ -22,8 +24,8 @@ MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
 
 PROJECT_ID=$(yq requestId $PROJECT)
-TUMOR=$(cat $PAIRING | transpose.py  | fgrep TUMOR_ID | cut -f2)
-NORMAL=$(cat $PAIRING | transpose.py  | fgrep NORMAL_ID | cut -f2)
+TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
+NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
 LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 
