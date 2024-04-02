@@ -27,19 +27,21 @@ PROJECT_ID=$(yq requestId $PROJECT)
 TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
 NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
+
+#
+# Need each instance to run in its own directory
+#
+RDIR=run/$PROJECT_ID/${TUMOR}_${NORMAL}
+
+mkdir -p $RDIR
+cd $RDIR
+
 LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 
-WDIR=$PWD/scratch/$PROJECT_ID/${TUMOR}_${NORMAL}
-ODIR=$PWD/out/${PROJECT_ID}/${TUMOR}_${NORMAL}
+ODIR=out/${PROJECT_ID}/${TUMOR}_${NORMAL}
 
-mkdir -vp $WDIR > $LOG
-#mkdir -vp $ODIR >> $LOG
-
-WDIR=$(realpath $WDIR)
-
+echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
-
-cd $WDIR
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile jurassic \
@@ -50,11 +52,10 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outdir $ODIR \
-    > $LOG
+    >> $LOG
     2> ${LOG/.log/.err}
 
 cat <<-END_VERSION > $ODIR/cmd.sh.log
-PWD: $OPWD
 SDIR: $SDIR
 ADIR: $ADIR
 Script: $0 $*
