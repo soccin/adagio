@@ -33,10 +33,11 @@ WDIR=$PWD/scratch/$PROJECT_ID/${TUMOR}_${NORMAL}
 ODIR=$PWD/out/${PROJECT_ID}/${TUMOR}_${NORMAL}
 
 mkdir -vp $WDIR > $LOG
-mkdir -vp $ODIR >> $LOG
+#mkdir -vp $ODIR >> $LOG
 
 WDIR=$(realpath $WDIR)
-ODIR=$(realpath $ODIR)
+
+echo \$ODIR=$ODIR >>$LOG
 
 cd $WDIR
 
@@ -45,7 +46,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --scatterCount=5 \
     --assayType exome \
     --somatic \
-    --workflows="snv,qc,facets" \
+    --workflows="snv,qc,facets,msisensor" \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outdir $ODIR \
@@ -60,12 +61,10 @@ Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile jurassic \
-    --scatterCount=2 \
+    --scatterCount=5 \
     --assayType exome \
     --somatic \
-    --workflows="snv,qc,facets" \
+    --workflows="snv,qc,facets,msisensor" \
     --mapping $MAPPING \
     --pairing $PAIRING \
-    --outdir $ODIR
-
 END_VERSION
