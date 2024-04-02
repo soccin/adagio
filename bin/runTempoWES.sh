@@ -27,6 +27,7 @@ PROJECT_ID=$(yq requestId $PROJECT)
 TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
 NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
+ODIR=$(pwd -P)/out/${PROJECT_ID}/${TUMOR}_${NORMAL}
 
 #
 # Need each instance to run in its own directory
@@ -38,10 +39,10 @@ cd $RDIR
 
 LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 
-ODIR=out/${PROJECT_ID}/${TUMOR}_${NORMAL}
-
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
+
+#    --workflows="snv,qc,facets,msisensor" \
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile jurassic \
@@ -51,9 +52,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --workflows="snv,qc,facets,msisensor" \
     --mapping $MAPPING \
     --pairing $PAIRING \
-    --outdir $ODIR \
-    >> $LOG
-    2> ${LOG/.log/.err}
+    --outDir $ODIR \
+    >> $LOG 2> ${LOG/.log/.err}
 
 cat <<-END_VERSION > $ODIR/cmd.sh.log
 SDIR: $SDIR
@@ -68,4 +68,5 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --workflows="snv,qc,facets,msisensor" \
     --mapping $MAPPING \
     --pairing $PAIRING \
+    --outDir $ODIR
 END_VERSION
