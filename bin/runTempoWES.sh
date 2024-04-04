@@ -49,7 +49,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --scatterCount=5 \
     --assayType exome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor" \
+    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --aggregate true \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
@@ -65,7 +66,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --scatterCount=5 \
     --assayType exome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor" \
+    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --aggregate true \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
