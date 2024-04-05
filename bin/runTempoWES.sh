@@ -8,6 +8,8 @@ OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
 
+PROFILE=neo
+
 export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
 export TMPDIR=/scratch/socci
 export PATH=$ADIR/bin:$PATH
@@ -45,8 +47,7 @@ echo \$ODIR=$ODIR >>$LOG
 #    --workflows="snv,qc,facets,msisensor" \
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
-    -profile jurassic \
-    --scatterCount=5 \
+    -profile $PROFILE \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -56,14 +57,15 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --outDir $ODIR \
     >> $LOG 2> ${LOG/.log/.err}
 
-cat <<-END_VERSION > $ODIR/cmd.sh.log
+mkdir $ODIR/runlog
+
+cat <<-END_VERSION > $ODIR/runlog/cmd.sh.log
 SDIR: $SDIR
 ADIR: $ADIR
 Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
-    -profile jurassic \
-    --scatterCount=5 \
+    -profile $PROFILE \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -71,4 +73,5 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
+
 END_VERSION
