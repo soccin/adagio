@@ -16,9 +16,9 @@ export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/
 export TMPDIR=/scratch/socci
 export PATH=$ADIR/bin:$PATH
 
-if [ "$#" != "3" ]; then
+if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv
+    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -26,17 +26,23 @@ fi
 PROJECT=$(realpath $1)
 MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
+if [ "$#" == "4" ]; then
+    AGGREGATE=$(realpath $4)
+else
+    AGGREGATE=true
+fi
 
 PROJECT_ID=$(yq requestId $PROJECT)
 TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
 NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
-ODIR=$(pwd -P)/out/${PROJECT_ID}/${TUMOR}_${NORMAL}
+ODIR=$(pwd -P)/out/${PROJECT_ID}
 
 #
 # Need each instance to run in its own directory
 #
-RDIR=run/$PROJECT_ID/${TUMOR}_${NORMAL}
+TUID=$(date +"%Y%m%d_%H%M%S")_$(uuidgen | sed 's/-.*//')
+RDIR=run/$PROJECT_ID/$TUID
 
 mkdir -p $RDIR
 cd $RDIR
@@ -46,24 +52,31 @@ LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
-#    --workflows="snv,qc,facets,msisensor" \
-
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
-    --aggregate true \
+    --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
     >> $LOG 2> ${LOG/.log/.err}
 
-mkdir $ODIR/runlog
+mkdir -p $ODIR/runlog
+
+cp $MAPPING $PAIRING $AGGREGATE $ODIR/runlog
+
+GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --all --long --tags --dirty="-UNCOMMITED" --always)
+GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
 
 cat <<-END_VERSION > $ODIR/runlog/cmd.sh.log
-SDIR: $SDIR
 ADIR: $ADIR
+GURL: $GURL
+GTAG: $GTAG
+PWD: $OPWD
+RDIR: $RDIR
+
 Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
@@ -71,7 +84,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
-    --aggregate true \
+    --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
