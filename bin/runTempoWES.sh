@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ue
+
 yq () {
     egrep $1 $2 | sed 's/.*: //' | tr -d '"' | tr -d "'"
 }
