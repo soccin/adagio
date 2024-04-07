@@ -1,6 +1,9 @@
 get_sm_tag<-function(bam) {
+    #
+    # The sample name must be exactly what is in the SM: tag
+    #
     hh=Rsamtools::scanBamHeader(bam)[[1]]
-    gsub("SM:","",grep("SM:",hh$text[names(hh$text)=="@RG"][1][[1]],value=T)) |> gsub("^s_","",x=_)
+    gsub("SM:","",grep("SM:",hh$text[names(hh$text)=="@RG"][1][[1]],value=T))
 }
 
 argv=commandArgs(trailing=T)
