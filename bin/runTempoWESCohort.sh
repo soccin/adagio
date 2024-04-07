@@ -65,7 +65,11 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
 
 mkdir -p $ODIR/runlog
 
-cp $MAPPING $PAIRING $AGGREGATE $ODIR/runlog
+cp $MAPPING $PAIRING $ODIR/runlog
+if [ "$AGGREGATE" != "true" ]; then
+    cp $AGGREGATE $ODIR/runlog
+fi
+
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --all --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
