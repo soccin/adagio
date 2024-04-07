@@ -18,12 +18,12 @@ export PATH=$ADIR/bin:$PATH
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBams.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBams.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
 
-PROJECT=$(realpath $1)
+PROJECT_ID=$1
 MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
 if [ "$#" == "4" ]; then
@@ -31,10 +31,6 @@ if [ "$#" == "4" ]; then
 else
     AGGREGATE=true
 fi
-
-PROJECT_ID=$(yq requestId $PROJECT)
-TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
-NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
 ODIR=$(pwd -P)/out/${PROJECT_ID}
 
@@ -47,25 +43,28 @@ RDIR=run/$PROJECT_ID/$TUID
 mkdir -p $RDIR
 cd $RDIR
 
-LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
+LOG=${PROJECT_ID}_runTempoWES.log
 
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
-    --assayType exome \
+    --assayType genome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --workflows="sv,qc,facets" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
     >> $LOG 2> ${LOG/.log/.err}
 
 mkdir -p $ODIR/runlog
 
-cp $MAPPING $PAIRING $AGGREGATE $ODIR/runlog
+cp $MAPPING $PAIRING $ODIR/runlog
+if [ "$AGGREGATE" != "true" ]; then
+    cp $AGGREGATE $ODIR/runlog
+fi
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --all --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
@@ -81,11 +80,11 @@ Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
-    --assayType exome \
+    --assayType genome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --workflows="sv,qc,facets" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
 
