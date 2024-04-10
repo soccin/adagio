@@ -85,9 +85,9 @@ Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
-    --assayType exome \
+    --assayType genome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --workflows="snv,sv,qc,facets,msisensor,mutsig" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
