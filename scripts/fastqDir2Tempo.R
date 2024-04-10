@@ -1,6 +1,6 @@
-fix_names<-function(ss) {
-    ifelse(grepl("^[0-9]",ss),cc("s",ss),ss)
-}
+# fix_names<-function(ss) {
+#     ifelse(grepl("^[0-9]",ss),cc("s",ss),ss)
+# }
 
 require(tidyverse)
 argv=commandArgs(trailing=T)
@@ -13,7 +13,7 @@ if(!all(gsub("_R1_","",R1)==gsub("_R2_","",R2))) {
     rlang::abort("ERROR")
 }
 
-sid=gsub("_IGO_.*","",basename(R1)) %>% fix_names
+sid=gsub("_IGO_.*","",basename(R1))
 
 mapping=tibble(SAMPLE=sid,TARGET="wgs",FASTQ_PE1=R1,FASTQ_PE2=R2)
 
