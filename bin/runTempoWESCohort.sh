@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -ue
-
 yq () {
     egrep $1 $2 | sed 's/.*: //' | tr -d '"' | tr -d "'"
 }
@@ -15,6 +13,15 @@ PROFILE=neo
 export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
 export TMPDIR=/scratch/socci
 export PATH=$ADIR/bin:$PATH
+
+haveNextflow=$(which nextflow 2>/dev/null)
+
+if [ "$haveNextflow" == "" ]; then
+    echo -e "\n\n   Need to install nextflow; see adagio/docs\n\n"
+    exit 1
+fi
+
+set -ue
 
 if [ "$#" -lt "3" ]; then
     echo
