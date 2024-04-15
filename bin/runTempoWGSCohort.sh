@@ -18,7 +18,7 @@ export PATH=$ADIR/bin:$PATH
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSCohort.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -47,7 +47,7 @@ RDIR=run/$PROJECT_ID/$TUID
 mkdir -p $RDIR
 cd $RDIR
 
-LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
+LOG=${PROJECT_ID}_${TUMOR}_runTempoWGS.log
 
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
