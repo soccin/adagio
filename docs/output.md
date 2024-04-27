@@ -1,4 +1,4 @@
-# MusVar: Output (v1.0.1)
+# BIC Variant Pipeline (v1.0.1)
 
 ## Introduction
 
