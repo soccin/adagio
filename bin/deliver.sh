@@ -6,8 +6,9 @@ if [ "$#" != "1" ]; then
 fi
 
 ODIR=$1
+mkdir -p $ODIR/tempo
 
-rsync -avP --exclude="markduplicates" --exclude="recalibrated" out/ $ODIR/sarek
+rsync -avP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" out/ $ODIR/tempo
 rsync -avP post $ODIR
 
 
