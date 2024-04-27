@@ -8,7 +8,7 @@ mkdir -p post/pipeline_info
 cp $(ls -rt run/*/*/report.html | tail -1) post/pipeline_info
 cp $(ls -rt run/*/*/timeline.html | tail -1) post/pipeline_info
 
-Rscript $RDIR/scripts/filter01.R
+Rscript $RDIR/scripts/report01.R
 
 CMD_LOG=post/pipeline_info/version.txt
 
