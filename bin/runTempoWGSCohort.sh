@@ -71,7 +71,7 @@ if [ "$AGGREGATE" != "true" ]; then
 fi
 
 
-GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --all --long --tags --dirty="-UNCOMMITED" --always)
+GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
 
 cat <<-END_VERSION > $ODIR/runlog/cmd.sh.log
