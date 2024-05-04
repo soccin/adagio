@@ -1,0 +1,25 @@
+chr1 : Its the chromosome name for first break point [1,2,3,4,5,6,7 etc..],
+pos1 : Its the chromosome loaction for first break point [1-based],
+str1 : Its the read direction for the first break point [0=top/plus/reference, 1=bottom/minus/complement],
+chr2 : Its the chromosome name for second break point [1,2,3,4,5,6,7 etc..],
+pos2 : Its the chromosome loaction for second break point [1-based],
+str2 : Its the read direction for the second break point [0=top/plus/reference, 1=bottom/minus/complement],
+gene1 : Gene for the first break point,
+transcript1 : Transcript used for the first breakpoint,
+site1 : Explanation of the site where the first breakpoint occurs [Example=>Intron of EWSR1(+):126bp after exon 10],
+kinasedomain1 : Explanation of the site where the first breapoint involves a Kinase Domain or not[Example=>Partial Kinase Domain Included]
+gene2 : Gene for the second break point,
+transcript2 : Transcript used for the second breakpoint,
+site2 : Explanation of the site where the second breakpoint occurs [Example=>Intron of ERG(-):393bp after exon 4],
+kinasedomain2 : Explanation of the site where the second breapoint involves a Kinase Domain or not[Example=>Partial Kinase Domain Included]
+fusion : Explanation if the evnet leads to fusion or not. [Example=>Protein Fusion: in frame {EWSR1:ERG}]
+Cosmic_Fusion_Counts : Number of Counts for the Events from Cosmic Fusion Results
+repName-repClass-repFamily:-site1 : Repeat Region Annotation for site 1
+repName-repClass-repFamily:-site2 : Repeat Region Annotation for site 2
+CC_Chr_Band : Cosmic Cancer Census Chromosome Band
+CC_Tumour_Types(Somatic) : Cosmic Cancer Census Tumor Type in Somatic Samples
+CC_Cancer_Syndrome : Cosmic Cancer Census Cancer Syndrome the genes are related to.
+CC_Mutation_Type : Cosmic Cancer Census Mutation Types the Genes are related to.
+CC_Translocation_Partner : Cosmic Cancer Census Translocation Partners for the gene.
+DGv_Name-DGv_VarType-site1 : Database of Genomic Variants annotation for site 1
+DGv_Name-DGv_VarType-site : Database of Genomic Variants annotation for site 2
