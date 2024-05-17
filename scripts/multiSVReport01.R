@@ -1,3 +1,10 @@
+getSDIR<-function() {
+    ai=grep("--file=",commandArgs(),value=T)
+    dirname(stringr::str_extract(ai,"=(.*)",group=T))
+}
+
+SDIR=getSDIR()
+
 argv=commandArgs(trailing=T)
 if(len(argv)<1) {
     cat("\n\tusage: multiSVReport.R SV_SOMATIC.bedpe\n\n")
@@ -5,8 +12,8 @@ if(len(argv)<1) {
 }
 require(tidyverse)
 
-SVFILE=argv[1]
-vcf=read_tsv(SVFILE,comment="##")
+SVFILES=argv
+vcf=map(SVFILES,read_tsv,comment="##",col_types=cols(.default="c")) %>% bind_rows %>% type_convert
 
 infoParse=vcf %>%
     select(TUMOR_ID,NORMAL_ID,NAME_A,INFO_A) %>%
@@ -28,7 +35,7 @@ if(len(projectNo)==0) {
     projectNo=projectNo[len(projectNo)]
 }
 
-headers=grep("^##(INFO)",readLines(SVFILE),value=T)
+headers=grep("^##(INFO)",readLines(SVFILES[1]),value=T)
 
 infoTbl=list()
 for(hi in headers) {
@@ -39,7 +46,7 @@ for(hi in headers) {
     }
 }
 
-docs=readLines("iAnnoteSVColumns.txt")
+docs=readLines(file.path(SDIR,"iAnnoteSVColumns.txt"))
 for(di in docs) {
     dis=strsplit(di," : ")[[1]]
     column=dis[1]
