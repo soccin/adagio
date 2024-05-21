@@ -8,7 +8,7 @@ https://bicdelivery.mskcc.org/project/${PROJNO}/adagio/r_001
 
 The documentation for the output of the pipeline is available online at:
 
-https://github.com/soccin/adagio/blob/v1.0.1/docs/output.md
+https://github.com/soccin/adagio/blob/v1.0.3/docs/output.md
 
 Additionally, a PDF copy of the documentation is included below. If you have any questions, please let us know. We are eager to receive your feedback, particularly regarding how we can improve the outputs of the pipeline. If there are specific graphs, tables, or reports you believe would be beneficial, please share your suggestions.
 
