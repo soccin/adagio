@@ -50,6 +50,7 @@ echo \$ODIR=$ODIR >>$LOG
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
+    -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
     --somatic \
     --workflows="snv,qc,facets" \
