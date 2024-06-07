@@ -50,8 +50,10 @@ if(nSamps==1) {
 }else{
 
     d1=read_tsv_quiet(dir_ls(cohortDir,"concordance_qc.txt"))
-    d2=read_tsv_quiet(dir_ls(cohortDir,"contamination_qc.txt"))
+    d2=read_tsv_quiet(dir_ls(cohortDir,"contamination_qc.txt")) %>%
         mutate(Contamination=Contamination/100)
+
+    maxC=max(max(d2$Contamination),1/100)
 
     pg2=d2 %>%
         mutate(Pair=gsub("__","\n",Pair)) %>%
@@ -60,7 +62,7 @@ if(nSamps==1) {
             geom_col(position="dodge") +
             coord_flip() +
             scale_fill_jama() +
-            scale_y_continuous(limits=c(0,1/100),labels = scales::percent_format(accuracy = .01),breaks=(0:10)/1000) +
+            scale_y_continuous(limits=c(0,maxC),labels = scales::percent_format(accuracy = .01)) +
             geom_hline(yintercept=.005,color="gold4",alpha=.5,linewidth=3) +
             labs(title=projectNo,subtitle="Conpair - Contamination")
 
