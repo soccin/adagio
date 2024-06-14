@@ -56,7 +56,7 @@ if(nSamps==1) {
     maxC=max(max(d2$Contamination),1/100)
 
     pg2=d2 %>%
-        mutate(Pair=gsub("__","\n",Pair)) %>%
+        mutate(Pair=gsub("__","/",Pair)) %>%
         ggplot(aes(Pair,Contamination,fill=Sample_Type)) +
             theme_light(14) +
             geom_col(position="dodge") +
@@ -67,7 +67,7 @@ if(nSamps==1) {
             labs(title=projectNo,subtitle="Conpair - Contamination")
 
     pg1=d1 %>%
-        mutate(Pair=gsub("__","\n",Pair)) %>%
+        mutate(Pair=gsub("__","/",Pair)) %>%
         mutate(QC=case_when(Concordance<90 ~ "FAIL", Concordance<95 ~ "WARN", T ~ "PASS")) %>%
         ggplot(aes(Pair,Concordance,fill=QC)) +
         theme_light(14) +
