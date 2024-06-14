@@ -6,8 +6,9 @@ require(tidyverse)
 
 facetsQCFiles=fs::dir_ls("out",recurs=3,regex="somatic.*facets") %>% fs::dir_ls(recur=1,regex=".facets_qc.txt")
 
-facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F) %>%
+facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types=cols(.default="c")) %>%
     bind_rows %>%
+    type_convert %>%
     select(tumor_sample_id,facets_qc,purity=purity_run_Purity,ploidy,fga) %>%
     separate(tumor_sample_id,c("SampleID","NormalID"),sep="__")
 
