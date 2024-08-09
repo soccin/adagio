@@ -37,17 +37,29 @@ mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mu
 
 maf=read_tsv(mafFile,comment="#")
 
+portalWESGeneFreqFile="/juno/bic/work/socci/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
+af_MSK_WES=read_tsv(portalWESGeneFreqFile) %>% mutate(AF=`#`/`Profiled Samples`) %>% select(Gene,AF)
+
 tbl1=maf %>%
+    mutate(GPos=paste0(Chromosome,":",Start_Position,"-",End_Position)) %>%
     select(
         Sample=Tumor_Sample_Barcode,Gene=Hugo_Symbol,Type=Variant_Classification,
         dbSNP_RS,Alteration=HGVSp_Short,oncogenic,
         VAF=t_var_freq,t_depth,t_alt_count,
         n_depth,n_alt_count,
-        Matched_Norm_Sample_Barcode) %>%
+        Normal_Sample=Matched_Norm_Sample_Barcode,
+        GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2,
+        non_cancer_AF_popmax,
+        SIFT,PolyPhen,VEP_IMPACT=IMPACT
+    ) %>%
     filter(!is.na(Alteration) & !grepl("=$",Alteration)) %>%
-    arrange(Gene,Sample)
+    arrange(Gene,Sample) %>%
+    left_join(af_MSK_WES) %>%
+    rename(MSK_WES_AF=AF)
+
 
 class(tbl1$VAF)="percentage"
+class(tbl1$MSK_WES_AF)="percentage"
 
 numMutations=tbl1 %>% count(Sample,name="NumMutations") %>% arrange(desc(NumMutations))
 nSamples=distinct(tbl1,Sample) %>% nrow
@@ -121,7 +133,7 @@ projNo=grep("^Proj",strsplit(getwd(),"/")[[1]],value=T)
 if(len(projNo)==0) {
     projNo=""
 }
-rFile=cc(projNo,"Report01","v1.xlsx")
+rFile=cc(projNo,"Report01","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 
