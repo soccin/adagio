@@ -25,6 +25,12 @@ facetsDat$fga[!facetsDat$facets_qc]=NA
 #
 
 sampleDataFile=fs::dir_ls("out",recur=2,regex="cohort_level/default_cohort") %>% fs::dir_ls(regex="sample_data.txt")
+
+if(len(sampleDataFile)==0) {
+    cat("\n\tERROR: can not find [sample_data.txt] in output folder\n\n")
+    rlang::abort("FATAL::ERROR")
+}
+
 sampleData=read_tsv(sampleDataFile) %>%
     separate(sample,c("Sample","NormalID"),sep="__") %>%
     select(-matches("^SB|^HLA|^MSI")) %>%

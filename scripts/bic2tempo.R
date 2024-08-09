@@ -13,14 +13,20 @@ suppressPackageStartupMessages({
     library(readr)
 })
 
-map=read_tsv(mapfile,col_names=F,show_col_types = FALSE,progress=F)
-pair=read_tsv(pairfile,col_names=F,show_col_types = FALSE,progress=F)
+map=read_tsv(mapfile,col_names=F,show_col_types = FALSE,progress=F) %>% mutate(X2=gsub("^s_","",X2))
+pair=read_tsv(pairfile,col_names=F,show_col_types = FALSE,progress=F)  %>% mutate_all(~gsub("^s_","",.))
 
 ms=map %>% distinct(X2) %>% pull
 ps=unlist(pair) %>% unname %>% unique
 samps=intersect(ms,ps)
 
 map=map %>% filter(X2 %in% samps)
+
+if(nrow(map)==0) {
+    cat("\n\tSample ID miss match.\n\tNo common samples between pairing and mapping\n\n")
+    rlang::abort("FATAL::ERROR")
+}
+
 pair=pair %>% filter(X1 %in% samps & X2 %in% samps)
 
 pmap=list()
