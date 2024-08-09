@@ -65,7 +65,7 @@ tbl1=maf %>%
 
 
 class(tbl1$VAF)="percentage"
-class(tbl1$MSK_WES_AF)="percentage"
+class(tbl1$MSKWES_GENE_Frac)="percentage"
 
 numMutations=tbl1 %>% count(Sample,name="NumMutations") %>% arrange(desc(NumMutations))
 nSamples=distinct(tbl1,Sample) %>% nrow
