@@ -61,7 +61,7 @@ tbl1=maf %>%
     filter(!is.na(Alteration) & !grepl("=$",Alteration)) %>%
     arrange(Gene,Sample) %>%
     left_join(af_MSK_WES) %>%
-    rename(MSK_WES_AF=AF)
+    rename(MSKWES_GENE_Frac=AF)
 
 
 class(tbl1$VAF)="percentage"
