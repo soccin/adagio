@@ -1,10 +1,10 @@
-The outputs for Project ${PROJNO} are now available.
+The outputs for Project {PROJNO} are now available.
 
 Please note that this version of the Variant Pipeline is new and not compatible with versions prior to 2024. If you need to combine data from earlier projects for aggregate analysis, please contact us so we can develop a plan to create a unified dataset.
 
 You can access the outputs on the BIC server at:
 
-https://bicdelivery.mskcc.org/project/${PROJNO}/adagio/r_001
+https://bicdelivery.mskcc.org/project/{PROJNO}/adagio/r_001
 
 The documentation for the output of the pipeline is available online at:
 
