@@ -62,8 +62,8 @@ echo \$ODIR=$ODIR >>$LOG
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
-    --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --germline \
+    --workflows="snv,qc" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
@@ -93,8 +93,8 @@ Script: $0 $*
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
-    --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --germline \
+    --workflows="snv,qc" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
