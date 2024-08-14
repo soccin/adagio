@@ -39,8 +39,6 @@ else
 fi
 
 PROJECT_ID=$(yq requestId $PROJECT)
-TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
-NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
 ODIR=$(pwd -P)/out/${PROJECT_ID}
 
@@ -53,7 +51,7 @@ RDIR=run/$PROJECT_ID/$TUID
 mkdir -p $RDIR
 cd $RDIR
 
-LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
+LOG=${PROJECT_ID}_runTempoWES.log
 
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
@@ -70,7 +68,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
 
 mkdir -p $ODIR/runlog
 
-cp $MAPPING $PAIRING $ODIR/runlog
+cp $MAPPING $ODIR/runlog
 if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
