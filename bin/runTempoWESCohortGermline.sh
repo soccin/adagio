@@ -23,18 +23,17 @@ fi
 
 set -ue
 
-if [ "$#" -lt "3" ]; then
+if [ "$#" -lt "2" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
 
 PROJECT=$(realpath $1)
 MAPPING=$(realpath $2)
-PAIRING=$(realpath $3)
-if [ "$#" == "4" ]; then
-    AGGREGATE=$(realpath $4)
+if [ "$#" == "3" ]; then
+    AGGREGATE=$(realpath $3)
 else
     AGGREGATE=true
 fi
@@ -63,10 +62,9 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
     --germline \
-    --workflows="snv,qc" \
+    --workflows="germsnv,qc" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
-    --pairing $PAIRING \
     --outDir $ODIR \
     >> $LOG 2> ${LOG/.log/.err}
 
@@ -94,10 +92,9 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
     --germline \
-    --workflows="snv,qc" \
+    --workflows="germsnv,qc" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
-    --pairing $PAIRING \
     --outDir $ODIR
 
 END_VERSION
