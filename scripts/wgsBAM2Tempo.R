@@ -8,6 +8,11 @@ get_sm_tag<-function(bam) {
 
 argv=commandArgs(trailing=T)
 
+if(len(argv)<1) {
+    cat("\n\n  usage: wgsBAM2Tempo.R bam1 [bam2 ...]\n\n")
+    quit()
+}
+
 mapping=tibble::tibble(
     SAMPLE=purrr::map_vec(argv,get_sm_tag),
     TARGET="wgs",
@@ -16,3 +21,7 @@ mapping=tibble::tibble(
 )
 
 readr::write_tsv(mapping,"mapping_bam_tempo.tsv")
+readr::write_tsv(
+    tibble::tribble(~NORMAL_ID,~TUMOR_ID),
+    "pairing_bam_tempo.tsv"
+)
