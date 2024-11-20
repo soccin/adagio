@@ -11,4 +11,7 @@ ODIR=out/$SM
 mkdir -p $ODIR
 
 bsub -o LSF/ -J DN -n 6 -R "rusage[mem=6]" -R cmorsc1 -W 24:00 \
-    picardV2 DownsampleSam CREATE_INDEX=true I=$BAM P=$P O=$ODIR/${BASE}.dn.bam
+    picardV2 DownsampleSam I=$BAM P=$P O=$ODIR/${BASE}.dn.bam
+
+samtools index -@ $LSB_DJOB_NUMPROC $ODIR/${BASE}.dn.bam
+
