@@ -1,6 +1,17 @@
 getSDIR<-function() {
     ai=grep("--file=",commandArgs(),value=T)
-    dirname(stringr::str_extract(ai,"=(.*)",group=T))
+    sdir=dirname(stringr::str_extract(ai,"=(.*)",group=T))
+
+    if(len(sdir)==0) {
+        sdir=Sys.getenv("SDIR")
+        if(sdir=="") {
+            cat("\n  Need to set SDIR\n\n")
+            quit()
+        }
+    }
+
+    sdir
+
 }
 
 SDIR=getSDIR()
@@ -58,7 +69,32 @@ for(di in docs) {
 
 infoTbl=bind_rows(infoTbl)
 
+fusionFreq=tbl1 %>%
+    select(TUMOR_ID,SVTYPE,matches("gene")) %>%
+    mutate(Event=paste0(SVTYPE,"-",gene1,"::",gene2)) %>%
+    select(TUMOR_ID,Event) %>%
+    distinct %>%
+    group_by(Event) %>%
+    summarize(N=n(),Samples=paste0(TUMOR_ID,collapse=";")) %>%
+    arrange(desc(N)) %>%
+    filter(N>1)
+
+geneFreq=tbl1 %>%
+    select(TUMOR_ID,SVTYPE,matches("gene")) %>%
+    gather(END,GENE,gene1,gene2) %>%
+    select(TUMOR_ID,GENE) %>%
+    distinct %>%
+    group_by(GENE) %>%
+    summarize(N=n(),Samples=paste0(TUMOR_ID,collapse=";")) %>%
+    arrange(desc(N)) %>%
+    filter(N>1)
+
 openxlsx::write.xlsx(
-    list(SVTable=tbl1,Glossary=infoTbl),
+    list(
+        Fusions=fusionFreq,
+        Genes=geneFreq,
+        SVTable=tbl1,
+        Glossary=infoTbl
+    ),
     cc("proj",projectNo,"tempoSVCalls.xlsx")
 )
