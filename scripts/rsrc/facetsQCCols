@@ -1,0 +1,11 @@
+tumor_sample_id
+purity
+ploidy
+dipLogR
+wgd
+fga
+n_amps
+n_homdels
+frac_homdels
+n_segs
+facets_qc
