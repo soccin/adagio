@@ -7,6 +7,18 @@ sampleDir=file.path("out",projectNo,"somatic")
 
 x11 = function (...) grDevices::x11(...,type='cairo')
 
+getSDIR <- function(){
+    args=commandArgs(trailing=F)
+    TAG="--file="
+    path_idx=grep(TAG,args)
+    SDIR=fs::path_real(dirname(substr(args[path_idx],nchar(TAG)+1,nchar(args[path_idx]))))
+    if(length(SDIR)==0) {
+        return(fs::path_real(Sys.getenv("SDIR")))
+    } else {
+        return(SDIR)
+    }
+}
+
 dir_ls<-function(dir,re) {
     fs::dir_ls(dir,recur=T,regex=re)
 }
@@ -83,3 +95,26 @@ pdf(file=cc("Proj",projectNo,"qcRpt01.pdf"),width=11,height=8.5)
 print(pg1)
 print(pg2)
 dev.off()
+
+facetsQCColsFile=file.path(getSDIR(),"rsrc","facetsQCCols")
+facetsQCCols=scan(facetsQCColsFile,"")
+facetsQCFiles=dir_ls(sampleDir,"\\.facets_qc\\.txt")
+df=map(facetsQCFiles,read_tsv,col_types=cols(.default="c"),progress=F,.progress=T) %>%
+    bind_rows %>%
+    type_convert
+flags=df %>%
+    select(tumor_sample_id,matches("pass")) %>%
+    gather(filter,value,matches("pass")) %>%
+    filter(!value) %>%
+    group_by(tumor_sample_id) %>%
+    summarize(FailedFilters=paste(filter,collapse=";"))
+dg=df %>%
+    select(all_of(facetsQCCols)) %>%
+    left_join(flags) %>%
+    mutate(tumor_sample_id=gsub("__.*","",tumor_sample_id))
+
+dg=dg %>% arrange(facets_qc,desc(purity))
+
+dg %>% filter(!facets_qc) %>% pull(tumor_sample_id) %>% write("facetsFailedSamples")
+openxlsx::write.xlsx(dg,cc("Proj",projectNo,"facetsRpt.xlsx"))
+
