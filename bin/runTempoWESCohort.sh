@@ -59,8 +59,20 @@ LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
-nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
+#
+# Check if in backgroup or forground
+#
+# https://unix.stackexchange.com/questions/118462/how-can-a-bash-script-detect-if-it-is-running-in-the-background
+#
+
+case $(ps -o stat= -p $$) in
+  *+*) ANSI_LOG="true" ;;
+  *) ANSI_LOG="false" ;;
+esac
+
+nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
+    -c $ADIR/conf/tempo-wgs.config \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -68,7 +80,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
-    >> $LOG 2> ${LOG/.log/.err}
+    2> ${LOG/.log/.err} \
+    | tee -a $LOG
 
 mkdir -p $ODIR/runlog
 
@@ -76,7 +89,6 @@ cp $MAPPING $PAIRING $ODIR/runlog
 if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
-
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
@@ -90,8 +102,9 @@ RDIR: $RDIR
 
 Script: $0 $*
 
-nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
+nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
+    -c $ADIR/conf/tempo-wgs.config \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -99,5 +112,5 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
-
+    
 END_VERSION

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -ue
-
 yq () {
     egrep $1 $2 | sed 's/.*: //' | tr -d '"' | tr -d "'"
 }
@@ -22,14 +20,14 @@ hash nextflow 2>/dev/null || {
     exit 1;
 }
 
+set -ue
+
 if [ "$#" -lt "3" ]; then
     echo
     echo usage: runTempoWGSBams.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
-
-
 
 PROJECT_ID=$1
 MAPPING=$(realpath $2)
@@ -99,7 +97,7 @@ RDIR: $RDIR
 
 Script: $0 $*
 
-nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
+nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
