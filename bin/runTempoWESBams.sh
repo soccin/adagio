@@ -25,7 +25,7 @@ set -ue
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWES.sh PROJECT.yaml BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -77,7 +77,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
     2> ${LOG/.log/.err} \
@@ -109,7 +109,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
     
