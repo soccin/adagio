@@ -22,9 +22,9 @@ hash nextflow 2>/dev/null || {
 
 set -ue
 
-if [ "$#" -lt "3" ]; then
+if [ "$#" -lt "2" ]; then
     echo
-    echo usage: runTempoWGSBams.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBamsGermline.sh PROJECT_ID MAPPING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -49,7 +49,7 @@ RDIR=run/$PROJECT_ID/$TUID
 mkdir -p $RDIR
 cd $RDIR
 
-LOG=${PROJECT_ID}_runTempoWES.log
+LOG=${PROJECT_ID}_runTempoWGSGermline.log
 
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
@@ -69,11 +69,10 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
-    --somatic \
-    --workflows="snv,sv,qc,facets,msisensor,mutsig" \
+    --germline \
+    --workflows="qc,germsnv,germsv" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
-    --pairing $PAIRING \
     --outDir $ODIR \
     2> ${LOG/.log/.err} \
     | tee -a $LOG
@@ -101,11 +100,10 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
-    --somatic \
-    --workflows="snv,sv,qc,facets,msisensor,mutsig" \
+    --germline \
+    --workflows="qc,germsnv,germsv" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
-    --pairing $PAIRING \
     --outDir $ODIR
 
 END_VERSION
