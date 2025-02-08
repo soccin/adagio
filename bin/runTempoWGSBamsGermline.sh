@@ -22,9 +22,9 @@ hash nextflow 2>/dev/null || {
 
 set -ue
 
-if [ "$#" -lt "2" ]; then
+if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBamsGermline.sh PROJECT_ID MAPPING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBamsGermline.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -73,6 +73,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --workflows="qc,germsnv,germsv" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
+    --pairing $PAIRING \
     --outDir $ODIR \
     2> ${LOG/.log/.err} \
     | tee -a $LOG
@@ -104,6 +105,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --workflows="qc,germsnv,germsv" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
+    --pairing $PAIRING \
     --outDir $ODIR
 
 END_VERSION
