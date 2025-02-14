@@ -4,18 +4,21 @@ mafFiles=argv
 
 maf=map(mafFiles,read_tsv,comment="#") %>%
     bind_rows %>%
-    mutate(t_var_freq=t_alt_count/t_depth)
+    mutate(n_var_freq=n_alt_count/n_depth)
+
 
 tbl1=maf %>%
     mutate(GPos=paste0(Chromosome,":",Start_Position,"-",End_Position)) %>%
     select(
-        Sample=Tumor_Sample_Barcode,Gene=Hugo_Symbol,Type=Variant_Classification,
+        Sample=Matched_Norm_Sample_Barcode,Gene=Hugo_Symbol,Type=Variant_Classification,
         dbSNP_RS,Alteration=HGVSp_Short,
-        VAF=t_var_freq,
+        VAF=n_var_freq,
         n_depth,n_alt_count,
         GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2
     ) %>%
-    arrange(Gene,Sample)
+    arrange(Gene,Sample) %>%
+    filter(!is.na(Alteration) | Gene=="TERT") %>%
+    filter(!grepl("=$",Alteration))
 
 class(tbl1$VAF)="percentage"
 
@@ -45,7 +48,7 @@ projNo=grep("^Proj",strsplit(getwd(),"/")[[1]],value=T)
 if(len(projNo)==0) {
     projNo=""
 }
-rFile=cc(projNo,"ReportGermline","v1.xlsx")
+rFile=cc(projNo,"ReportGermline","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 
