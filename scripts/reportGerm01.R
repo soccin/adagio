@@ -1,9 +1,23 @@
 require(tidyverse)
-argv=commandArgs(trailing=T)
-mafFiles=argv
 
-maf=map(mafFiles,read_tsv,comment="#") %>%
+mafFiles0=fs::dir_ls("out",recur=4,regex=".germline.final.maf$")
+
+#
+# Get one MAF per normal sample
+#
+mafFiles=tibble(MAFFile=mafFiles0) %>%
+    mutate(Normal=dirname(MAFFile)%>%dirname%>%basename) %>%
+    distinct(Normal,.keep_all=T) %>%
+    pull(MAFFile)
+
+if(len(mafFiles)<1) {
+    cat("\n\nFATAL ERROR: Can not find any Germline MAFs\n\n")
+    rlang::abort("ERROR")
+}
+
+maf=map(mafFiles,read_tsv,comment="#",col_types=cols(.default="c")) %>%
     bind_rows %>%
+    type_convert %>%
     mutate(n_var_freq=n_alt_count/n_depth)
 
 
@@ -16,7 +30,7 @@ tbl1=maf %>%
         n_depth,n_alt_count,
         GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2
     ) %>%
-    arrange(Gene,Sample) %>%
+    arrange(Gene,GPos,Sample) %>%
     filter(!is.na(Alteration) | Gene=="TERT") %>%
     filter(!grepl("=$",Alteration))
 
