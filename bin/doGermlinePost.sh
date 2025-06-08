@@ -1,23 +1,28 @@
 #!/bin/bash
 
+#
+#  Version 2
+#
+
 SDIR=$(dirname "$(readlink -f "$0")")
+RDIR=$(realpath $SDIR/..)
 
-mkdir -p tmp/germline
-for file in $(find out -name "*.vcf.gz" | fgrep union.pass); do
-    echo $file
-    zcat $file > tmp/germline/$(basename ${file/.gz/})
-done
+mkdir -p post/pipeline_info
+cp $(ls -rt run/*/*/report.html | tail -1) post/pipeline_info
+cp $(ls -rt run/*/*/timeline.html | tail -1) post/pipeline_info
 
-for file in tmp/germline/*.vcf; do
-    echo $file;
-    sid=$(basename $file | sed 's/.union.*//')
-    bsub -o LSF/ -J VCF2MAF_$$ -n 15 -R cmorsc1 \
-        /home/socci/Work/Users/LoweS/HoY/COMPASS/vcf2MafApp/vcf2maf.sh \
-            GRCh37 \
-            $file $sid $sid
-done
+Rscript $SDIR/../scripts/reportGerm01.R
+CMD_LOG=post/pipeline_info/version.txt
 
-bSync VCF2MAF_$$
+GTAG=$(git --git-dir=$RDIR/.git --work-tree=$RDIR describe --long --tags --dirty="-UNCOMMITED" --always)
+GURL=$(git --git-dir=$RDIR/.git --work-tree=$RDIR config --get remote.origin.url)
 
-Rscript $SDIR/../scripts/reportGerm01.R tmp/germline/*maf
+cp out/*/runlog/cmd.sh.log post/pipeline_info
+cp $RDIR/docs/output.html post/pipeline_info
 
+cat <<-END_VERSION > $CMD_LOG
+DATE: $(date)
+SDIR: $RDIR
+GURL: $GURL
+GTAG: $GTAG
+END_VERSION
