@@ -59,28 +59,16 @@ LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
-#
-# Check if in backgroup or forground
-#
-# https://unix.stackexchange.com/questions/118462/how-can-a-bash-script-detect-if-it-is-running-in-the-background
-#
-
-case $(ps -o stat= -p $$) in
-  *+*) ANSI_LOG="true" ;;
-  *) ANSI_LOG="false" ;;
-esac
-
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     -profile $PROFILE \
     --assayType exome \
     --germline \
     --workflows="germsnv,qc" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
-    2> ${LOG/.log/.err} \
-    | tee -a $LOG
+    >> $LOG 2> ${LOG/.log/.err}
 
 mkdir -p $ODIR/runlog
 
@@ -108,8 +96,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log false \
     --germline \
     --workflows="germsnv,qc" \
     --aggregate $AGGREGATE \
-    --mapping $MAPPING \
+    --bamMapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
-
+    
 END_VERSION
