@@ -4,6 +4,10 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
+## Branch: devs/tempo-fmap
+
+Uses new tempo with faster mapping and several other improvements (2829e604)
+
 ## Install
 
 - Make sure to clone with `--recurse-submodules`.
