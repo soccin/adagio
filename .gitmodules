@@ -1,4 +1,4 @@
 [submodule "tempo"]
 	path = tempo
-	url = git@github.com:mskcc/tempo.git
-	branch = nf-core/markdup_bqsr
+	url = git@github.com:soccin/tempo.git
+	branch = devs/fmap
