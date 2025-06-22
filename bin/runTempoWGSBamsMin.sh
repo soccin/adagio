@@ -1,14 +1,14 @@
 #!/bin/bash
 
-yq () {
-    egrep $1 $2 | sed 's/.*: //' | tr -d '"' | tr -d "'"
-}
-
 OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
 
-PROFILE=neo
+#
+# Use default CMO/MSKCC juno.config
+# Put any over-rides in config files in adagio/conf
+#
+PROFILE=juno
 
 export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
 export TMPDIR=/scratch/socci
@@ -65,12 +65,17 @@ case $(ps -o stat= -p $$) in
   *) ANSI_LOG="false" ;;
 esac
 
+#
+# Full workflow
+#   --workflows="snv,sv,qc,facets,msisensor,mutsig"
+#
+
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
     --somatic \
-    --workflows="snv,sv,qc,facets,msisensor,mutsig" \
+    --workflows="snv,sv,qc,facets" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
     --pairing $PAIRING \
@@ -94,6 +99,8 @@ GURL: $GURL
 GTAG: $GTAG
 PWD: $OPWD
 RDIR: $RDIR
+ODIR: $ODIR
+PROJECT_ID: $PROJECT_ID
 
 Script: $0 $*
 
@@ -102,7 +109,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
     --somatic \
-    --workflows="snv,sv,qc,facets,msisensor,mutsig" \
+    --workflows="snv,sv,qc,facets" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
     --pairing $PAIRING \
