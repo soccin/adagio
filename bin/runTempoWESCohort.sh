@@ -30,7 +30,7 @@ if [ "$#" -lt "3" ]; then
     exit
 fi
 
-PROJECT_ID=$(realpath $1)
+PROJECT_ID=$1
 MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
 if [ "$#" == "4" ]; then
@@ -98,6 +98,7 @@ GURL: $GURL
 GTAG: $GTAG
 PWD: $OPWD
 RDIR: $RDIR
+ODIR: $ODIR
 PROJECT_ID: $PROJECT_ID
 
 Script: $0 $*
