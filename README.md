@@ -4,6 +4,17 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
+## Version: v1.5.0 (2025-06-22)
+
+See change log for all changes from v1.0.4 (2024-10-30:ffa846e)
+
+Currently using develop version of tempo forked from commit:4400235d (origin/develop)
+
+## Docs
+
+Online docs at DEVELOP: (https://deploy-preview-983--cmotempo.netlify.app) or 
+MASTER: (https://cmotempo.netlify.app/).
+
 ## Install
 
 - Make sure to clone with `--recurse-submodules`.
