@@ -1,9 +1,5 @@
 #!/bin/bash
 
-yq () {
-    egrep $1 $2 | sed 's/.*: //' | tr -d '"' | tr -d "'"
-}
-
 OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
@@ -25,12 +21,12 @@ set -ue
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT.yaml MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWESTest.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
 
-PROJECT=$(realpath $1)
+PROJECT_ID=$(realpath $1)
 MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
 if [ "$#" == "4" ]; then
@@ -39,7 +35,6 @@ else
     AGGREGATE=true
 fi
 
-PROJECT_ID=$(yq requestId $PROJECT)
 TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
 NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
 
