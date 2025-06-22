@@ -74,7 +74,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     --assayType genome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --workflows="snv,sv,qc,facets" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
@@ -105,7 +105,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     --assayType genome \
     --somatic \
-    --workflows="snv,qc,facets,msisensor,mutsig" \
+    --workflows="snv,sv,qc,facets" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
