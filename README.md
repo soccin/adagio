@@ -6,7 +6,7 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 
 ## Version: tempo-devel (2025-06-27)
 
-Currently using develop version of tempo forked (commit: e136e568)
+Currently tracking the develop branch of tempo (commit: e136e568)
 
 ## Docs
 
