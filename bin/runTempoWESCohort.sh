@@ -71,7 +71,6 @@ esac
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
-    -c $ADIR/conf/neo.config \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -105,7 +104,6 @@ Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
-    -c $ADIR/conf/neo.config \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
