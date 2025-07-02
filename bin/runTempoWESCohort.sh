@@ -10,6 +10,14 @@ ADIR=$(realpath $SDIR/..)
 #
 PROFILE=juno
 
+#
+# This should go in separate config file that is
+# picked based on the cluster name. But does not
+# work if you try to include it from a -c configfile
+#
+REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
+#
+
 export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
 export TMPDIR=/scratch/socci
 export PATH=$ADIR/bin:$PATH
@@ -25,7 +33,7 @@ set -ue
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWES.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWESCohort.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
@@ -53,7 +61,7 @@ RDIR=run/$PROJECT_ID/$TUID
 mkdir -p $RDIR
 cd $RDIR
 
-LOG=${PROJECT_ID}_${TUMOR}_runTempoWES.log
+LOG=${PROJECT_ID}_${TUMOR}_runTempoWESCohort.log
 
 echo \$RDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
@@ -72,6 +80,7 @@ esac
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wes.config \
+    --reference_base=$REFERENCE_BASE \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -100,12 +109,14 @@ PWD: $OPWD
 RDIR: $RDIR
 ODIR: $ODIR
 PROJECT_ID: $PROJECT_ID
+REFERENCE_BASE: $REFERENCE_BASE
 
 Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wes.config \
+    --reference_base=$REFERENCE_BASE \
     --assayType exome \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
@@ -113,5 +124,5 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
-    
+
 END_VERSION
