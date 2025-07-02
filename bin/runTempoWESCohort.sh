@@ -78,6 +78,7 @@ case $(ps -o stat= -p $$) in
 esac
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
+    -resume \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wes.config \
     --reference_base=$REFERENCE_BASE \
