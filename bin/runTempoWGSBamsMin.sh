@@ -71,6 +71,7 @@ esac
 #
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
+    -resume \
     -profile $PROFILE \
     -c $ADIR/conf/tempo-wgs.config \
     --assayType genome \
