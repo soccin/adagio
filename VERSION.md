@@ -1,16 +1,17 @@
 # Version Information
 
 ## adagio
-- **Version:** v1.5.0
-- **Tag:** v1.0.4 (previous release)
+- **Branch:** eos
+- **Version:** 
+- **Tag:** v2.1
 
 ## Submodules
 
 ### tempo
 - **Path:** tempo/
-- **Version:** 1.4.4-425-gb85adb46
-- **Latest Commit:** b85adb46
-- **Commit Message:** Fixes for change in oncoKb API endpoint
-- **Branch:** hotfix-nds/oncokb
-- **Fork Commit:** 4400235d [Branch: develop]
+- **Branch:** eos
+- **Version:** 1.4.4-467-ga6957be9
+- **Latest Commit:** a6957be9
+- **Fork Commit:** e136e568 [Branch: develop]
+- **Commit Message:** Merge pull request #1032
 
