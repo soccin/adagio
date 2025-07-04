@@ -4,7 +4,7 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: tempo-devel (2025-06-27)
+## Version: v2.0.1 tempo-devel (2025-06-27)
 
 Currently tracking the develop branch of tempo (commit: e136e568)
 
