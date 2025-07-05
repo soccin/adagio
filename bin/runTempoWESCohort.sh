@@ -3,23 +3,6 @@
 OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
-
-#
-# Use default CMO/MSKCC juno.config
-# Put any over-rides in config files in adagio/conf
-#
-PROFILE=juno
-
-#
-# This should go in separate config file that is
-# picked based on the cluster name. But does not
-# work if you try to include it from a -c configfile
-#
-REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-#
-
-export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-export TMPDIR=/scratch/socci
 export PATH=$ADIR/bin:$PATH
 
 haveNextflow=$(which nextflow 2>/dev/null)
@@ -28,6 +11,53 @@ if [ "$haveNextflow" == "" ]; then
     echo -e "\n\n   Need to install nextflow; see adagio/docs\n\n"
     exit 1
 fi
+
+DS=$(date +%Y%m%d_%H%M%S)
+UUID=${DS}_${RANDOM}
+
+. $ADIR/bin/getClusterName.sh
+echo \$CLUSTER=$CLUSTER
+if [ "$CLUSTER" == "IRIS" ]; then
+
+    CONFIG=iris
+    export NXF_OPTS='-Xms1g -Xmx4g'
+    export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
+    export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
+    export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
+
+    REFERENCE_BASE="/data1/core001/rsrc/genomic"
+    TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
+
+elif [ "$CLUSTER" == "JUNO" ]; then
+
+    echo -e "\nNOT IMPLEMENTED\n"
+    echo -e "  Need to fix config stuff for juno on this branch"
+    echo -e "  This branch does not have a local config (-c)\n"
+    exit 1
+
+    CONFIG=juno
+    export WORKDIR=work/$UUID
+    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
+    export TMPDIR=/scratch/socci
+
+    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
+
+else
+
+    echo -e "\nUnknown cluster: $CLUSTER\n"
+    exit 1
+
+fi
+
+
+#
+# Use default CMO/MSKCC juno.config
+# Put any over-rides in config files in adagio/conf
+#
+TEMPO_PROFILE=juno
+
+PIPELINE_CONFIG=tempo-wes
+ASSAY_TYPE=exome
 
 set -ue
 
@@ -47,23 +77,16 @@ else
     AGGREGATE=true
 fi
 
-TUMOR=$(cat $PAIRING | transpose.py | fgrep TUMOR_ID | cut -f2)
-NORMAL=$(cat $PAIRING | transpose.py | fgrep NORMAL_ID | cut -f2)
-
 ODIR=$(pwd -P)/out/${PROJECT_ID}
 
-#
-# Need each instance to run in its own directory
-#
-TUID=$(date +"%Y%m%d_%H%M%S")_$(uuidgen | sed 's/-.*//')
-RDIR=run/$PROJECT_ID/$TUID
+echo \$ODIR=$ODIR
 
-mkdir -p $RDIR
-cd $RDIR
+mkdir -p $WORKDIR
+cd $WORKDIR
 
-LOG=${PROJECT_ID}_${TUMOR}_runTempoWESCohort.log
+LOG=${PROJECT_ID}_runTempoWESCohort.log
 
-echo \$RDIR=$(realpath .) >$LOG
+echo \$WORKDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
 #
@@ -79,10 +102,12 @@ esac
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
-    -profile $PROFILE \
-    -c $ADIR/conf/tempo-wes.config \
+    -profile $TEMPO_PROFILE \
+    -c $ADIR/conf/${CONFIG}.config \
+    -c $ADIR/conf/${PIPELINE_CONFIG}.config \
     --reference_base=$REFERENCE_BASE \
-    --assayType exome \
+    --targets_base=$TARGETS_BASE \
+    --assayType $ASSAY_TYPE \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
     --aggregate $AGGREGATE \
@@ -104,26 +129,33 @@ GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url
 
 cat <<-END_VERSION > $ODIR/runlog/cmd.sh.log
 ADIR: $ADIR
+CLUSTER: $CLUSTER
 GURL: $GURL
 GTAG: $GTAG
 PWD: $OPWD
-RDIR: $RDIR
 ODIR: $ODIR
+WORKDIR: $WORKDIR
+UUID: $UUID
 PROJECT_ID: $PROJECT_ID
+TEMPO_PROFILE: $TEMPO_PROFILE
+ASSAY_TYPE: $ASSAY_TYPE
 REFERENCE_BASE: $REFERENCE_BASE
+TARGETS_BASE: $TARGETS_BASE
 
 Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
-    -profile $PROFILE \
-    -c $ADIR/conf/tempo-wes.config \
+    -resume \
+    -profile $TEMPO_PROFILE \
+    -c $ADIR/conf/${CONFIG}.config \
+    -c $ADIR/conf/${PIPELINE_CONFIG}.config \
     --reference_base=$REFERENCE_BASE \
-    --assayType exome \
+    --targets_base=$TARGETS_BASE \
+    --assayType $ASSAY_TYPE \
     --somatic \
     --workflows="snv,qc,facets,msisensor,mutsig" \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
-
 END_VERSION
