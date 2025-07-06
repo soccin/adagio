@@ -1,9 +1,9 @@
 # Version Information
 
 ## adagio
-- **Branch:** eos
-- **Version:** v2.2.1
-- **Tag:** v2.2.1
+- **Branch:** eos-devs
+- **Version:**
+- **Tag:**
 
 ## Submodules
 
