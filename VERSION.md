@@ -2,16 +2,15 @@
 
 ## adagio
 - **Branch:** eos
-- **Version:** 
-- **Tag:** v2.1
+- **Version:** v2.2.0
+- **Tag:** v2.2.0
 
 ## Submodules
 
 ### tempo
 - **Path:** tempo/
-- **Branch:** eos
-- **Version:** 1.4.4-467-ga6957be9
-- **Latest Commit:** a6957be9
+- **Branch:** eos-devs
+- **Version:** 1.4.4-471-g1028658b
+- **Latest Commit:** 1028658b
 - **Fork Commit:** e136e568 [Branch: develop]
-- **Commit Message:** Merge pull request #1032
 
