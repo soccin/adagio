@@ -4,10 +4,10 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.2.0 eos   
+## Version: v2.2.1 eos   
 
-Iris cluster version.
-Currently tracking the eos-dev branch of tempo (1028658b) forked from mskcc/tempo develop (e136e568)
+Iris cluster version. This version is a freeze for processing WES samples only at this point. 
+Currently tracking the eos branch of tempo (1028658b) forked from mskcc/tempo develop (e136e568)
 
 ## Docs
 
