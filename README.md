@@ -7,7 +7,7 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 ## Version: branch eos-devs   
 
 Iris cluster version.
-Currently tracking the eos-devs branch of tempo () forked from mskcc/tempo develop (e136e568)
+Currently tracking the eos-devs branch of tempo (1028658b) forked from mskcc/tempo develop (e136e568)
 
 ## Docs
 
