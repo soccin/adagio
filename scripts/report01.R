@@ -43,7 +43,21 @@ mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mu
 
 maf=read_tsv(mafFile,comment="#")
 
-portalWESGeneFreqFile="/juno/bic/work/socci/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
+CLUSTER=system("getClusterName.sh",intern=T)
+
+switch(CLUSTER,
+    "JUNO"={
+        portalWESGeneFreqFile="/juno/bic/work/socci/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
+    },
+    "IRIS"={
+        portalWESGeneFreqFile="/home/soccin/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
+    },
+    {
+        cat("\n\nUnknown CLUSTER",CLUSTER,"\n\n")
+        rlang::abort("FATAL ERROR")
+    }
+)
+
 af_MSK_WES=read_tsv(portalWESGeneFreqFile) %>% mutate(AF=`#`/`Profiled Samples`) %>% select(Gene,AF)
 
 tbl1=maf %>%
