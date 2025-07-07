@@ -1,0 +1,33 @@
+# Cursor AI Rules for Adagio Project
+
+## Commit Message Generation
+
+Take a deep breath and work on this problem step-by-step. Summarize the diff of this commit into a clear and concisely written commit message. Use the imperative style for the subject, use Conventional Commits (type and optionally scope), and limit the subject+type+scope to 50 characters or less. Be as descriptive as possible in the unlimited length body. Return as a single codeblock, ready to be pasted into COMMIT_EDITMSG without further editing. Please wrap the text in the main body to roughly 60 character long lines.
+
+Finally, please append the tag #cursor to the end of the main body. Do not add blank line, simply seperate it from the main body text with a space. 
+
+### Specific rules
+
+When generating commit messages for this project:
+- Use conventional commit format: `type(scope): description`
+- Common types: feat, fix, docs, style, refactor, test, chore
+- Scope should be one of: tempo, pipeline, docs, scripts, conf
+- Description should be concise but descriptive
+- Include reference to specific files or modules when relevant
+- For pipeline changes, mention the affected workflow (snv, sv, qc, facets, etc.)
+- For configuration changes, specify the config file affected
+
+## Examples of good commit messages:
+- `feat(tempo): add new germline variant calling workflow`
+- `fix(pipeline): resolve memory allocation issue in QC module`
+- `docs(tempo): update output documentation for v1.0.4`
+- `refactor(scripts): unify WES and WGS run scripts`
+- `chore(conf): update LSF resource parameters for better performance`
+
+## Project Context
+This is a bioinformatics pipeline project (Adagio) with Tempo as the main analysis framework. The codebase includes:
+- Nextflow pipeline workflows
+- Configuration files for different environments
+- Shell scripts for pipeline execution
+- Documentation and reporting tools
+- Container definitions for bioinformatics tools 
