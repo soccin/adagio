@@ -2,13 +2,11 @@
 
 ## Commit Message Generation
 
+Take a deep breath and work on this problem step-by-step. Summarize the diff of this commit into a clear and concisely written commit message. Use the imperative style for the subject, use Conventional Commits (type and optionally scope), and limit the subject+type+scope to 50 characters or less. Be as descriptive as possible in the unlimited length body. Return as a single codeblock, ready to be pasted into COMMIT_EDITMSG without further editing. Please wrap the text in the main body to roughly 60 character long lines.
+
 IMPORATANT!!! All commit messages should end with the string "#cursor" (do not include quotes) to easily indicate the ones that are purely auto-generated with no editting. 
 
 Eg: `last line of commit. #cursor`
-
-### Overall rules
-
-Take a deep breath and work on this problem step-by-step. Summarize the diff of this commit into a clear and concisely written commit message. Use the imperative style for the subject, use Conventional Commits (type and optionally scope), and limit the subject+type+scope to 50 characters or less. Be as descriptive as possible in the unlimited length body. Return as a  single codeblock, ready to be pasted into COMMIT_EDITMSG without further editing
 
 ### Specific rules
 
