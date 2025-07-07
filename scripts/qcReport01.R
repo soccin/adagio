@@ -41,14 +41,16 @@ if(nSamps==1) {
         rename(Concordance=2) %>%
         mutate(QC=case_when(Concordance<90 ~ "FAIL", Concordance<95 ~ "WARN", T ~ "PASS"))
 
-    pg1=d1 %>% ggplot(aes(Sample_ID,Concordance,fill=QC)) +
+    pg1=d1 %>%
+    ggplot(aes(Sample_ID,Concordance,fill=QC)) +
         theme_light(14) +
         geom_col() +
         coord_flip() +
         scale_fill_nejm() +
         labs(title=projectNo,subtitle="Conpair - Concordance")
 
-    pg2=d2 %>% ggplot(aes(Sample_ID,Contamination,fill=Sample_Type)) +
+    pg2=d2 %>%
+    ggplot(aes(Sample_ID,Contamination,fill=Sample_Type)) +
         theme_light(14) +
         geom_col(position="dodge") +
         coord_flip() +
@@ -91,9 +93,24 @@ if(nSamps==1) {
 
 }
 
+hsm=fs::dir_ls("out",recur=T,regex="hs_metrics.txt") %>%
+    map(read_tsv,comment="#",n_max=1,progress=F,show_col_types=F) %>%
+    bind_rows(.id="PATH") %>%
+    mutate(SAMPLE=basename(PATH)%>%gsub(".hs_metrics.*","",.)) %>%
+    select(-PATH) %>%
+    select(SAMPLE,everything()) %>%
+    select(SAMPLE,MEAN_TARGET_COVERAGE,ZERO_CVG_TARGETS_PCT,PCT_TARGET_BASES_20X,PCT_TARGET_BASES_100X)
+
+phs=hsm %>%
+    gather(METRIC,VALUE,-SAMPLE) %>%
+    ggplot(aes(SAMPLE,VALUE)) + theme_light(14) + geom_col() + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm"))
+
+halt("DDDDDD")
+
 pdf(file=cc("Proj",projectNo,"qcRpt01.pdf"),width=11,height=8.5)
 print(pg1)
 print(pg2)
+print(phs)
 dev.off()
 
 facetsQCColsFile=file.path(getSDIR(),"rsrc","facetsQCCols")
@@ -113,8 +130,12 @@ dg=df %>%
     left_join(flags) %>%
     mutate(tumor_sample_id=gsub("__.*","",tumor_sample_id))
 
-dg=dg %>% arrange(facets_qc,desc(purity))
+dg=dg %>%
+    arrange(facets_qc,desc(purity))
 
-dg %>% filter(!facets_qc) %>% pull(tumor_sample_id) %>% write("facetsFailedSamples")
+dg %>%
+    filter(!facets_qc) %>%
+    pull(tumor_sample_id) %>%
+    write("facetsFailedSamples")
 openxlsx::write.xlsx(dg,cc("Proj",projectNo,"facetsRpt.xlsx"))
 
