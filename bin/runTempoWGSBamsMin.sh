@@ -3,34 +3,73 @@
 OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 ADIR=$(realpath $SDIR/..)
+export PATH=$ADIR/bin:$PATH
+
+haveNextflow=$(which nextflow 2>/dev/null)
+
+if [ "$haveNextflow" == "" ]; then
+    echo -e "\n\n   Need to install nextflow; see adagio/docs\n\n"
+    exit 1
+fi
+
+DS=$(date +%Y%m%d_%H%M%S)
+UUID=${DS}_${RANDOM}
+
+. $ADIR/bin/getClusterName.sh
+echo \$CLUSTER=$CLUSTER
+echo \$CLUSTER=$CLUSTER
+if [ "$CLUSTER" == "IRIS" ]; then
+
+    CONFIG=iris
+    export NXF_OPTS='-Xms1g -Xmx4g'
+    export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
+    export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
+    export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
+
+    REFERENCE_BASE="/data1/core001/rsrc/genomic"
+    TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
+
+elif [ "$CLUSTER" == "JUNO" ]; then
+
+    echo -e "\nNOT IMPLEMENTED\n"
+    echo -e "  Need to fix config stuff for juno on this branch"
+    echo -e "  This branch does not have a local config (-c)\n"
+    exit 1
+
+    CONFIG=juno
+    export WORKDIR=work/$UUID
+    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
+    export TMPDIR=/scratch/socci
+
+    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
+
+else
+
+    echo -e "\nUnknown cluster: $CLUSTER\n"
+    exit 1
+
+fi
 
 #
 # Use default CMO/MSKCC juno.config
 # Put any over-rides in config files in adagio/conf
 #
-PROFILE=juno
+TEMPO_PROFILE=juno
 
-export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-export TMPDIR=/scratch/socci
-export PATH=$ADIR/bin:$PATH
-
-hash nextflow 2>/dev/null || {
-    echo -en >&2 "\n\n   nextflow not installed. Need to install in\n      adagio/bin\n"
-    echo -en >&2 "\n   See 'docs/installation.md' for more info\n\n"
-    exit 1;
-}
+PIPELINE_CONFIG=tempo-wgs
+ASSAY_TYPE=wgs
 
 set -ue
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBams.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBams.sh PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     exit
 fi
 
 PROJECT_ID=$1
-MAPPING=$(realpath $2)
+BAM_MAPPING=$(realpath $2)
 PAIRING=$(realpath $3)
 if [ "$#" == "4" ]; then
     AGGREGATE=$(realpath $4)
@@ -40,18 +79,14 @@ fi
 
 ODIR=$(pwd -P)/out/${PROJECT_ID}
 
-#
-# Need each instance to run in its own directory
-#
-TUID=$(date +"%Y%m%d_%H%M%S")_$(uuidgen | sed 's/-.*//')
-RDIR=run/$PROJECT_ID/$TUID
+echo \$ODIR=$ODIR
 
-mkdir -p $RDIR
-cd $RDIR
+mkdir -p $WORKDIR
+cd $WORKDIR
 
-LOG=${PROJECT_ID}_runTempoWES.log
+LOG=${PROJECT_ID}_runTempoWGSBams.log
 
-echo \$RDIR=$(realpath .) >$LOG
+echo \$WORKDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
 
 #
@@ -72,11 +107,14 @@ esac
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
-    -profile $PROFILE \
-    -c $ADIR/conf/tempo-wgs.config \
-    --assayType genome \
+    -profile $TEMPO_PROFILE \
+    -c $ADIR/conf/${CONFIG}.config \
+    -c $ADIR/conf/${PIPELINE_CONFIG}.config \
+    --reference_base=$REFERENCE_BASE \
+    --targets_base=$TARGETS_BASE \
+    --assayType $ASSAY_TYPE \
     --somatic \
-    --workflows="snv,sv,qc,facets" \
+    --workflows="snv,sv,qc" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
     --pairing $PAIRING \
@@ -96,21 +134,31 @@ GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url
 
 cat <<-END_VERSION > $ODIR/runlog/cmd.sh.log
 ADIR: $ADIR
+CLUSTER: $CLUSTER
 GURL: $GURL
 GTAG: $GTAG
 PWD: $OPWD
-RDIR: $RDIR
 ODIR: $ODIR
+WORKDIR: $WORKDIR
+UUID: $UUID
 PROJECT_ID: $PROJECT_ID
+TEMPO_PROFILE: $TEMPO_PROFILE
+ASSAY_TYPE: $ASSAY_TYPE
+REFERENCE_BASE: $REFERENCE_BASE
+TARGETS_BASE: $TARGETS_BASE
 
 Script: $0 $*
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
-    -profile $PROFILE \
-    -c $ADIR/conf/tempo-wgs.config \
-    --assayType genome \
+    -resume \
+    -profile $TEMPO_PROFILE \
+    -c $ADIR/conf/${CONFIG}.config \
+    -c $ADIR/conf/${PIPELINE_CONFIG}.config \
+    --reference_base=$REFERENCE_BASE \
+    --targets_base=$TARGETS_BASE \
+    --assayType $ASSAY_TYPE \
     --somatic \
-    --workflows="snv,sv,qc,facets" \
+    --workflows="snv,sv,qc" \
     --aggregate $AGGREGATE \
     --bamMapping $MAPPING \
     --pairing $PAIRING \
