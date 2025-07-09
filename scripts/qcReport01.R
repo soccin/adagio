@@ -93,24 +93,33 @@ if(nSamps==1) {
 
 }
 
+typeMap=d2 %>% select(SAMPLE=Sample_ID,TYPE=Sample_Type,PAIR=Pair) %>% arrange(PAIR,TYPE,SAMPLE) %>% distinct(SAMPLE,TYPE)
+Ng=round(nrow(typeMap)/12)
+Nb=round(nrow(typeMap)/Ng)
+typeMap=typeMap %>% mutate(R=floor((row_number()-1)/Nb))
+
 hsm=fs::dir_ls("out",recur=T,regex="hs_metrics.txt") %>%
     map(read_tsv,comment="#",n_max=1,progress=F,show_col_types=F) %>%
     bind_rows(.id="PATH") %>%
     mutate(SAMPLE=basename(PATH)%>%gsub(".hs_metrics.*","",.)) %>%
     select(-PATH) %>%
     select(SAMPLE,everything()) %>%
-    select(SAMPLE,MEAN_TARGET_COVERAGE,ZERO_CVG_TARGETS_PCT,PCT_TARGET_BASES_20X,PCT_TARGET_BASES_100X)
+    select(SAMPLE,MEAN_TARGET_COVERAGE,ZERO_CVG_TARGETS_PCT,PCT_TARGET_BASES_20X,PCT_TARGET_BASES_100X) %>%
+    left_join(typeMap)
 
-phs=hsm %>%
-    gather(METRIC,VALUE,-SAMPLE) %>%
-    ggplot(aes(SAMPLE,VALUE)) + theme_light(14) + geom_col() + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm"))
+caution=tibble(METRIC=colnames(hsm) %>% grep("_",.,value=T),CAUTION=c(100,0.02,.95,.50),FAIL=c(25,0.05,.80,.10))
+dh=hsm %>% gather(METRIC,VALUE,-SAMPLE,-TYPE) %>% left_join(typeMap) %>% group_split(.$R)
 
-halt("DDDDDD")
+plot_hsm<-function(dhi) {
+    ggplot(dhi,aes(SAMPLE,VALUE,fill=TYPE)) + theme_light(10) + geom_col(alpha=.85) + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm")) + guides() + geom_hline(aes(yintercept=CAUTION),data=caution,color="gold4",linewidth=1) + geom_hline(aes(yintercept=FAIL),data=caution,color="darkred",linewidth=1.4) + scale_fill_jama()
+}
+
+phsm=map(dh,plot_hsm)
 
 pdf(file=cc("Proj",projectNo,"qcRpt01.pdf"),width=11,height=8.5)
 print(pg1)
 print(pg2)
-print(phs)
+print(phsm)
 dev.off()
 
 facetsQCColsFile=file.path(getSDIR(),"rsrc","facetsQCCols")
