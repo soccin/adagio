@@ -17,7 +17,6 @@ UUID=${DS}_${RANDOM}
 
 . $ADIR/bin/getClusterName.sh
 echo \$CLUSTER=$CLUSTER
-echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
@@ -57,7 +56,7 @@ fi
 TEMPO_PROFILE=juno
 
 PIPELINE_CONFIG=tempo-wgs
-ASSAY_TYPE=wgs
+ASSAY_TYPE=genome
 
 set -ue
 
@@ -116,7 +115,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --somatic \
     --workflows="snv,sv,qc" \
     --aggregate $AGGREGATE \
-    --bamMapping $MAPPING \
+    --bamMapping $BAM_MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
     2> ${LOG/.log/.err} \
@@ -124,7 +123,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
 
 mkdir -p $ODIR/runlog
 
-cp $MAPPING $PAIRING $ODIR/runlog
+cp $BAM_MAPPING $PAIRING $ODIR/runlog
 if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
@@ -160,7 +159,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --somatic \
     --workflows="snv,sv,qc" \
     --aggregate $AGGREGATE \
-    --bamMapping $MAPPING \
+    --bamMapping $BAM_MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR
 
