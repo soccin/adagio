@@ -1,5 +1,82 @@
 # Changelog
 
+## v2.2.1 [2025-07-10] - v1.5.0 [2024-XX-XX]
+
+### Added
+- **Cluster Configuration**: New cluster-specific configuration files and scripts
+  - `conf/iris.config` for IRIS cluster configuration with SLURM executor [`df6b105`]
+  - `conf/juno.config` for cluster-specific configuration options [`18bd8c0`]
+  - `bin/getClusterName.sh` script to determine cluster name based on zone configuration [`cad7e47`]
+  - `00.SETUP.sh` script for Nextflow installation [`cbfcfed`]
+
+- **FASTQ Processing**: Enhanced FASTQ file processing capabilities
+  - `scripts/attic/fastqDir2Tempo.R` for directory-based FASTQ file processing with R1-R2 consistency checks [`2eb3115`]
+  - Improved `scripts/fastq2tempo.R` with better input handling and mapping generation [`2eb3115`]
+
+- **Cursor AI Integration**: Added comprehensive cursor AI rules and configuration
+  - Enhanced `.cursorrules` with commit message generation guidelines [`e046a9e`, `e123466`, `bc6d340`, `5d18f8a`]
+  - Added cluster-specific file path for WES gene frequency [`b88c183`]
+
+### Changed
+- **Major Version Updates**: Significant version progression
+  - Bumped to version v2.1.x for EOS Branch development [`622b1b8`]
+  - Released v2.2.0 as Iris-specific release [`c9f72c0`]
+  - Released v2.2.1 as frozen release [`c1c9d56`]
+
+- **Configuration Management**: Comprehensive configuration refactoring
+  - Refactored `conf/tempo-wes.config` and `conf/tempo-wgs.config` to streamline configuration options [`a741508`]
+  - Enhanced tempo-wes.config with new process configurations for improved resource allocation [`7b84e46`]
+  - Updated tempo-wgs.config with new parameters and process configurations [`bb65192`]
+  - Added resource allocation settings for additional processes in tempo-wes.config [`fcc6cf9`]
+
+- **Script Enhancements**: Major improvements to run scripts
+  - Enhanced `bin/runTempoWESCohort.sh` with improved cluster configuration handling [`6cf77ac`]
+  - Added reference_base variable to runTempoWESCohort.sh for improved configuration management [`67be868`]
+  - Enhanced `bin/runTempoWGSBamsMin.sh` with cluster detection capabilities [`c774dd8`]
+
+- **Resource Allocation**: Optimized resource allocation across configurations
+  - Updated resource allocation for RunMutect2 in tempo-wgs.config [`08f11ee`]
+  - Enhanced tempo-wes.config and tempo-wgs.config with new parameters [`bb65192`]
+  - Updated WGS config for resource allocation [`c455c56`]
+  - Increased queue size and updated cluster options [`e7fe01d`]
+
+- **Submodule Management**: Updated tempo submodule tracking
+  - Updated tempo submodule to track develop branch [`f5ad132`, `28cdd42`, `fb4a0f8`, `596224e`]
+  - Updated tempo submodule to eos-devs branch [`271e38e`, `a0e65c3`, `32eef59`, `bf5c030`]
+  - Updated tempo submodule to latest commit [`5cdcb7c`]
+
+### Fixed
+- **Bug Fixes**: Various bug fixes and improvements
+  - Fixed bug with new PROJECT_ID variable [`92ffede`]
+  - Fixed regex in fastq2tempo.R for R2 file naming and updated pairing column name [`238691f`]
+  - Fixed maxWallTime on IRIS [`2181d7b`]
+  - Corrected BAM mapping variable in WGS script [`e8e71c4`]
+
+- **Configuration Issues**: Resolved configuration problems
+  - Removed non-functional reference_base parameter from tempo-wes.config [`d391b34`]
+  - Removed parameters from tempo-wgs.config that are not functional [`a7bdaf9`]
+  - Removed redundant sections from .cursorrules [`5d18f8a`]
+
+### Removed
+- **Deprecated Scripts**: Cleanup and reorganization
+  - Moved old scripts to attic directory (`bin/attic/v1.0.4/`) for archival
+  - Moved various scripts to stash directory for potential future use
+  - Removed custom configs for WES runs in favor of pure juno.config [`01f053d`]
+
+### Technical Details
+- **Version**: Multiple major version releases (v2.0.1, v2.2.0, v2.2.1)
+- **Date Range**: From v1.5.0 to current HEAD (commit 5cdcb7c)
+- **Files Modified**: 25+ files across bin/, conf/, scripts/, and root directories
+- **Major Features**: Cluster-specific configurations, enhanced FASTQ processing, cursor AI integration
+
+### Commit Summary
+- **Total Commits**: 50+ commits since v1.5.0
+- **Major Features**: IRIS cluster support, enhanced configuration management, improved script handling
+- **Configuration Updates**: Resource optimization, cluster-specific configs, process improvements
+- **Bug Fixes**: Various script and configuration fixes
+
+---
+
 ## v1.5.0 [2025-06-22] - v1.0.4 [2024-10-30:ffa846e]
 
 ### Added
