@@ -4,11 +4,12 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: branch eos-devs   
+## Version: v2.2.2 - branch eos-devs   
 
-Iris cluster version.
-Currently tracking the eos-devs branch of tempo (caedd15d)
+Iris cluster version. Currently tracking the eos-devs branch of tempo (caedd15d)
 forked from mskcc/tempo develop (e136e568)
+
+This version (2.2.x) has the old SV-callers.
 
 ## Docs
 
