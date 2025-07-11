@@ -1,0 +1,820 @@
+From 9b795d83717e3afee167cedb6a0dd16cbdbb230c Mon Sep 17 00:00:00 2001
+From: "Nicholas D. Socci" <soccin@mskcc.org>
+Date: Fri, 20 Jun 2025 23:02:00 -0400
+Subject: [PATCH 3/4] Update GATK4SPARK_APPLYBQSR module via nf-core update:
+ streamline YAML formatting, update input/output paths, and enhance test cases
+ for improved clarity and functionality.
+
+---
+ modules.json                                  |  48 ++----
+ .../gatk4spark/applybqsr/environment.yml      |   2 +
+ modules/nf-core/gatk4spark/applybqsr/main.nf  |  43 ++---
+ modules/nf-core/gatk4spark/applybqsr/meta.yml | 160 +++++++++---------
+ .../gatk4spark/applybqsr/tests/main.nf.test   | 148 +++++++++++-----
+ .../applybqsr/tests/main.nf.test.snap         | 152 +++++++++++++++--
+ .../gatk4spark/applybqsr/tests/tags.yml       |   2 -
+ 7 files changed, 369 insertions(+), 186 deletions(-)
+ delete mode 100644 modules/nf-core/gatk4spark/applybqsr/tests/tags.yml
+
+diff --git a/modules.json b/modules.json
+index cc2c829f..fa0308e2 100644
+--- a/modules.json
++++ b/modules.json
+@@ -8,82 +8,60 @@
+                     "custom/dumpsoftwareversions": {
+                         "branch": "master",
+                         "git_sha": "c8e35eb2055c099720a75538d1b8adb3fb5a464c",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "fastqc": {
+                         "branch": "master",
+                         "git_sha": "c8e35eb2055c099720a75538d1b8adb3fb5a464c",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4/gatherbqsrreports": {
+                         "branch": "master",
+                         "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4/markduplicates": {
+                         "branch": "master",
+                         "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4/splitintervals": {
+                         "branch": "master",
+                         "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4spark/applybqsr": {
+                         "branch": "master",
+-                        "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "git_sha": "fa55ebb81654fe1736975fa28d1af5a079bf6a08",
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4spark/baserecalibrator": {
+                         "branch": "master",
+                         "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "gatk4spark/markduplicates": {
+                         "branch": "master",
+                         "git_sha": "1999eff2c530b2b185a25cc42117a1686f09b685",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "multiqc": {
+                         "branch": "master",
+                         "git_sha": "c8e35eb2055c099720a75538d1b8adb3fb5a464c",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "samtools/index": {
+                         "branch": "master",
+                         "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     },
+                     "samtools/merge": {
+                         "branch": "master",
+                         "git_sha": "b13f07be4c508d6ff6312d354d09f2493243e208",
+-                        "installed_by": [
+-                            "modules"
+-                        ]
++                        "installed_by": ["modules"]
+                     }
+                 }
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/modules/nf-core/gatk4spark/applybqsr/environment.yml b/modules/nf-core/gatk4spark/applybqsr/environment.yml
+index d3e954cd..a5c49e95 100644
+--- a/modules/nf-core/gatk4spark/applybqsr/environment.yml
++++ b/modules/nf-core/gatk4spark/applybqsr/environment.yml
+@@ -1,3 +1,5 @@
++---
++# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/environment-schema.json
+ channels:
+   - conda-forge
+   - bioconda
+diff --git a/modules/nf-core/gatk4spark/applybqsr/main.nf b/modules/nf-core/gatk4spark/applybqsr/main.nf
+index 5cc5c9c4..da177609 100644
+--- a/modules/nf-core/gatk4spark/applybqsr/main.nf
++++ b/modules/nf-core/gatk4spark/applybqsr/main.nf
+@@ -1,49 +1,50 @@
+ process GATK4SPARK_APPLYBQSR {
+-    tag "$meta.id"
++    tag "${meta.id}"
+     label 'process_low'
+ 
+     conda "${moduleDir}/environment.yml"
+-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+-        'https://depot.galaxyproject.org/singularity/gatk4-spark:4.6.1.0--hdfd78af_0':
+-        'biocontainers/gatk4-spark:4.6.1.0--hdfd78af_0' }"
++    container "${workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container
++        ? 'https://depot.galaxyproject.org/singularity/gatk4-spark:4.6.1.0--hdfd78af_0'
++        : 'biocontainers/gatk4-spark:4.6.1.0--hdfd78af_0'}"
+ 
+     input:
+     tuple val(meta), path(input), path(input_index), path(bqsr_table), path(intervals)
+-    path  fasta
+-    path  fai
+-    path  dict
++    path fasta
++    path fai
++    path dict
+ 
+     output:
+-    tuple val(meta), path("*.bam") , emit: bam,  optional: true
+-    tuple val(meta), path("*.cram"), emit: cram, optional: true
+-    path "versions.yml"            , emit: versions
++    tuple val(meta), path("${prefix}.bam"),  emit: bam,  optional: true
++    tuple val(meta), path("${prefix}.cram"), emit: cram, optional: true
++    path "versions.yml",                     emit: versions
+ 
+     when:
+     task.ext.when == null || task.ext.when
+ 
+     script:
+     def args = task.ext.args ?: ''
+-    def prefix = task.ext.prefix ?: "${meta.id}"
+-    def interval_command = intervals ? "--intervals $intervals" : ""
++    prefix = task.ext.prefix ?: "${meta.id}"
++    def interval_command = intervals ? "--intervals ${intervals}" : ""
+ 
+     def avail_mem = 3072
+     if (!task.memory) {
+-        log.info '[GATK ApplyBQSRSpark] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.'
+-    } else {
+-        avail_mem = (task.memory.mega*0.8).intValue()
++        log.info('[GATK ApplyBQSRSpark] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this.')
++    }
++    else {
++        avail_mem = (task.memory.mega * 0.8).intValue()
+     }
+     """
+     gatk \\
+         --java-options "-Xmx${avail_mem}M -XX:-UsePerfData" \\
+         ApplyBQSRSpark \\
+-        --input $input \\
++        --input ${input} \\
+         --output ${prefix}.${input.getExtension()} \\
+-        --reference $fasta \\
+-        --bqsr-recal-file $bqsr_table \\
+-        $interval_command \\
++        --reference ${fasta} \\
++        --bqsr-recal-file ${bqsr_table} \\
++        ${interval_command} \\
+         --spark-master local[${task.cpus}] \\
+         --tmp-dir . \\
+-        $args
++        ${args}
+ 
+     cat <<-END_VERSIONS > versions.yml
+     "${task.process}":
+@@ -52,7 +53,7 @@ process GATK4SPARK_APPLYBQSR {
+     """
+ 
+     stub:
+-    def prefix = task.ext.prefix ?: "${meta.id}"
++    prefix = task.ext.prefix ?: "${meta.id}"
+     """
+     touch ${prefix}.bam
+     touch ${prefix}.cram
+diff --git a/modules/nf-core/gatk4spark/applybqsr/meta.yml b/modules/nf-core/gatk4spark/applybqsr/meta.yml
+index 609af2f4..909be927 100644
+--- a/modules/nf-core/gatk4spark/applybqsr/meta.yml
++++ b/modules/nf-core/gatk4spark/applybqsr/meta.yml
+@@ -1,85 +1,91 @@
+ name: gatk4spark_applybqsr
+ description: Apply base quality score recalibration (BQSR) to a bam file
+ keywords:
+-  - bam
+-  - base quality score recalibration
+-  - bqsr
+-  - cram
+-  - gatk4spark
++- bam
++- base quality score recalibration
++- bqsr
++- cram
++- gatk4spark
+ tools:
+-  - gatk4:
+-      description: |
+-        Developed in the Data Sciences Platform at the Broad Institute, the toolkit offers a wide variety of tools
+-        with a primary focus on variant discovery and genotyping. Its powerful processing engine
+-        and high-performance computing features make it capable of taking on projects of any size.
+-      homepage: https://gatk.broadinstitute.org/hc/en-us
+-      documentation: https://gatk.broadinstitute.org/hc/en-us/categories/360002369672s
+-      doi: 10.1158/1538-7445.AM2017-3590
+-      licence: ["Apache-2.0"]
+-      identifier: ""
++- gatk4:
++    description: |
++      Developed in the Data Sciences Platform at the Broad Institute, the toolkit offers a wide variety of tools
++      with a primary focus on variant discovery and genotyping. Its powerful processing engine
++      and high-performance computing features make it capable of taking on projects of any size.
++    homepage: https://gatk.broadinstitute.org/hc/en-us
++    documentation: https://gatk.broadinstitute.org/hc/en-us/categories/360002369672s
++    doi: 10.1158/1538-7445.AM2017-3590
++    licence: ["Apache-2.0"]
++    identifier: ""
+ input:
+-  - - meta:
+-        type: map
+-        description: |
+-          Groovy Map containing sample information
+-          e.g. [ id:'test', single_end:false ]
+-    - input:
+-        type: file
+-        description: BAM/CRAM file from alignment
+-        pattern: "*.{bam,cram}"
+-    - input_index:
+-        type: file
+-        description: BAI/CRAI file from alignment
+-        pattern: "*.{bai,crai}"
+-    - bqsr_table:
+-        type: file
+-        description: Recalibration table from gatk4_baserecalibrator
+-    - intervals:
+-        type: file
+-        description: Bed file with the genomic regions included in the library (optional)
+-  - - fasta:
+-        type: file
+-        description: The reference fasta file
+-        pattern: "*.fasta"
+-  - - fai:
+-        type: file
+-        description: Index of reference fasta file
+-        pattern: "*.fasta.fai"
+-  - - dict:
+-        type: file
+-        description: GATK sequence dictionary
+-        pattern: "*.dict"
++- - meta:
++      type: map
++      description: |
++        Groovy Map containing sample information
++        e.g. [ id:'test', single_end:false ]
++  - input:
++      type: file
++      description: BAM/CRAM file from alignment
++      pattern: "*.{bam,cram}"
++  - input_index:
++      type: file
++      description: BAI/CRAI file from alignment
++      pattern: "*.{bai,crai}"
++  - bqsr_table:
++      type: file
++      description: Recalibration table from gatk4_baserecalibrator
++  - intervals:
++      type: file
++      description: Bed file with the genomic regions included in the library (optional)
++- - fasta:
++      type: file
++      description: The reference fasta file
++      pattern: "*.fasta"
++- - fai:
++      type: file
++      description: Index of reference fasta file
++      pattern: "*.fasta.fai"
++- - dict:
++      type: file
++      description: GATK sequence dictionary
++      pattern: "*.dict"
+ output:
+-  - bam:
+-      - meta:
+-          type: map
+-          description: |
+-            Groovy Map containing sample information
+-            e.g. [ id:'test', single_end:false ]
+-      - "*.bam":
+-          type: file
+-          description: Recalibrated BAM file
+-          pattern: "*.{bam}"
+-  - cram:
+-      - meta:
+-          type: map
+-          description: |
+-            Groovy Map containing sample information
+-            e.g. [ id:'test', single_end:false ]
+-      - "*.cram":
+-          type: file
+-          description: Recalibrated CRAM file
+-          pattern: "*.{cram}"
+-  - versions:
+-      - versions.yml:
+-          type: file
+-          description: File containing software versions
+-          pattern: "versions.yml"
++- bam:
++  - meta:
++      type: map
++      description: |
++        Groovy Map containing sample information
++        e.g. [ id:'test', single_end:false ]
++      pattern: "*.{bam}"
++  - ${prefix}.bam:
++      type: map
++      description: |
++        Groovy Map containing sample information
++        e.g. [ id:'test', single_end:false ]
++      pattern: "*.{bam}"
++- cram:
++  - meta:
++      type: map
++      description: |
++        Groovy Map containing sample information
++        e.g. [ id:'test', single_end:false ]
++      pattern: "*.{cram}"
++  - ${prefix}.cram:
++      type: map
++      description: |
++        Groovy Map containing sample information
++        e.g. [ id:'test', single_end:false ]
++      pattern: "*.{cram}"
++- versions:
++  - versions.yml:
++      type: file
++      description: File containing software versions
++      pattern: "versions.yml"
+ authors:
+-  - "@yocra3"
+-  - "@FriederikeHanssen"
+-  - "@maxulysse"
++- "@yocra3"
++- "@FriederikeHanssen"
++- "@maxulysse"
+ maintainers:
+-  - "@yocra3"
+-  - "@FriederikeHanssen"
+-  - "@maxulysse"
++- "@yocra3"
++- "@FriederikeHanssen"
++- "@maxulysse"
+diff --git a/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test b/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test
+index 53f20216..25284c76 100644
+--- a/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test
++++ b/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test
+@@ -17,27 +17,62 @@ nextflow_process {
+                 """
+                 input[0] = [
+                     [ id:'test' ], // meta map
+-                    file(params.test_data['sarscov2']['illumina']['test_paired_end_sorted_bam'], checkIfExists: true),
+-                    file(params.test_data['sarscov2']['illumina']['test_paired_end_sorted_bam_bai'], checkIfExists: true),
+-                    file(params.test_data['sarscov2']['illumina']['test_baserecalibrator_table'], checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam.bai', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/gatk/test.baserecalibrator.table', checkIfExists: true),
+                     []
+                 ]
+-                input[1] = file(params.test_data['sarscov2']['genome']['genome_fasta'], checkIfExists: true)
+-                input[2] = file(params.test_data['sarscov2']['genome']['genome_fasta_fai'], checkIfExists: true)
+-                input[3] = file(params.test_data['sarscov2']['genome']['genome_dict'], checkIfExists: true)
++                input[1] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
++                input[2] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta.fai', checkIfExists: true)
++                input[3] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.dict', checkIfExists: true)
+                 """
+             }
+         }
+ 
+         then {
++            assert process.success
+             assertAll(
+-                { assert process.success },
+-                { assert snapshot(process.out).match() }
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
++            )
++        }
++    }
++
++    test("sarscov2 - bam - stub") {
++        options "-stub"
++
++        when {
++            process {
++                """
++                input[0] = [
++                    [ id:'test' ], // meta map
++                    [],
++                    [],
++                    [],
++                    []
++                ]
++                input[1] = []
++                input[2] = []
++                input[3] = []
++                """
++            }
++        }
++
++        then {
++            assert process.success
++            assertAll(
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
+             )
+         }
+ 
+     }
+ 
++
+     test("sarscov2 - bam intervals") {
+ 
+         when {
+@@ -45,28 +80,30 @@ nextflow_process {
+                 """
+                 input[0] = [
+                     [ id:'test' ], // meta map
+-                    file(params.test_data['sarscov2']['illumina']['test_paired_end_sorted_bam'], checkIfExists: true),
+-                    file(params.test_data['sarscov2']['illumina']['test_paired_end_sorted_bam_bai'], checkIfExists: true),
+-                    file(params.test_data['sarscov2']['illumina']['test_baserecalibrator_table'], checkIfExists: true),
+-                    file(params.test_data['sarscov2']['genome']['test_bed'], checkIfExists: true)
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam.bai', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/gatk/test.baserecalibrator.table', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/bed/test.bed', checkIfExists: true)
+                 ]
+-                input[1] = file(params.test_data['sarscov2']['genome']['genome_fasta'], checkIfExists: true)
+-                input[2] = file(params.test_data['sarscov2']['genome']['genome_fasta_fai'], checkIfExists: true)
+-                input[3] = file(params.test_data['sarscov2']['genome']['genome_dict'], checkIfExists: true)
++                input[1] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
++                input[2] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta.fai', checkIfExists: true)
++                input[3] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.dict', checkIfExists: true)
+                 """
+             }
+         }
+ 
+         then {
++            assert process.success
+             assertAll(
+-                { assert process.success },
+-                { assert snapshot(process.out).match() }
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
+             )
+         }
+-
+     }
+ 
+-    test("sarscov2 - bam - stub") {
++    test("sarscov2 - bam intervals -stub") {
+         options "-stub"
+ 
+         when {
+@@ -74,25 +111,27 @@ nextflow_process {
+                 """
+                 input[0] = [
+                     [ id:'test' ], // meta map
+-                    [],
+-                    [],
+-                    [],
+-                    []
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/bam/test.paired_end.sorted.bam.bai', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/illumina/gatk/test.baserecalibrator.table', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/bed/test.bed', checkIfExists: true)
+                 ]
+-                input[1] = []
+-                input[2] = []
+-                input[3] = []
++                input[1] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta', checkIfExists: true)
++                input[2] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.fasta.fai', checkIfExists: true)
++                input[3] = file(params.modules_testdata_base_path + 'genomics/sarscov2/genome/genome.dict', checkIfExists: true)
+                 """
+             }
+         }
+ 
+         then {
++            assert process.success
+             assertAll(
+-                { assert process.success },
+-                { assert snapshot(process.out).match() }
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
+             )
+         }
+-
+     }
+ 
+     test("sarscov2 - cram") {
+@@ -102,26 +141,57 @@ nextflow_process {
+                 """
+                 input[0] = [
+                     [ id:'test' ], // meta map
+-                    file(params.test_data['homo_sapiens']['illumina']['test_paired_end_sorted_cram'], checkIfExists: true),
+-                    file(params.test_data['homo_sapiens']['illumina']['test_paired_end_sorted_cram_crai'], checkIfExists: true),
+-                    file(params.test_data['homo_sapiens']['illumina']['test_baserecalibrator_table'], checkIfExists: true),
+-                    file(params.test_data['homo_sapiens']['genome']['genome_bed'], checkIfExists: true)
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.sorted.cram', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.sorted.cram.crai', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gatk/test.baserecalibrator.table', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.bed', checkIfExists: true)
+                 ]
+-                input[1] = file(params.test_data['homo_sapiens']['genome']['genome_fasta'], checkIfExists: true)
+-                input[2] = file(params.test_data['homo_sapiens']['genome']['genome_fasta_fai'], checkIfExists: true)
+-                input[3] = file(params.test_data['homo_sapiens']['genome']['genome_dict'], checkIfExists: true)
++                input[1] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta', checkIfExists: true)
++                input[2] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta.fai', checkIfExists: true)
++                input[3] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.dict', checkIfExists: true)
+                 """
+             }
+         }
+ 
+         then {
++            assert process.success
+             assertAll(
+-                { assert process.success },
+-                { assert snapshot(process.out).match() }
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
+             )
+         }
+-
+     }
+ 
++    test("sarscov2 - cram -stub") {
++        options "-stub"
+ 
++        when {
++            process {
++                """
++                input[0] = [
++                    [ id:'test' ], // meta map
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.sorted.cram', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/cram/test.paired_end.sorted.cram.crai', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/illumina/gatk/test.baserecalibrator.table', checkIfExists: true),
++                    file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.bed', checkIfExists: true)
++                ]
++                input[1] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta', checkIfExists: true)
++                input[2] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.fasta.fai', checkIfExists: true)
++                input[3] = file(params.modules_testdata_base_path + 'genomics/homo_sapiens/genome/genome.dict', checkIfExists: true)
++                """
++            }
++        }
++
++        then {
++            assert process.success
++            assertAll(
++                { assert snapshot(
++                    process.out,
++                    path(process.out.versions[0]).yaml
++                ).match() }
++            )
++        }
++    }
+ }
+diff --git a/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test.snap b/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test.snap
+index db160a01..cd2a088c 100644
+--- a/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test.snap
++++ b/modules/nf-core/gatk4spark/applybqsr/tests/main.nf.test.snap
+@@ -40,13 +40,18 @@
+                 "versions": [
+                     "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
+                 ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
+             }
+         ],
+         "meta": {
+-            "nf-test": "0.9.1",
+-            "nextflow": "24.10.0"
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
+         },
+-        "timestamp": "2024-11-06T11:47:37.292174976"
++        "timestamp": "2025-04-11T14:56:27.915627809"
+     },
+     "sarscov2 - cram": {
+         "content": [
+@@ -79,13 +84,72 @@
+                 "versions": [
+                     "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
+                 ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
++            }
++        ],
++        "meta": {
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
++        },
++        "timestamp": "2025-04-11T14:57:42.699756036"
++    },
++    "sarscov2 - cram -stub": {
++        "content": [
++            {
++                "0": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.bam:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "1": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.cram:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "2": [
++                    "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
++                ],
++                "bam": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.bam:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "cram": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.cram:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "versions": [
++                    "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
++                ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
+             }
+         ],
+         "meta": {
+-            "nf-test": "0.9.1",
+-            "nextflow": "24.10.0"
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
+         },
+-        "timestamp": "2024-11-06T11:48:24.575560544"
++        "timestamp": "2025-04-11T14:57:58.189642524"
+     },
+     "sarscov2 - bam": {
+         "content": [
+@@ -118,13 +182,18 @@
+                 "versions": [
+                     "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
+                 ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
+             }
+         ],
+         "meta": {
+-            "nf-test": "0.9.1",
+-            "nextflow": "24.10.0"
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
+         },
+-        "timestamp": "2024-11-06T11:46:46.042894548"
++        "timestamp": "2025-04-11T14:56:13.425170564"
+     },
+     "sarscov2 - bam intervals": {
+         "content": [
+@@ -157,12 +226,71 @@
+                 "versions": [
+                     "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
+                 ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
++            }
++        ],
++        "meta": {
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
++        },
++        "timestamp": "2025-04-11T14:56:55.562307069"
++    },
++    "sarscov2 - bam intervals -stub": {
++        "content": [
++            {
++                "0": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.bam:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "1": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.cram:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "2": [
++                    "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
++                ],
++                "bam": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.bam:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "cram": [
++                    [
++                        {
++                            "id": "test"
++                        },
++                        "test.cram:md5,d41d8cd98f00b204e9800998ecf8427e"
++                    ]
++                ],
++                "versions": [
++                    "versions.yml:md5,985dcafacddb7013ec01b73fd9163290"
++                ]
++            },
++            {
++                "GATK4SPARK_APPLYBQSR": {
++                    "gatk4": "4.6.1.0"
++                }
+             }
+         ],
+         "meta": {
+-            "nf-test": "0.9.1",
+-            "nextflow": "24.10.0"
++            "nf-test": "0.9.2",
++            "nextflow": "24.10.5"
+         },
+-        "timestamp": "2024-11-06T11:47:13.436442722"
++        "timestamp": "2025-04-11T14:57:11.97218192"
+     }
+ }
+\ No newline at end of file
+diff --git a/modules/nf-core/gatk4spark/applybqsr/tests/tags.yml b/modules/nf-core/gatk4spark/applybqsr/tests/tags.yml
+deleted file mode 100644
+index 27567076..00000000
+--- a/modules/nf-core/gatk4spark/applybqsr/tests/tags.yml
++++ /dev/null
+@@ -1,2 +0,0 @@
+-gatk4spark/applybqsr:
+-  - "modules/nf-core/gatk4spark/applybqsr/**"
+-- 
+2.39.5 (Apple Git-154)
+
