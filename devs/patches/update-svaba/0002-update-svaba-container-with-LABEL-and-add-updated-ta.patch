@@ -1,0 +1,41 @@
+From e6eedae021adee0314a69f8292bdbd1c429a571c Mon Sep 17 00:00:00 2001
+From: Anne Marie Noronha <noronhaa@mskcc.org>
+Date: Fri, 19 Jul 2024 11:11:59 -0400
+Subject: [PATCH 2/2] update svaba container with LABEL and add updated tag to
+ config
+
+---
+ conf/containers.config      | 2 +-
+ containers/svaba/Dockerfile | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/conf/containers.config b/conf/containers.config
+index 0460cb3b..25046431 100755
+--- a/conf/containers.config
++++ b/conf/containers.config
+@@ -85,7 +85,7 @@
+     container = "cmopipeline/strelka2-manta-bcftools-vt:2.0.1"
+   }
+   withName: '.*RunSvABA' {
+-    container = "cmopipeline/svaba:0.0.1"
++    container = "cmopipeline/svaba:0.0.2"
+   }
+   withName: 'runBRASS.*' {
+     container = "cmopipeline/brass:0.0.2"
+diff --git a/containers/svaba/Dockerfile b/containers/svaba/Dockerfile
+index 5b75cd16..bdf9a1c1 100644
+--- a/containers/svaba/Dockerfile
++++ b/containers/svaba/Dockerfile
+@@ -1,6 +1,9 @@
+ # Start with an Ubuntu image
+ FROM ubuntu:20.04
+ 
++LABEL maintainer="Anne Marie Noronha (noronhaa@mskcc.org)" \
++    version.image="0.0.2"
++
+ # Avoid prompts with tzdata (timezones)
+ ENV DEBIAN_FRONTEND=noninteractive
+ 
+-- 
+2.39.5 (Apple Git-154)
+
