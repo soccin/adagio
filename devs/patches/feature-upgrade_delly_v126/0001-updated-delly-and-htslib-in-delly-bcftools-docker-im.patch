@@ -1,0 +1,66 @@
+From 8bcbf291c3a0dee6498e710d2b33448fc07455a8 Mon Sep 17 00:00:00 2001
+From: Anne Marie Noronha <noronhaa@mskcc.org>
+Date: Wed, 19 Jun 2024 13:00:56 -0400
+Subject: [PATCH] updated delly and htslib in delly-bcftools docker image
+
+---
+ conf/containers.config               |  6 +++---
+ containers/delly-bcftools/Dockerfile | 14 ++++++++++----
+ 2 files changed, 13 insertions(+), 7 deletions(-)
+
+diff --git a/conf/containers.config b/conf/containers.config
+index 0460cb3b..89a02d08 100755
+--- a/conf/containers.config
++++ b/conf/containers.config
+@@ -76,10 +76,10 @@
+     container = "cmopipeline/metadataparser:0.5.9"
+   }
+   withName:SomaticDellyCall {
+-    container = "cmopipeline/delly-bcftools:0.0.1"
++    container = "cmopipeline/delly-bcftools:0.0.3"
+   }
+   withName:'.*DellyCombine' {
+-    container = "cmopipeline/delly-bcftools:0.0.1"
++    container = "cmopipeline/delly-bcftools:0.0.3"
+   }
+   withName:SomaticRunManta {
+     container = "cmopipeline/strelka2-manta-bcftools-vt:2.0.1"
+@@ -115,7 +115,7 @@
+ //------------------- Germline pipeline
+ 
+   withName:GermlineDellyCall {
+-    container = "cmopipeline/delly-bcftools:0.0.1"
++    container = "cmopipeline/delly-bcftools:0.0.3"
+   }
+   withName:GermlineRunHaplotypecaller {
+     container = "broadinstitute/gatk:4.1.0.0"
+diff --git a/containers/delly-bcftools/Dockerfile b/containers/delly-bcftools/Dockerfile
+index e09c718d..869c0f9c 100644
+--- a/containers/delly-bcftools/Dockerfile
++++ b/containers/delly-bcftools/Dockerfile
+@@ -2,12 +2,18 @@ FROM halllab/bcftools:v1.9
+ 
+ LABEL maintainer="Anne Marie Noronha (noronhaa@mskcc.org)" \
+       version.ubuntu="18.04" \
+-      version.delly="0.8.2" \
+-      version.htslib="1.9"
++      version.delly="1.2.6" \
++      version.htslib="1.20" \
++      version.image="0.0.3"
+ 
+ # set the environment variables
+-ENV delly_version 0.8.2
+-ENV htslib_version 1.9
++ENV delly_version 1.2.6
++ENV htslib_version 1.20
++
++# APT repository has moved to archive. Sources needs to change.
++RUN sed -i /stretch-updates/d /etc/apt/sources.list
++RUN sed -i "s/security.debian/archive.debian/g" /etc/apt/sources.list
++RUN sed -i "s/deb.debian/archive.debian/g" /etc/apt/sources.list
+ 
+ # run update
+ RUN apt-get update -y && apt-get install -y \
+-- 
+2.39.5 (Apple Git-154)
+
