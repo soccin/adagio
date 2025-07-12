@@ -113,7 +113,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --targets_base=$TARGETS_BASE \
     --assayType $ASSAY_TYPE \
     --somatic \
-    --workflows="snv,sv,qc" \
+    --workflows="snv,sv,facets" \
     --aggregate $AGGREGATE \
     --bamMapping $BAM_MAPPING \
     --pairing $PAIRING \
