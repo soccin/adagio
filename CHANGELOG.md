@@ -1,6 +1,30 @@
 # Changelog
 
+## v2.3.1 [2025-07-11] - v2.2.2 [2025-07-11]
 
+### Added
+- **Neoantigen Resource Allocation**: Enhanced resource management for neoantigen analysis
+  - Added RunNeoantigen process configuration to `conf/tempo-wes.config` with CPU, memory, and time allocation [`3f970ca`]
+  - Added RunNeoantigen process configuration to `conf/tempo-wgs.config` with optimized resource settings for WGS analysis [`3f970ca`]
+  - Implemented task attempt-based resource scaling for improved pipeline efficiency [`3f970ca`]
+
+### Changed
+- **Tempo Submodule**: Updated tempo submodule to latest commit for improved pipeline functionality [`8060f9b`]
+- **Documentation**: Enhanced patches README with additional SV Caller and Neoantigen information [`e1fb499`]
+
+### Technical Details
+- **Version**: Development version (HEAD) based on v2.2.2
+- **Date Range**: From v2.2.2 (2025-07-11) to current HEAD (commit 3f970ca)
+- **Files Modified**: 4 files across conf/, tempo/, and devs/ directories
+- **Major Features**: Neoantigen resource allocation, tempo submodule updates
+
+### Commit Summary
+- **Total Commits**: 4 commits since v2.2.2
+- **Major Features**: Neoantigen analysis resource optimization
+- **Configuration Updates**: Resource allocation for RunNeoantigen process
+- **Submodule Updates**: Latest tempo pipeline improvements
+
+---
 
 ## v2.2.2 [2025-07-11] - v2.2.1 [2025-07-10]
 

@@ -4,12 +4,17 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.2.2 - branch eos-devs   
+## Version: v2.3.1 - branch eos-devs   
 
-Iris cluster version. Currently tracking the eos-devs branch of tempo (caedd15d)
+Iris cluster version. Currently tracking the eos-devs branch of tempo (7bf4d34f)
 forked from mskcc/tempo develop (e136e568)
 
-This version (2.2.x) has the old SV-callers.
+This version (2.3.x) has the following updates/feature-enhancements:
+
+- **Neoantigen Analysis**: Added resource allocation for RunNeoantigen process in both WES and WGS configurations
+- **Pipeline Updates**: Updated tempo submodule with updates for:
+  - updates to delly and svaba
+  - optimizations for neoantigen
 
 ## Docs
 
