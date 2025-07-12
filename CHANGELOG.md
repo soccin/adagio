@@ -1,5 +1,59 @@
 # Changelog
 
+
+
+## v2.2.2 [2025-07-11] - v2.2.1 [2025-07-10]
+
+### Added
+- **Feature Patches System**: Comprehensive patch management for tempo pipeline updates
+  - `devs/patches/README.md` with detailed documentation on patch system and workflow [`518fa0a`, `e1fb499`]
+  - GATK4SPARK_APPLYBQSR module update patch for improved variant calling [`98444cb`]
+  - Delly and htslib upgrade patch for enhanced structural variant detection [`32f330c`]
+  - SVABA container and configuration update patches for improved SV calling [`e1913c5`]
+
+- **Documentation Enhancements**: New documentation and roadmap
+  - `devs/ndsDevsTempoBranches` documentation for branch management [`7f083cc`]
+  - `devs/roadmap-tempo-ccs.md` comprehensive roadmap for tempo pipeline development [`7f083cc`]
+  - Enhanced README with SV Caller and Neoantigen information [`e1fb499`]
+
+### Changed
+- **Version Management**: Updated version information across project
+  - Bumped version to v2.2.2 in README.md and VERSION.md [`72afc50`]
+  - Updated tempo submodule to latest commit for improved pipeline functionality [`2fe581d`, `5cdcb7c`]
+
+- **Configuration Improvements**: Enhanced configuration management
+  - Clarified commit message generation rules in .cursorrules [`b03ea88`]
+  - Removed redundant sections from .cursorrules for cleaner configuration [`5d18f8a`]
+  - Updated cursor AI rules for better clarity and consistency [`bc6d340`, `e123466`]
+
+- **Resource Allocation**: Optimized WGS configuration
+  - Streamlined tempo-wgs.config with improved resource allocation settings [`c455c56`]
+  - Enhanced IRIS cluster configuration with increased queue size [`e7fe01d`]
+
+- **Script Enhancements**: Improved WGS BAM processing
+  - Enhanced `bin/runTempoWGSBamsMin.sh` with cluster detection capabilities [`c774dd8`]
+  - Fixed BAM mapping variable in WGS script for improved reliability [`e8e71c4`]
+  - Added cluster-specific file path support for WES gene frequency reporting [`b88c183`]
+
+### Fixed
+- **Bug Fixes**: Various improvements and corrections
+  - Fixed BAM mapping variable in WGS script for proper file handling [`e8e71c4`]
+  - Corrected resource allocation parameters in WGS configuration [`c455c56`]
+
+### Technical Details
+- **Version**: Released v2.2.2 as stable release [`72afc50`]
+- **Date Range**: From v2.2.1 (2025-07-10) to current HEAD (commit e1fb499)
+- **Files Modified**: 15+ files across devs/, conf/, bin/, scripts/, and root directories
+- **Major Features**: Feature patches system, enhanced documentation, improved configuration management
+
+### Commit Summary
+- **Total Commits**: 20 commits since v2.2.1
+- **Major Features**: Patch management system, comprehensive documentation, configuration improvements
+- **Configuration Updates**: Resource optimization, commit message rules, cursor AI integration
+- **Bug Fixes**: Script reliability, resource allocation, configuration cleanup
+
+---
+
 ## v2.2.1 [2025-07-10] - v1.5.0 [2024-XX-XX]
 
 ### Added
