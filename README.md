@@ -6,7 +6,7 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 
 ## Version: v2.3.1 - branch eos-devs   
 
-Iris cluster version. Currently tracking the eos-devs branch of tempo (7bf4d34f)
+Iris cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5)
 forked from mskcc/tempo develop (e136e568)
 
 This version (2.3.x) has the following updates/feature-enhancements:
@@ -15,6 +15,9 @@ This version (2.3.x) has the following updates/feature-enhancements:
 - **Pipeline Updates**: Updated tempo submodule with updates for:
   - updates to delly and svaba
   - optimizations for neoantigen
+- **Workflow conditional changes**: Turned off the following modules for WGS runs
+  - LoH/RunLOHHLA.nf
+  - QC/SomaticRunMultiQC.nf
 
 ## Docs
 
