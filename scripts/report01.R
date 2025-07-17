@@ -1,5 +1,9 @@
 require(tidyverse)
 
+argv=commandArgs(trailingOnly=TRUE)
+ASSAY=argv[1]
+if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
+
 #
 # Get Facets QC info
 #
@@ -31,6 +35,8 @@ if(len(sampleDataFile)==0) {
     rlang::abort("FATAL::ERROR")
 }
 
+
+
 sampleData=read_tsv(sampleDataFile) %>%
     separate(sample,c("Sample","NormalID"),sep="__") %>%
     select(-matches("^SB|^HLA|^MSI")) %>%
@@ -38,6 +44,10 @@ sampleData=read_tsv(sampleDataFile) %>%
     left_join(facetsDat) %>%
     select(-facets_qc,facets_qc) %>%
     rename(`Facets Purity`=purity,`Facets Ploidy`=ploidy,`Fraction Genome Altered`=fga)
+
+if(!(ASSAY=="WES" || ASSAY=="exome")) {
+    sampleData=sampleData %>% select(-TMB)
+}
 
 mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mut_somatic.maf")
 
@@ -60,6 +70,9 @@ switch(CLUSTER,
 
 af_MSK_WES=read_tsv(portalWESGeneFreqFile) %>% mutate(AF=`#`/`Profiled Samples`) %>% select(Gene,AF)
 
+extraCols=c("non_cancer_AF_popmax","SIFT","PolyPhen","IMPACT")
+extraCols=intersect(extraCols,colnames(maf))
+
 tbl1=maf %>%
     mutate(GPos=paste0(Chromosome,":",Start_Position,"-",End_Position)) %>%
     select(
@@ -69,9 +82,9 @@ tbl1=maf %>%
         n_depth,n_alt_count,
         Normal_Sample=Matched_Norm_Sample_Barcode,
         GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2,
-        non_cancer_AF_popmax,
-        SIFT,PolyPhen,VEP_IMPACT=IMPACT
+        all_of(extraCols)
     ) %>%
+    rename(VEP_IMPACT=IMPACT) %>%
     filter(!is.na(Alteration) & !grepl("=$",Alteration)) %>%
     arrange(Gene,Sample) %>%
     left_join(af_MSK_WES) %>%
