@@ -5,10 +5,17 @@ SDIR="$( cd "$( dirname "$0" )" && pwd )"
 RDIR=$(realpath $SDIR/..)
 
 mkdir -p post/pipeline_info
-cp $(ls -rt run/*/*/report.html | tail -1) post/pipeline_info
-cp $(ls -rt run/*/*/timeline.html | tail -1) post/pipeline_info
 
-Rscript $RDIR/scripts/report01.R
+#
+# 
+REPORT_HTML=$(find -L . | fgrep /report.html | head -1)
+
+cp $REPORT_HTML post/pipeline_info
+cp $(ls -rt $(dirname $REPORT_HTML)/timeline.html | tail -1) post/pipeline_info
+
+ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
+
+Rscript $RDIR/scripts/report01.R $ASSAY
 
 mkdir -p post/plots/facets
 cp $(find out -name '*purity.CNCF.png') post/plots/facets
