@@ -104,6 +104,8 @@ esac
 #   --workflows="snv,sv,qc,facets,msisensor,mutsig"
 #
 
+WORKFLOWS=snv,sv,qc,facets,msisensor,mutsig
+
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
     -profile $TEMPO_PROFILE \
@@ -113,7 +115,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --targets_base=$TARGETS_BASE \
     --assayType $ASSAY_TYPE \
     --somatic \
-    --workflows="snv,sv,facets" \
+    --workflows=$WORKFLOWS \
     --aggregate $AGGREGATE \
     --bamMapping $BAM_MAPPING \
     --pairing $PAIRING \
@@ -145,6 +147,7 @@ TEMPO_PROFILE: $TEMPO_PROFILE
 ASSAY_TYPE: $ASSAY_TYPE
 REFERENCE_BASE: $REFERENCE_BASE
 TARGETS_BASE: $TARGETS_BASE
+WORKFLOWS: $WORKFLOWS
 
 Script: $0 $*
 
@@ -157,7 +160,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --targets_base=$TARGETS_BASE \
     --assayType $ASSAY_TYPE \
     --somatic \
-    --workflows="snv,sv,qc" \
+    --workflows=$WORKFLOWS \
     --aggregate $AGGREGATE \
     --bamMapping $BAM_MAPPING \
     --pairing $PAIRING \
