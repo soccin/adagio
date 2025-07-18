@@ -17,6 +17,10 @@ ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
 
 Rscript $RDIR/scripts/report01.R $ASSAY
 
+if [ "$ASSAY" == "genome" ]; then
+  Rscript $RDIR/scripts/reportSV01.R
+fi
+
 mkdir -p post/plots/facets
 cp $(find out -name '*purity.CNCF.png') post/plots/facets
 
@@ -33,6 +37,7 @@ DATE: $(date)
 SDIR: $RDIR
 GURL: $GURL
 GTAG: $GTAG
+ASSAY: $ASSAY
 END_VERSION
 
 
