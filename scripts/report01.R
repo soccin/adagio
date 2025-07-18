@@ -166,7 +166,7 @@ projNo=grep("^Proj",strsplit(getwd(),"/")[[1]],value=T)
 if(len(projNo)==0) {
     projNo=""
 }
-rFile=cc(projNo,"Report01","v2.xlsx")
+rFile=cc(projNo,"SNV_Report01","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 
