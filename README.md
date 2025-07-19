@@ -6,8 +6,22 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 
 ## Version: v2.3.3 - branch eos-devs   
 
-Iris cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5)
+**Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5)
 forked from mskcc/tempo develop (e136e568)
+
+### Tempo advancements
+
+- **Pipeline Updates**: Updated tempo submodule with updates for:
+  - updates to delly and svaba
+  - optimizations for neoantigen
+
+- **Workflow conditional changes**: Turned off the following modules for WGS runs
+  - LoH/RunLOHHLA.nf
+  - QC/SomaticRunMultiQC.nf
+
+- **Neoantigen Analysis**: Added resource allocation for RunNeoantigen process in both WES and WGS configurations
+
+### General Improvements
 
 - **New SV Reporting System**: Added comprehensive structural variant reporting with BEDPE file processing and Excel output generation
 
@@ -16,13 +30,8 @@ forked from mskcc/tempo develop (e136e568)
 - **Assay-Specific Reporting**: Implemented conditional report generation that adapts content based on analysis type (WES vs WGS)
 
 - **Workflow Configuration**: Refactored WGS workflow parameters for improved maintainability and consistency
-- **Neoantigen Analysis**: Added resource allocation for RunNeoantigen process in both WES and WGS configurations
-- **Pipeline Updates**: Updated tempo submodule with updates for:
-  - updates to delly and svaba
-  - optimizations for neoantigen
-- **Workflow conditional changes**: Turned off the following modules for WGS runs
-  - LoH/RunLOHHLA.nf
-  - QC/SomaticRunMultiQC.nf
+
+
 
 ## Docs
 
