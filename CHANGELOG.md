@@ -1,5 +1,36 @@
 # Changelog
 
+## v2.3.3 [2025-01-XX] - v2.3.2 [2025-01-XX]
+
+### Added
+- **Structural Variant Reporting**: New comprehensive SV reporting capabilities
+  - Added `scripts/reportSV01.R` for structured SV analysis reports with BEDPE file processing [`e8571e8`]
+  - Added `scripts/rsrc/read_tempo_sv.R` utility for reading tempo SV data [`e8571e8`]
+  - Added `scripts/rsrc/reportCols01` configuration for SV report columns [`e8571e8`]
+  - Added `scripts/rsrc/svColTypeDescriptions.csv` for SV column type descriptions [`e8571e8`]
+  - Enhanced `bin/doPost.sh` with conditional SV report generation based on assay type [`abc7bb2`]
+
+### Changed
+- **Report Generation**: Improved report handling and organization
+  - Updated `scripts/report01.R` to rename output file from "Report01" to "SNV_Report01" for better clarity [`5d4986d`]
+  - Enhanced `bin/doPost.sh` to use `find` for dynamic report file location and improved timeline handling [`fac54b5`]
+  - Modified `scripts/report01.R` to accept assay argument and conditionally exclude TMB column for non-WES assays [`90f1878`]
+  - Refactored `bin/runTempoWGSBamsMin.sh` to use variable-based workflow configuration for better maintainability [`c1cefc9`]
+
+### Technical Details
+- **Version**: Development version (HEAD) based on v2.3.2
+- **Date Range**: From v2.3.2 (commit 0f75608) to current HEAD (commit abc7bb2)
+- **Files Modified**: 8 files across bin/, scripts/, and scripts/rsrc/ directories
+- **Major Features**: SV reporting system, enhanced report organization, improved workflow configuration
+
+### Commit Summary
+- **Total Commits**: 6 commits since v2.3.2
+- **Major Features**: Structural variant reporting, enhanced report handling
+- **Script Updates**: Improved report generation, workflow configuration
+- **Configuration Updates**: SV column descriptions, report column configurations
+
+---
+
 ## v2.3.1 [2025-07-11] - v2.2.2 [2025-07-11]
 
 ### Added
