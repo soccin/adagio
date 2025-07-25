@@ -1,10 +1,16 @@
 #!/usr/bin/env Rscript
-mapfile=commandArgs(trailing=T)[1]
-pairfile=commandArgs(trailing=T)[2]
-targetName="idt_v2"
+mapfile=commandArgs(trailing=TRUE)[1]
+pairfile=commandArgs(trailing=TRUE)[2]
+targetName=commandArgs(trailing=TRUE)[3]
+
 if(is.na(mapfile) || is.na(pairfile)) {
-    cat("\n   usage: bic2tempo.R MAPPING_FILE.txt PAIRING_FILE.txt\n\n")
+    cat("\n   usage: bic2tempo.R MAPPING_FILE.txt PAIRING_FILE.txt [TARGET]\n\n")
     quit()
+}
+
+if(is.na(targetName)) {
+    cat("\n   TARGET not specified so idt_v2 being used as default\n\n")
+    targetName="idt_v2"
 }
 
 suppressPackageStartupMessages({
@@ -19,6 +25,16 @@ pair=read_tsv(pairfile,col_names=F,show_col_types = FALSE,progress=F)  %>% mutat
 ms=map %>% distinct(X2) %>% pull
 ps=unlist(pair) %>% unname %>% unique
 samps=intersect(ms,ps)
+
+badNames=grep("__|pool",samps,ignore.case=T,value=T)
+if(len(badNames)>0) {
+    cat("\n\n   Bad names found\n")
+    cat("\n   ",paste(badNames,collapse="\n    "),"\n\n")
+    cat("   Tempo does not work with names that contain:\n")
+    cat("     - 'pool|Pool|POOL' (case ignore)\n")
+    cat("     - '__' (double underscore)\n\n\n")
+    rlang::abort()
+}
 
 map=map %>% filter(X2 %in% samps)
 
@@ -46,9 +62,9 @@ for(mi in map |> transpose()) {
 
 pmap=bind_rows(pmap)
 tpair=pair %>% mutate_all(~gsub("^s_","",.)) %>% select(NORMAL_ID=X1,TUMOR_ID=X2)
-requestId=stringr::str_extract(basename(pmap$FASTQ_PE1[1]),"_IGO_([^/]*)_\\d+_S",group=T)
+#requestId=stringr::str_extract(basename(pmap$FASTQ_PE1[1]),"_IGO_([^/]*)_\\d+_S",group=T)
 
-write_tsv(tpair,paste0("inputTempo_",requestId,"_pairing.tsv"))
-write_tsv(pmap,paste0("inputTempo_",requestId,"_mapping.tsv"))
+write_tsv(tpair,"inputTempo_pairing.tsv")
+write_tsv(pmap,"inputTempo_mapping.tsv")
 
 
