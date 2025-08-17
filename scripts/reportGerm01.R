@@ -1,4 +1,7 @@
-require(tidyverse)
+suppressPackageStartupMessages({
+  require(tidyverse)
+  require(openxlsx)
+})
 
 maffile=fs::dir_ls("out",recur=3,regex="mut_germline.maf")
 qcfile=fs::dir_ls("out",recur=3,regex="alignment_qc.txt")
@@ -71,7 +74,6 @@ if(assayType=="genome") {
 
 }
 
-library(openxlsx)
 # set zoom
 set_zoom <- function(sV,x) gsub('(?<=zoomScale=")[0-9]+', x, sV, perl = TRUE)
 
@@ -104,7 +106,7 @@ if(len(projNo)==0) {
 }
 
 rFile=cc(projNo,"ReportGermline","v2.xlsx")
-rDir="post/reports"
+rDir="germline/reports"
 fs::dir_create(rDir)
 
 saveWorkbook(wb,file.path(rDir,rFile),overwrite=T)
