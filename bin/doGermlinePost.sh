@@ -8,11 +8,14 @@ SDIR=$(dirname "$(readlink -f "$0")")
 RDIR=$(realpath $SDIR/..)
 
 mkdir -p post/pipeline_info
-cp $(ls -rt run/*/*/report.html | tail -1) post/pipeline_info
-cp $(ls -rt run/*/*/timeline.html | tail -1) post/pipeline_info
+cp $(ls -rt run/report.html | tail -1) post/pipeline_info
+cp $(ls -rt run/timeline.html | tail -1) post/pipeline_info
 
 Rscript $SDIR/../scripts/reportGerm01.R
+Rscript $SDIR/../scripts/reportGermSV01.R
 CMD_LOG=post/pipeline_info/version.txt
+
+exit
 
 GTAG=$(git --git-dir=$RDIR/.git --work-tree=$RDIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$RDIR/.git --work-tree=$RDIR config --get remote.origin.url)

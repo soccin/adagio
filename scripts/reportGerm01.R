@@ -21,15 +21,8 @@ normals=readLines(cmdlog) %>%
     read_tsv(show_col_types = FALSE,progress=T) %>%
     pull(NORMAL_ID)
 
-projectId=readLines(cmdlog) %>%
-    grep("Script:",.,value=T) %>%
-    strsplit(" ") %>%
-    map_vec(3) %>%
-    readLines %>%
-    grep("requestId:",.,value=T) %>%
-    strsplit(" ") %>%
-    map_vec(2) %>%
-    gsub('"','',.)
+projectId=readLines(cmdlog) %>% grep("PROJECT_ID:",.,value=T) %>% strsplit(" ") %>% map_vec(2)
+assayType=readLines(cmdlog) %>% grep("ASSAY_TYPE:",.,value=T) %>% strsplit(" ") %>% map_vec(2)
 
 #
 # QC/Table
@@ -61,13 +54,22 @@ totalMuts=maf %>%
 
 numMutations=tbl1 %>%
     count(Sample,name="NumNonSilentMutations")
+if(assayType=="genome") {
 
-tbl0=left_join(qcTbl,totalMuts) %>%
-    left_join(numMutations) %>%
-    select(Sample,TotalMutations,NumNonSilentMutations,MeanTargetCoverage,FractionTargets20X,FractionTargetsZeroCoverage,FractionDuplicateMarked,TotalReads)
-class(tbl0$FractionTargets20X)="percentage"
-class(tbl0$FractionTargetsZeroCoverage)="percentage"
-class(tbl0$FractionDuplicateMarked)="percentage"
+  tbl0=left_join(qcTbl,totalMuts) %>%
+      left_join(numMutations) %>%
+      select(Sample,TotalMutations,NumNonSilentMutations,FractionDuplicateMarked,TotalReads)
+
+} else {
+
+  tbl0=left_join(qcTbl,totalMuts) %>%
+      left_join(numMutations) %>%
+      select(Sample,TotalMutations,NumNonSilentMutations,MeanTargetCoverage,FractionTargets20X,FractionTargetsZeroCoverage,FractionDuplicateMarked,TotalReads)
+  class(tbl0$FractionTargets20X)="percentage"
+  class(tbl0$FractionTargetsZeroCoverage)="percentage"
+  class(tbl0$FractionDuplicateMarked)="percentage"
+
+}
 
 library(openxlsx)
 # set zoom
