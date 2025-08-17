@@ -8,7 +8,7 @@ fi
 ODIR=$1
 mkdir -p $ODIR/tempo
 
-rsync -rvP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" out/ $ODIR/tempo
+rsync -rvP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ $ODIR/tempo
 rsync -rvP post $ODIR
 
 
