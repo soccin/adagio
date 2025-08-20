@@ -4,9 +4,18 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.3.3 - master
+## Version: v2.3.4 - master
 
 **Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5) forked from mskcc/tempo develop (e136e568)
+
+### Latest Release (v2.3.4)
+
+- **Germline SV Reporting**: Added `scripts/reportGermSV01.R` for comprehensive germline structural variant analysis
+- **Directory Restructure**: Refactored germline post-processing - output moved from `post/` to `germline/` directory
+- **Resource Optimization**: Enhanced CPU and memory allocation for Delly, SvABA, Neoantigen, and MultiQC processes
+- **Enhanced QC**: Improved QC reporting with additional metrics, sample type grouping, and better visualizations
+- **Workflow Improvements**: Configurable target validation and better error handling in sample processing
+- **Delivery Process**: Optimized file delivery with germline exclusions for cleaner output separation
 
 ### Tempo advancements
 
