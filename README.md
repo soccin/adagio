@@ -4,7 +4,9 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.3.4 - master
+## Version:
+- Branch: eos
+- Tag (base): 2.3.4
 
 **Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5) forked from mskcc/tempo develop (e136e568)
 
