@@ -130,11 +130,6 @@ get_sample_process_details <- function(trace_data, sample_name, process_pattern)
 #' trace_files <- c("file1.txt", "file2.txt")
 #' report <- generate_status_report(trace_files)
 generate_status_report <- function(trace_files) {
-  # Load required functions
-  if (file.exists("nextflow_analysis.R")) {
-    source("nextflow_analysis.R")
-  }
-  
   # Handle input: either file list path or vector of files
   if (length(trace_files) == 1 && file.exists(trace_files)) {
     trace_files <- load_trace_file_list(trace_files)
