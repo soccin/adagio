@@ -37,6 +37,7 @@ get_failed_processes_by_sample <- function(trace_data) {
 #' Get Processes Without Success
 #'
 #' Identifies process names that have no COMPLETED or CACHED instances.
+#' Includes defensive programming to handle cases where CACHED column may not exist.
 #'
 #' @param trace_data Tibble containing trace data
 #' @return Tibble showing process names with no successful completions
@@ -50,9 +51,16 @@ get_processes_without_success <- function(trace_data) {
     count(status) %>%
     spread(status, n, fill = 0)
   
-  status_summary %>%
-    filter(is.na(COMPLETED) | COMPLETED == 0) %>%
-    filter(is.na(CACHED) | CACHED == 0)
+  failed=status_summary %>%
+    filter(is.na(COMPLETED) | COMPLETED == 0)
+
+  if("CACHED" %in% colnames(failed)) {
+    failed=failed %>%
+      filter(is.na(CACHED) | CACHED == 0)
+  }
+
+  failed
+
 }
 
 #' Create Failed Process Report
@@ -119,6 +127,8 @@ get_sample_process_details <- function(trace_data, sample_name, process_pattern)
 #' Generate Comprehensive Status Report
 #'
 #' Creates a complete status report combining failure analysis and SLURM information.
+#' Automatically detects whether input is a single trace file or a file-of-files list
+#' by checking for "task_id" header in the first line.
 #'
 #' @param trace_files Vector of trace file paths or single trace file list path
 #' @return List containing various analysis results
@@ -131,7 +141,16 @@ get_sample_process_details <- function(trace_data, sample_name, process_pattern)
 #' report <- generate_status_report(trace_files)
 generate_status_report <- function(trace_files) {
   # Handle input: either file list path or vector of files
-  if (length(trace_files) == 1 && file.exists(trace_files)) {
+
+  #
+  # If we have only one argv/file make sure it is a
+  # fileOfFiles and not a trace file
+  #
+  is_trace_file<-function(tfile) {
+    (read_lines(tfile,n_max=1) %>% grepl("^task_id",.))
+  }
+
+  if (length(trace_files) == 1 && file.exists(trace_files) && !(is_trace_file(trace_files))) {
     trace_files <- load_trace_file_list(trace_files)
   }
   
