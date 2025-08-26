@@ -1,5 +1,12 @@
 # Changelog
 
+## feat/report-facets [2025-08-26] - Enhanced FACETS Report Generation
+
+### Summary
+Complete refactoring and enhancement of the FACETS report generation script (`scripts/reportFacets01.R`) with significant improvements to code quality, functionality, and maintainability. Major additions include multi-sheet Excel export functionality with comprehensive analysis results (runInfo, armLevel, geneLevel), enhanced quality control processing that reads individual QC files from sample directories, and comprehensive failed sample filtering across all datasets. The script now follows tidyverse style guidelines with snake_case naming, proper documentation, helper functions for code reuse, and switched from writexl to openxlsx library. These changes provide improved maintainability through better code organization, enhanced reliability with robust error handling, and a better user experience with informative progress messages and standardized output formatting.
+
+---
+
 ## v2.3.3 [2025-01-XX] - v2.3.2 [2025-01-XX]
 
 ### Added
