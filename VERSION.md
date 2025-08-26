@@ -1,8 +1,8 @@
 # Version Information
 
 ## adagio
-- **Branch:** eos-devs
-- **Version:** v2.2.2
+- **Branch:** master
+- **Version:** v2.3.4+feat/report-facets
 
 ## Submodules
 
