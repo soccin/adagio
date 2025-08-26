@@ -7,36 +7,52 @@
 # - Individual segmentation files (purity and hisens modes)
 # - Multi-sheet Excel workbook with run info, arm-level, and gene-level CNAs
 
+# Helper Functions
+# ================
+
+# Simplified wrapper for directory listing with recursion and regex
+dir_ls <- function(dir, pattern) {
+  fs::dir_ls(dir, recurse = TRUE, regexp = pattern)
+}
+
 library(tidyverse)
 library(readxl)
 library(openxlsx)
-
-# Quality Control: Identify Failed Samples
-# =========================================
-# Look for the facetsRpt.xlsx QC report to identify samples that failed
-# FACETS analysis. These samples will be excluded from final outputs.
-
-facets_report <- fs::dir_ls(regex = "facetsRpt.xlsx")
-
-if (length(facets_report) == 1) {
-  # Read QC report and extract samples that failed facets_qc check
-  fqc <- read_xlsx(facets_report)
-  failed_samples <- fqc %>%
-    filter(!facets_qc) %>%
-    pull(tumor_sample_id)
-
-  message("Found ", length(failed_samples), " failed samples to exclude")
-} else {
-  # No QC report found - proceed with all samples
-  failed_samples <- character(0)
-  message("No facetsRpt.xlsx found - including all samples")
-}
 
 # Extract Project Information
 # ===========================
 # The project number is embedded in the output directory structure
 
 project_no <- basename(fs::dir_ls("out"))
+sample_dir <- file.path("out", project_no, "somatic")
+
+# Quality Control: Identify Failed Samples
+# =========================================
+# Read individual FACETS QC files from each sample directory to identify
+# samples that failed quality control. These samples will be excluded from
+# final outputs to ensure reliable results.
+
+# Find all QC files across sample directories
+facets_qc_files <- dir_ls(sample_dir, "\\.facets_qc\\.txt")
+
+# Read and combine all QC files
+qc_data <- map(
+  facets_qc_files,
+  ~read_tsv(.x, col_types = cols(.default = "c"), show_col_types = FALSE),
+  .progress = TRUE
+) %>%
+  bind_rows() %>%
+  type_convert()
+
+# Extract samples that failed QC (facets_qc == FALSE)
+failed_samples <- qc_data %>%
+  filter(!facets_qc) %>%
+  pull(tumor_sample_id)
+
+message("Found ", length(failed_samples), " samples that failed FACETS QC")
+if (length(failed_samples) > 0) {
+  message("Failed samples: ", str_c(failed_samples, collapse = ", "))
+}
 
 # Helper function to process segmentation files
 # =============================================
@@ -58,7 +74,7 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
     # Exclude samples that failed QC
     filter(!(ID %in% failed_samples))
 
-  output_file <- str_c("Proj", project_no, output_suffix)
+  output_file <- str_c("Proj_", project_no, "_", output_suffix)
   write_tsv(seg, output_file)
 
   message("Wrote ", nrow(seg), " segments to ", output_file)
@@ -100,12 +116,14 @@ cna_armlevel <- fs::dir_ls("out", recurse = 3,
   map_dfr(~read_tsv(.x, show_col_types = FALSE)) %>%
   # Remove header row artifacts and ensure proper data types
   filter(sample != "sample") %>%
-  type_convert()
+  type_convert() %>%
+  filter(!sample %in% failed_samples)
 
 # Gene-level copy number alterations (focal changes affecting specific genes)
 cna_genelevel <- fs::dir_ls("out", recurse = 3,
                             regexp = "cohort_level/.*/cna_genelevel.txt") %>%
-  map_dfr(~read_tsv(.x, show_col_types = FALSE))
+  map_dfr(~read_tsv(.x, show_col_types = FALSE)) %>%
+  filter(!sample %in% failed_samples)
 
 # Generate Multi-Sheet Excel Report
 # ==================================
@@ -114,7 +132,7 @@ cna_genelevel <- fs::dir_ls("out", recurse = 3,
 # - armLevel: Chromosomal arm gains/losses across samples
 # - geneLevel: Gene-specific copy number changes
 
-excel_filename <- str_c("Proj", project_no, "CNV_Facets_v2.xlsx")
+excel_filename <- str_c("Proj_", project_no, "_CNV_Facets_v2.xlsx")
 
 write.xlsx(
   list(
