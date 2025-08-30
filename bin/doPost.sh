@@ -12,6 +12,7 @@ REPORT_HTML=$(find -L . | fgrep /report.html | head -1)
 
 cp $REPORT_HTML post/pipeline_info
 cp $(ls -rt $(dirname $REPORT_HTML)/timeline.html | tail -1) post/pipeline_info
+cp $(ls -rt $(dirname $REPORT_HTML)/*trace* | tail -1) post/pipeline_info
 
 ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
 
