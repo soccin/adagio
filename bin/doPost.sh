@@ -25,6 +25,8 @@ fi
 mkdir -p post/plots/facets
 cp $(find out -name '*purity.CNCF.png') post/plots/facets
 
+Rscript $RDIR/scripts/reportFacets01.R
+
 CMD_LOG=post/pipeline_info/version.txt
 
 GTAG=$(git --git-dir=$RDIR/.git --work-tree=$RDIR describe --long --tags --dirty="-UNCOMMITED" --always)
