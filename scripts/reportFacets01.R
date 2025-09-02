@@ -26,6 +26,9 @@ library(openxlsx)
 project_no <- basename(fs::dir_ls("out"))
 sample_dir <- file.path("out", project_no, "somatic")
 
+rDir="post/reports"
+fs::dir_create(rDir)
+
 # Quality Control: Identify Failed Samples
 # =========================================
 # Read individual FACETS QC files from each sample directory to identify
@@ -74,8 +77,8 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
     # Exclude samples that failed QC
     filter(!(ID %in% failed_samples))
 
-  output_file <- str_c("Proj_", project_no, "_", output_suffix)
-  write_tsv(seg, output_file)
+  output_file <- str_c("Proj_", project_no, "_Filtered_", output_suffix)
+  write_tsv(seg, file.path(rDir,output_file))
 
   message("Wrote ", nrow(seg), " segments to ", output_file)
   return(seg)
@@ -132,7 +135,7 @@ cna_genelevel <- fs::dir_ls("out", recurse = 3,
 # - armLevel: Chromosomal arm gains/losses across samples
 # - geneLevel: Gene-specific copy number changes
 
-excel_filename <- str_c("Proj_", project_no, "_CNV_Facets_v2.xlsx")
+excel_filename <- str_c("Proj_", project_no, "_facets_v3.xlsx")
 
 write.xlsx(
   list(
@@ -140,7 +143,7 @@ write.xlsx(
     armLevel = cna_armlevel,
     geneLevel = cna_genelevel
   ),
-  excel_filename
+  file.path(rDir,excel_filename)
 )
 
 message("Generated comprehensive Excel report: ", excel_filename)
