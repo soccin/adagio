@@ -4,13 +4,18 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.3.4 - master
+## Version: v2.3.5 - master
 - Branch: eos
 - Tag (base): 2.3.4
 
 **Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5) forked from mskcc/tempo develop (e136e568)
 
-### Latest Release (v2.3.4)
+### Latest Release (v2.3.5)
+
+- **FACETS Post-processing**: Added automated FACETS report generation in `doPost.sh` with filtered segmentation files and comprehensive Excel output
+- **Report Organization**: FACETS reports now output to `post/reports/` directory with versioned filenames (v3)
+
+### Previous Release (v2.3.4)
 
 - **Germline SV Reporting**: Added `scripts/reportGermSV01.R` for comprehensive germline structural variant analysis
 - **Directory Restructure**: Refactored germline post-processing - output moved from `post/` to `germline/` directory

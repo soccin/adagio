@@ -2,7 +2,7 @@
 
 ## adagio
 - **Branch:** master
-- **Version:** v2.3.4+feat/report-facets
+- **Version:** v2.3.5+fix/post-facets
 
 ## Submodules
 
