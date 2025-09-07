@@ -1,5 +1,15 @@
 # Changelog
 
+## fix/getClustName [2025-09-07] - getClusterName.sh Improvements
+
+### Changed
+- **Check run-mode**: Check that script is being sourced and not executed directly [`0274596`]
+- **Script Refactoring**: Modernized `bin/getClusterName.sh` with `ip` command fallback, consistent `[[ ]]` syntax, and extracted helper functions [`004ebcf`, `455f530`]
+- **Debug Mode**: Added debug mode via `DEBUG_CLUSTER` for troubleshooting [`455f530`]
+
+
+---
+
 ## feat/report-facets [2025-08-26] - Enhanced FACETS Report Generation
 
 ### Summary
