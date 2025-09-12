@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.3.6 [2025-09-12] - Bug Fixes and Script Improvements
+
+### Fixed
+- **Configuration**: Disabled scratch temp directory usage in IRIS configuration [`d01cbfe`]
+- **Project Extraction**: Simplified project number extraction logic in reportSV01.R [`dd1b771`]
+
+### Changed
+- **Cluster Detection**: Enhanced cluster detection capabilities across multiple scripts
+  - Added cluster detection utility function in `scripts/get_cluster_name.R` [`28ded56`]
+  - Modernized cluster detection in report01.R with improved logic [`09d58d9`]
+- **Script Refactoring**: Continued improvements to getClusterName.sh functionality
+  - Comprehensive improvements with better error handling and debug output [`455f530`]
+  - Extracted complex pipeline logic into dedicated get_zone function [`004ebcf`]
+  - Improved sourcing validation and network detection [`0274596`]
+
+### Technical Details
+- **Version**: v2.3.6 release
+- **Date Range**: From v2.3.5 to current HEAD (commit 1555b3b)
+- **Files Modified**: 6 files across bin/, conf/, and scripts/ directories
+- **Major Features**: Enhanced cluster detection, configuration fixes, script improvements
+
+### Commit Summary
+- **Total Commits**: 11 commits since v2.3.5
+- **Major Features**: Cluster detection utilities, configuration improvements
+- **Bug Fixes**: Scratch directory usage, project extraction logic
+- **Script Updates**: getClusterName.sh enhancements, report generation improvements
+
+---
+
 ## fix/getClustName [2025-09-07] - getClusterName.sh Improvements
 
 ### Changed
