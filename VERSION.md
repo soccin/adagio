@@ -1,8 +1,7 @@
 # Version Information
 
 ## adagio
-- **Branch:** master
-- **Version:** v2.3.5+fix/post-facets
+- **Version:** v2.3.6
 
 ## Submodules
 
