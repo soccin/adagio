@@ -4,6 +4,12 @@ argv=commandArgs(trailingOnly=TRUE)
 ASSAY=argv[1]
 if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
 
+SDIR=get_script_dir()
+source(file.path(SDIR,"get_cluster_name.R"))
+CLUSTER=get_cluster_name()
+cat("\n\n  CLUSTER =",CLUSTER,"\n\n")
+
+
 #
 # Get Facets QC info
 #
@@ -35,8 +41,6 @@ if(len(sampleDataFile)==0) {
     rlang::abort("FATAL::ERROR")
 }
 
-
-
 sampleData=read_tsv(sampleDataFile) %>%
     separate(sample,c("Sample","NormalID"),sep="__") %>%
     select(-matches("^SB|^HLA|^MSI")) %>%
@@ -52,8 +56,6 @@ if(!(ASSAY=="WES" || ASSAY=="exome")) {
 mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mut_somatic.maf")
 
 maf=read_tsv(mafFile,comment="#")
-
-CLUSTER=system("getClusterName.sh",intern=T)
 
 switch(CLUSTER,
     "JUNO"={
@@ -162,10 +164,7 @@ setColWidths(wb,sheet=3,cols=1:ncol(tbl1),widths="auto")
 setColWidths(wb,sheet=3,cols=1,widths=12)
 setColWidths(wb,sheet=3,cols=5:6,widths=14)
 
-projNo=grep("^Proj",strsplit(getwd(),"/")[[1]],value=T)
-if(len(projNo)==0) {
-    projNo=""
-}
+projNo <- basename(fs::dir_ls("out"))
 rFile=cc(projNo,"SNV_Report01","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)

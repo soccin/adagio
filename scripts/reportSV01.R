@@ -23,10 +23,8 @@ dd=dd %>%
 df=dd %>% select(1:CC_Chr_Band,matches("VAF"),matches("_(AD|PE|SR|PR|PS|DR|DV|RR|RV)$"),matches("^CC|^DGv"),matches("CONSENSUS"),NORMAL_ID,UUID)
 colDesc=read_csv(file.path(PROOT,"rsrc/svColTypeDescriptions.csv"))
 
-projNo=grep("^Proj",strsplit(getwd(),"/")[[1]],value=T)
-if(len(projNo)==0) {
-    projNo=""
-}
+projNo <- basename(fs::dir_ls("out"))
+
 rFile=cc(projNo,"SV_Report01","v4.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
