@@ -1,4 +1,4 @@
-# BIC Variant Pipeline (v1.0.3)
+# BIC Variant Pipeline (v2.3.7)
 
 ## Introduction
 
@@ -11,13 +11,16 @@ The output consists of the raw output files from the TEMPO pipeline along with s
 {outdir}
 ├── post
 │   ├── reports
-│   │   ├── {projectNum}_mutationReport_v1.xlsx
-│   │   └── output.html
+│   │   ├── {projectNum}_SNV_Report01_v2.xlsx
+│   │   ├── Proj_{projectNum}_facets_v3.xlsx
+│   │   ├── Proj_{projectNum}_Filtered_facets_hisens.seg
+│   │   └── Proj_{projectNum}_Filtered_facets_purity.seg
 │   ├── pipeline_info
 │   │   ├── version.txt
 │   │   └── output.html
 │   └── plots
 │       └── facets
+│           └── {sample}_purity.CNCF.png
 └── tempo
     └── {projectNum}
         ├── bams
@@ -38,16 +41,31 @@ The post folder contains a number of useful files that give an overall summary o
 
 ### Reports
 
-In the reports folder, there is a mutation summary report in excel format which has the following three sheets:
+The reports folder contains multiple files providing comprehensive analysis results:
+
+#### SNV Report (`{projectNum}_SNV_Report01_v2.xlsx`)
+The SNV (Single Nucleotide Variant) mutation summary report in Excel format with the following three sheets:
 
 1. *Sample Data*: Provides summary information on samples including TMB and sample purity.
 2. *Gene Stats*: Lists genes mutated in more than two samples, with mutation count, frequency, and affected samples.
 3. *Mutations*: Displays a table of all non-silent mutations detected.
 
+#### FACETS Report (`Proj_{projectNum}_facets_v3.xlsx`)
+A comprehensive Excel report focused on copy number analysis results from FACETS, including sample purity estimates, ploidy information, and copy number profiles.
+
+#### Segmentation Files
+- `Proj_{projectNum}_Filtered_facets_hisens.seg`: High sensitivity segmentation data from FACETS analysis
+- `Proj_{projectNum}_Filtered_facets_purity.seg`: Purity-based filtered segmentation data from FACETS analysis
+
+These tab-delimited files contain genomic coordinates and copy number segment information for downstream analysis.
+
 
 ### Pipeline Info
 
-Information on the pipeline including: `version.txt` file contains details about the software version used for analysis along with other run information and an HTML version of this document (`output.html`).
+The pipeline_info folder contains comprehensive information about the pipeline execution:
+
+- `version.txt`: Details about the software version, timestamp, git repository information, and assay type used for analysis
+- `output.html`: HTML version of this output documentation
 
 
 ### Plots Folder
