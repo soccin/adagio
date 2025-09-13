@@ -31,7 +31,7 @@ The output consists of the raw output files from the TEMPO pipeline along with s
 
 ## Tempo Output
 
-The core output is from the [Tempo](https://github.com/mskcc/tempo) research pipeline from MSKCC CMO Computational Science group. The raw output from Tempo is in the `tempo` subfolder, and a detailed description of these files can be found here: [//outputs.html](https://deploy-preview-983--cmotempo.netlify.app/outputs.html). _N.B._, to save space, the `bam` and `snp-pileup` files are not delivered by default. If you require them, please contact us.
+The core output is from the [Tempo](https://github.com/mskcc/tempo) research pipeline from MSKCC CMO Computational Science group. The raw output from Tempo is in the `tempo` subfolder, and a detailed description of these files can be found here: [Tempo-Outputs](https://deploy-preview-983--cmotempo.netlify.app/outputs.html). _N.B._, to save space, the `bam` and `snp-pileup` files are not delivered by default. If you require them, please contact us.
 
 
 ## Post folder
