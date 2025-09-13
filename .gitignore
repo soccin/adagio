@@ -2,3 +2,4 @@
 bin/nextflow
 settings.local.json 
 CLAUDE.local.md
+output

@@ -1,7 +1,7 @@
 # Version Information
 
 ## adagio
-- **Version:** v2.3.6
+- **Version:** v2.3.7
 
 ## Submodules
 

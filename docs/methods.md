@@ -1,10 +1,10 @@
 # Variant Calling Pipeline
 
-### Version 1.0.3
+### Version 2.3.7
 
 ## Overview
 
-Sequence mapping and variant calling were done using the TEMPO pipeline [Tempo2024], which is an nf-core/nextflow-based pipeline [Garcia2020, Ewels2020]. The output was then post-processed using a custom R script to filter for non-silent mutations. This script, along with the code to run the pipeline and a link to the specific version of the TEMPO code that was used, is available at this link: [https://github.com/soccin/adagio/releases/tag/v1.0.3](https://github.com/soccin/adagio/releases/tag/v1.0.3).
+Sequence mapping and variant calling were done using the TEMPO pipeline [Tempo2024], which is an nf-core/nextflow-based pipeline [Garcia2020, Ewels2020]. The output was then post-processed using a custom R script to filter for non-silent mutations. This script, along with the code to run the pipeline and a link to the specific version of the TEMPO code that was used, is available at this link: [https://github.com/soccin/adagio/releases/tag/v2.3.7](https://github.com/soccin/adagio/releases/tag/v2.3.7).
 
 
 ## Details

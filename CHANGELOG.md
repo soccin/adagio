@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3.7 [2025-09-13] - Documentation Update
+
+### Changed
+- **Documentation**: Updated output documentation to reflect current pipeline structure and file organization
+
+---
+
 ## v2.3.6 [2025-09-12] - Bug Fixes and Script Improvements
 
 ### Fixed
