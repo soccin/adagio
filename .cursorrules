@@ -34,8 +34,8 @@ chore(conf): update LSF resource parameters for better performace
 ```
 
 ```
-docs(tempo): update output documentation for v1.0.4
+docs(tempo): update output documentation for v2.3.7
 
-Integrate changes to pipeline since v1.0.3 to the output
+Integrate changes to pipeline since v2.3.6 to the output
 documentation. #cursor
 ```
