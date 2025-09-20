@@ -26,7 +26,6 @@ if [ "$CLUSTER" == "IRIS" ]; then
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
-    TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
 
 elif [ "$CLUSTER" == "JUNO" ]; then
 
@@ -53,6 +52,9 @@ TEMPO_PROFILE=juno
 
 PIPELINE_CONFIG=tempo-wes
 ASSAY_TYPE=exome
+
+TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
+
 
 set -ue
 
