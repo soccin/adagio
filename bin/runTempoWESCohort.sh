@@ -30,12 +30,7 @@ if [ "$CLUSTER" == "IRIS" ]; then
 
 elif [ "$CLUSTER" == "JUNO" ]; then
 
-    echo -e "\nNOT IMPLEMENTED\n"
-    echo -e "  Need to fix config stuff for juno on this branch"
-    echo -e "  This branch does not have a local config (-c)\n"
-    exit 1
-
-    CONFIG=juno
+    CONFIG=neo
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
