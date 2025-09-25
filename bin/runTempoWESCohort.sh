@@ -26,6 +26,11 @@ if [ "$CLUSTER" == "IRIS" ]; then
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
+    PIPELINE_CONFIG=tempo-wes-iris
+
+    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
+    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
+    exit 1
 
 elif [ "$CLUSTER" == "JUNO" ]; then
 
@@ -35,6 +40,7 @@ elif [ "$CLUSTER" == "JUNO" ]; then
     export TMPDIR=/scratch/socci
 
     REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
+    PIPELINE_CONFIG=tempo-wes-juno
 
 else
 
@@ -50,7 +56,6 @@ fi
 #
 TEMPO_PROFILE=juno
 
-PIPELINE_CONFIG=tempo-wes
 ASSAY_TYPE=exome
 
 TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
