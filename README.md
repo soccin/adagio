@@ -1,54 +1,25 @@
 # ADAGIO
 
-A derivation of [_Tempo_](https://github.com/mskcc/tempo).
+A genomic sequencing pipeline framework - a customized derivation of [_Tempo_](https://github.com/mskcc/tempo) for processing paired-end WES/WGS human cancer samples with matched normal controls.
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.3.7 - master
+## Version: v2.4.0
 
-**Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5) forked from mskcc/tempo develop (e136e568)
+### Summary
 
-### Latest Release (v2.3.7)
+**v2.4.0** represents a significant modernization of the Adagio pipeline with major architectural improvements:
 
-- **Bug Fixes**: Disabled scratch temp directory usage and simplified project extraction in reportSV01.R
-- **Cluster Detection**: Added utility function and modernized detection logic across reporting scripts
-- **Script Improvements**: Enhanced getClusterName.sh with better error handling and modular design
+- **Tempo Submodule Modernization**: Updated to devs branch (a37c341b) featuring nf-core framework integration and Apache Spark optimization for enhanced MarkDuplicates processing
+- **Enhanced FACETS Reporting**: Complete refactoring with multi-sheet Excel export, improved QC processing, and tidyverse compliance
+- **Consolidated Documentation**: Unified changelog system with dedicated tempo submodule tracking
 
-### Previous Release (v2.3.5)
+### Improvements
 
-- **FACETS Post-processing**: Added automated FACETS report generation in `doPost.sh` with filtered segmentation files and comprehensive Excel output
-- **Report Organization**: FACETS reports now output to `post/reports/` directory with versioned filenames (v3)
-
-### Previous Release (v2.3.4)
-
-- **Germline SV Reporting**: Added `scripts/reportGermSV01.R` for comprehensive germline structural variant analysis
-- **Directory Restructure**: Refactored germline post-processing - output moved from `post/` to `germline/` directory
-- **Resource Optimization**: Enhanced CPU and memory allocation for Delly, SvABA, Neoantigen, and MultiQC processes
-- **Enhanced QC**: Improved QC reporting with additional metrics, sample type grouping, and better visualizations
-- **Workflow Improvements**: Configurable target validation and better error handling in sample processing
-- **Delivery Process**: Optimized file delivery with germline exclusions for cleaner output separation
-
-### Tempo advancements
-
-- **Pipeline Updates**: Updated tempo submodule with updates for:
-  - updates to delly and svaba
-  - optimizations for neoantigen
-
-- **Workflow conditional changes**: Turned off the following modules for WGS runs
-  - LoH/RunLOHHLA.nf
-  - QC/SomaticRunMultiQC.nf
-
-- **Neoantigen Analysis**: Added resource allocation for RunNeoantigen process in both WES and WGS configurations
-
-### General Improvements
-
-- **New SV Reporting System**: Added comprehensive structural variant reporting with BEDPE file processing and Excel output generation
-
-- **Enhanced Report Organization**: Improved file naming (SNV_Report01) and dynamic file handling for better workflow management
-
-- **Assay-Specific Reporting**: Implemented conditional report generation that adapts content based on analysis type (WES vs WGS)
-
-- **Workflow Configuration**: Refactored WGS workflow parameters for improved maintainability and consistency
+- **Performance**: Apache Spark-based MarkDuplicates with parallel processing optimizations
+- **Reporting**: Multi-sheet Excel exports with comprehensive analysis results (runInfo, armLevel, geneLevel)
+- **Code Quality**: Tidyverse-compliant R scripts with enhanced documentation and error handling
+- **Framework**: Full nf-core standard adoption with improved development workflow
 
 
 
