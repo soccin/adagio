@@ -25,6 +25,7 @@ if [ "$CLUSTER" == "IRIS" ]; then
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
 
+    PIPELINE_CONFIG=tempo-wes-iris
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
 elif [ "$CLUSTER" == "JUNO" ]; then
@@ -34,6 +35,7 @@ elif [ "$CLUSTER" == "JUNO" ]; then
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
 
+    PIPELINE_CONFIG=tempo-wes-juno
     REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
 
 else
@@ -50,7 +52,6 @@ fi
 #
 TEMPO_PROFILE=juno
 
-PIPELINE_CONFIG=tempo-wes
 ASSAY_TYPE=exome
 
 TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
