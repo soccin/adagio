@@ -1,13 +1,13 @@
 # Version Information
 
 ## adagio
-- **Version:** v2.3.7
+- **Version:** v2.4.2
 
 ## Submodules
 
 ### tempo
 - **Path:** tempo/
-- **Branch:** eos-devs
-- **Version:** 1.4.4-476-ge16a8dcd
-- **Fork Commit:** e136e568 [Branch: develop]
-- **Fork Date:** 2025-06-12
+- **Branch:** nds-devs
+- **Version:** 1.4.4-528-g2ddf2203
+- **Current Commit:** 2ddf2203
+- **Last Updated:** 2025-09-24

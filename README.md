@@ -4,51 +4,52 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v2.3.7 - master
+## Version: v2.4.2 - master
 
-**Iris** cluster version. Currently tracking the eos-devs branch of tempo (0f8d1ce5) forked from mskcc/tempo develop (e136e568)
+**Neo/Juno** cluster version with nf-core integration. Currently tracking tempo submodule (00eb724b) with comprehensive nf-core/markdup_spark integration and Spark-based processing improvements.
 
-### Latest Release (v2.3.7)
+### Latest Release (v2.4.2)
+
+- **nf-core Integration**: Complete integration with nf-core framework and tools in tempo submodule
+- **MarkDuplicates Enhancement**: Migration to Spark-based MarkDuplicates with SETNMMDANDUQTAGS processing
+- **Cluster Configuration**: Added cluster-specific pipeline configurations for IRIS and JUNO clusters
+- **Resource Optimization**: Enhanced CPU allocation (minimum 2 CPUs per process) and improved resource management
+- **BQSR Improvements**: Added scatter-based BQSR processing for better parallelization
+- **Documentation**: Consolidated changelog documentation and created comprehensive tempo submodule history
+
+### Previous Release (v2.3.8)
+
+- **Port Attempt**: Second attempt to port back to neo/juno infrastructure
+- **Branch Merge**: Integrated devs/neo-redo-b branch with cluster-specific improvements
+- **Configuration Updates**: Enhanced cluster detection and resource allocation
+
+### Previous Release (v2.3.7)
 
 - **Bug Fixes**: Disabled scratch temp directory usage and simplified project extraction in reportSV01.R
 - **Cluster Detection**: Added utility function and modernized detection logic across reporting scripts
 - **Script Improvements**: Enhanced getClusterName.sh with better error handling and modular design
 
-### Previous Release (v2.3.5)
+### Tempo Submodule Advancements
 
-- **FACETS Post-processing**: Added automated FACETS report generation in `doPost.sh` with filtered segmentation files and comprehensive Excel output
-- **Report Organization**: FACETS reports now output to `post/reports/` directory with versioned filenames (v3)
+- **nf-core Framework**: Full adoption of nf-core framework with template compliance
+- **Spark Processing**: Enhanced processing with Spark-based MarkDuplicates and parallel SETNMMDANDUQTAGS
+- **Module Integration**: Local module customizations with upstream compatibility
+- **Performance**: Parallelized processing with interval splitting and improved resource utilization
+- **Documentation**: Enhanced README and comprehensive integration status documentation
 
-### Previous Release (v2.3.4)
+### Configuration Improvements
 
-- **Germline SV Reporting**: Added `scripts/reportGermSV01.R` for comprehensive germline structural variant analysis
-- **Directory Restructure**: Refactored germline post-processing - output moved from `post/` to `germline/` directory
-- **Resource Optimization**: Enhanced CPU and memory allocation for Delly, SvABA, Neoantigen, and MultiQC processes
-- **Enhanced QC**: Improved QC reporting with additional metrics, sample type grouping, and better visualizations
-- **Workflow Improvements**: Configurable target validation and better error handling in sample processing
-- **Delivery Process**: Optimized file delivery with germline exclusions for cleaner output separation
-
-### Tempo advancements
-
-- **Pipeline Updates**: Updated tempo submodule with updates for:
-  - updates to delly and svaba
-  - optimizations for neoantigen
-
-- **Workflow conditional changes**: Turned off the following modules for WGS runs
-  - LoH/RunLOHHLA.nf
-  - QC/SomaticRunMultiQC.nf
-
-- **Neoantigen Analysis**: Added resource allocation for RunNeoantigen process in both WES and WGS configurations
+- **Cluster-Specific Configs**: Separate configurations for IRIS (`tempo-wes-iris`) and JUNO (`tempo-wes-juno`) clusters
+- **Resource Allocation**: Optimized CPU and memory settings for different cluster environments
+- **Pipeline Parameters**: Enhanced parameter management with cluster-specific overrides
+- **Error Handling**: Improved error detection and temporary workarounds for IRIS configuration issues
 
 ### General Improvements
 
-- **New SV Reporting System**: Added comprehensive structural variant reporting with BEDPE file processing and Excel output generation
-
-- **Enhanced Report Organization**: Improved file naming (SNV_Report01) and dynamic file handling for better workflow management
-
-- **Assay-Specific Reporting**: Implemented conditional report generation that adapts content based on analysis type (WES vs WGS)
-
-- **Workflow Configuration**: Refactored WGS workflow parameters for improved maintainability and consistency
+- **Enhanced FACETS Reporting**: Multi-sheet Excel export with comprehensive analysis results (runInfo, armLevel, geneLevel)
+- **Quality Control**: Individual QC file processing with comprehensive failed sample filtering
+- **Code Quality**: Tidyverse compliance, improved documentation, and better code organization
+- **File Processing**: Robust pattern matching, error handling, and progress reporting
 
 
 
