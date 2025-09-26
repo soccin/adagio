@@ -1,13 +1,14 @@
 # Version Information
 
 ## adagio
-- **Version:** v2.3.7
+- **Cordelia**
+- **Version:** v3.0.0
 
 ## Submodules
 
 ### tempo
 - **Path:** tempo/
-- **Branch:** eos-devs
-- **Version:** 1.4.4-476-ge16a8dcd
-- **Fork Commit:** e136e568 [Branch: develop]
-- **Fork Date:** 2025-06-12
+- **Version:** cordelia-01-0-g957a2949
+- **Branch:** ccs/update-250925
+- **Fork Commit:** 957a2949
+- **Fork Date:** 2025-09-25

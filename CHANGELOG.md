@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.0.0 [2025-09-26] - Cordelia Release
+
+### Added
+- **Tempo Submodule Update**: Updated tempo submodule to cordelia-01 tag [`17609d6`]
+  - Advances from commit `00eb724` to `957a2949`
+  - Includes 17 commits with memory optimization features, workflow enhancements, and documentation updates
+  - Branch: ccs/update-250925
+  - Date: 2025-09-25
+
+### Changed
+- **Documentation**: Consolidated changelog and updated version information [`1cfbc07`]
+  - Enhanced changelog organization and formatting
+  - Updated version tracking across project files
+  - Improved documentation structure for better maintenance
+
+### Version Update
+- **Major Release**: Cordelia v3.0.0 marking significant tempo submodule advancement
+- **Tempo Submodule**: Now at cordelia-01 tag with comprehensive improvements
+- **Documentation**: Unified changelog documentation with tempo submodule tracking
+
+---
+
 ## v2.3.7 [2025-09-13] - Documentation Update
 
 ### Changed
