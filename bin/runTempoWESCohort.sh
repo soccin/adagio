@@ -20,27 +20,27 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
+
+    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
+    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
+    exit 1
+
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
-    PIPELINE_CONFIG=tempo-wes-iris
 
-    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
-    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
-    exit 1
 
 elif [ "$CLUSTER" == "JUNO" ]; then
 
-    CONFIG=neo
+    CONFIG=juno
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
 
     REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-    PIPELINE_CONFIG=tempo-wes-juno
 
 else
 
@@ -56,6 +56,7 @@ fi
 #
 TEMPO_PROFILE=juno
 
+PIPELINE_CONFIG=tempo-wes-${CONFIG}
 ASSAY_TYPE=exome
 
 TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
