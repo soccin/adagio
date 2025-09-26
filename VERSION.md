@@ -1,13 +1,14 @@
 # Version Information
 
 ## adagio
-- **Version:** v2.4.2
+- **Cordelia**
+- **Version:** v3.0.0
 
 ## Submodules
 
 ### tempo
 - **Path:** tempo/
-- **Branch:** nds-devs
-- **Version:** 1.4.4-528-g2ddf2203
-- **Current Commit:** 2ddf2203
-- **Last Updated:** 2025-09-24
+- **Version:** cordelia-01-0-g957a2949
+- **Branch:** ccs/update-250925
+- **Fork Commit:** 957a2949
+- **Fork Date:** 2025-09-25
