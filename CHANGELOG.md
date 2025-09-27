@@ -1,6 +1,73 @@
 # Changelog
 
-## v3.0.0 [2025-09-26] - Cordelia Release
+## v3-pre2 [2025-09-26] - Resource Optimizations for Cordelia
+
+### Added
+- **Documentation**: Added GATK Spark MarkDuplicates memory fix notes [`ed05071`]
+  - Documents solution for increased memory consumption in MarkDuplicatesSpark (issue #8307)
+  - Includes working command example with spark driver and executor memory configuration
+  - Resolves out-of-memory errors in GATK Spark workflows
+
+- **Configuration Files**: New cluster-specific configuration structure
+  - Created `conf/tempo-wgs-juno.conf` with comprehensive WGS-specific settings for Juno cluster
+  - Added structured sections for read alignment, somatic pipeline, germline pipeline, QC, and cohort aggregation
+  - Implemented 50+ process-specific configurations with optimized resource allocation
+
+### Changed
+- **Configuration Standardization**: Standardized cluster configuration naming [`9ad02e4`]
+  - Renamed `conf/neo.config` to `conf/juno.config` to match cluster naming conventions
+  - Updated `bin/runTempoWESCohort.sh` and `bin/runTempoWGSBam.sh` to use dynamic PIPELINE_CONFIG variable
+  - Reorganized tempo config files with cluster-specific naming:
+    - `tempo-wes.config` → `tempo-wes-iris.conf.NEEDTOFIX`
+    - `tempo-wgs.config` → `tempo-wgs-iris.conf`
+
+- **Resource Allocation Optimization**: Comprehensive resource allocation improvements
+  - **WES Configuration** [`dd0959b`, `6a19b44`]:
+    - Increased SomaticCombineChannel memory allocation (4GB base, 8GB on retry)
+    - Implemented exponential CPU scaling for RunMutect2: `2 * task.attempt * task.attempt`
+    - Fixed SomaticAnnotateMaf CPU allocation to match VEP forks setting (8+4*attempt CPUs)
+    - Adjusted memory allocations to fixed values for better resource predictability
+
+  - **WGS Configuration** [`2ab641a`, `5b1fd20`, `69a028f`, `3233b66`]:
+    - Reset WGS configuration with TEMPO defaults optimized for Juno cluster
+    - Increased minimum CPU allocation from 1 to 2 cores for 30+ processes
+    - Synchronized optimizations between WES and WGS configurations
+    - Implemented CPU scaling strategy: scales CPUs instead of memory on retries
+    - Applied new allocation strategy to 20+ processes across somatic and germline pipelines
+
+- **Resource Strategy Philosophy**: New approach to resource allocation [`3233b66`]
+  - **Old Strategy**: Fixed CPUs + scaling memory (`nc`, `nm.GB * task.attempt`)
+  - **New Strategy**: Scaling CPUs + fixed memory (`nc * task.attempt`, `nm.GB`)
+  - Provides "CPU cushion" for retries while maintaining consistent memory usage
+  - Leverages Juno's per-core memory allocation model effectively
+
+### Fixed
+- **Memory Management**: Resolved resource contention issues
+  - Fixed RunMutect2 memory allocation to provide cushion for GATK's hardcoded `-Xmx8g` setting
+  - Addressed performance issues when running multiple concurrent Mutect2 jobs
+  - Optimized resource allocation for high-concurrency pipeline execution
+
+- **Configuration Consistency**: Ensured consistent resource allocation
+  - Synchronized resource settings between WES and WGS pipelines
+  - Applied systematic optimizations across both exome and genome analysis workflows
+  - Maintained consistency in CPU scaling and memory management strategies
+
+### Technical Details
+- **Branch Integration**: Successfully merged `optimize/post-mapping` into Cordelia branch [`19b4652`]
+- **Files Modified**: 8 files with 402 insertions and 13 deletions
+- **Configuration Strategy**: Implemented systematic approach to resource optimization
+- **Performance Impact**: Improved pipeline throughput and reduced job startup overhead
+- **Resource Efficiency**: Better utilization of Juno cluster capabilities while preventing resource contention
+
+### Commit Summary
+- **Total Commits**: 10 commits since v3.0.0
+- **Major Features**: Resource optimization, configuration standardization, documentation enhancements
+- **Configuration Updates**: Comprehensive resource allocation improvements for both WES and WGS
+- **Performance Improvements**: Exponential CPU scaling, memory optimization, systematic resource management
+
+---
+
+## v3-pre [2025-09-26] - Cordelia Pre-Release 1
 
 ### Added
 - **Tempo Submodule Update**: Updated tempo submodule to cordelia-01 tag [`17609d6`]
