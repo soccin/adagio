@@ -11,7 +11,6 @@ Cordelia: current tempo submodule at `cordelia-01`.
 ### Tempo advancements
 
 ### General Improvements
-
 ## Docs
 
 Online docs at DEVELOP: (https://deploy-preview-983--cmotempo.netlify.app) or 
