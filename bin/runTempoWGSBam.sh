@@ -20,22 +20,23 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
+
+    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
+    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
+    exit 1
+
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
-    TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
+
 
 elif [ "$CLUSTER" == "JUNO" ]; then
 
-    echo -e "\nNOT IMPLEMENTED\n"
-    echo -e "  Need to fix config stuff for juno on this branch"
-    echo -e "  This branch does not have a local config (-c)\n"
-    exit 1
-
     CONFIG=juno
+    export NXF_OPTS='-Xms1g -Xmx4g'
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
@@ -54,9 +55,12 @@ fi
 # Put any over-rides in config files in adagio/conf
 #
 TEMPO_PROFILE=juno
-PIPELINE_CONFIG=tempo-wgs-${CONFIG}
 
+PIPELINE_CONFIG=tempo-wgs-${CONFIG}
 ASSAY_TYPE=genome
+
+TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
+
 
 set -ue
 
