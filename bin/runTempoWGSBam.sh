@@ -54,8 +54,8 @@ fi
 # Put any over-rides in config files in adagio/conf
 #
 TEMPO_PROFILE=juno
+PIPELINE_CONFIG=tempo-wgs-${CONFIG}
 
-PIPELINE_CONFIG=tempo-wgs
 ASSAY_TYPE=genome
 
 set -ue
