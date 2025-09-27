@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.1.0 [2025-09-26] - Resource Optimization Update
+## v3-pre2 [2025-09-26] - Resource Optimizations for Cordelia
 
 ### Added
 - **Documentation**: Added GATK Spark MarkDuplicates memory fix notes [`ed05071`]
@@ -67,7 +67,7 @@
 
 ---
 
-## v3.0.0 [2025-09-26] - Cordelia Release
+## v3-pre [2025-09-26] - Cordelia Pre-Release 1
 
 ### Added
 - **Tempo Submodule Update**: Updated tempo submodule to cordelia-01 tag [`17609d6`]
