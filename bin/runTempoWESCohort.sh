@@ -108,7 +108,7 @@ esac
 #   --workflows="snv,sv,qc,facets,msisensor,mutsig"
 #
 
-WORKFLOWS=snv,qc,facets,msisensor,mutsig
+WORKFLOWS=snv,qc,facets
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
