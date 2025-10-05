@@ -20,11 +20,6 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
-
-    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
-    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
-    exit 1
-
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
@@ -108,7 +103,7 @@ esac
 #   --workflows="snv,sv,qc,facets,msisensor,mutsig"
 #
 
-WORKFLOWS=snv,sv,qc,facets,msisensor,mutsig
+WORKFLOWS=snv,sv,qc,facets,mutsig
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
