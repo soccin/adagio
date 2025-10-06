@@ -20,10 +20,7 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
-
-    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
-    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
-    exit 1
+    TEMPO_PROFILE=iris
 
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
@@ -36,6 +33,8 @@ if [ "$CLUSTER" == "IRIS" ]; then
 elif [ "$CLUSTER" == "JUNO" ]; then
 
     CONFIG=juno
+    TEMPO_PROFILE=juno
+
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
@@ -54,7 +53,6 @@ fi
 # Use default CMO/MSKCC juno.config
 # Put any over-rides in config files in adagio/conf
 #
-TEMPO_PROFILE=juno
 
 PIPELINE_CONFIG=tempo-wes-${CONFIG}
 ASSAY_TYPE=exome
