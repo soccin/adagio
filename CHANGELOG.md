@@ -1,5 +1,56 @@
 # Changelog
 
+## v3-pre3 [2025-10-06] - IRIS Cluster Support and WGS Optimizations
+
+### Added
+- **IRIS Cluster Support**: Complete IRIS cluster configuration and pipeline enablement
+  - Added `conf/tempo-wes-iris.config` with optimized WES configuration for IRIS cluster [`6c0079a`]
+  - Added `conf/tempo-wgs-iris.config` with comprehensive WGS configuration for IRIS cluster [`b54d8c2`]
+  - Added `publish_dir_mode` parameter to IRIS config for nf-core compatibility [`d7cf368`]
+  - Added IRIS profile configuration to tempo submodule [`c9faee7`]
+
+### Changed
+- **Cluster Configuration Management**: Enhanced cluster-specific configuration handling
+  - Fixed TEMPO_PROFILE assignment to correctly use 'iris' for IRIS and 'juno' for JUNO clusters [`20f4c98`]
+  - Renamed config files from `.conf` to `.config` extension for Nextflow compliance [`b54d8c2`]
+  - Removed placeholder `tempo-wes-iris.conf.NEEDTOFIX` and activated final configuration [`6c0079a`]
+
+- **Pipeline Enablement**: Enabled WES and WGS pipelines on IRIS cluster
+  - Removed blocking error message preventing WES cohort processing on IRIS [`38f9af7`]
+  - Removed blocking error message preventing WGS BAM processing on IRIS [`a358be6`]
+  - Memory configuration issues have been resolved for IRIS cluster operation
+
+- **Workflow Configuration**: Streamlined default workflows
+  - Removed structural variant (sv) and mutsig workflows from default WES configuration [`a0d0026`]
+  - Removed msisensor from default WGS workflows to align with WES configuration [`a358be6`]
+  - Default workflows now focus on snv, qc, and facets analyses
+
+- **Script Improvements**: Enhanced post-processing and file handling
+  - Simplified pipeline info file collection using direct glob patterns instead of find commands [`384c0b8`]
+  - Improved code maintainability with cleaner wildcard-based file copying
+
+### Performance Optimizations
+- **WGS Resource Allocation**: Optimized resource allocation for variant callers on JUNO cluster [`6c9e0be`]
+  - **SomaticDellyCall**: Increased memory from 10GB to 80GB
+  - **RunSvABA**: Increased CPUs to 32+ (observed 1561% parallelization), reduced memory from 4GB to 3GB
+  - **SomaticRunManta**: Adjusted CPUs to 4+12*attempt, increased memory from 2GB to 16GB
+  - **GermlineDellyCall**: Aligned with somatic settings (80GB memory)
+  - **GermlineRunManta**: Aligned with somatic settings (16GB memory)
+
+### Technical Details
+- **Branch Integration**: Merged multiple development branches into feat/wes [`4ec875c`]
+- **Files Modified**: 9 files with 221 insertions and 110 deletions
+- **Configuration Strategy**: Established cluster-specific configuration files for both WES and WGS on IRIS
+- **Naming Conventions**: Standardized Nextflow config file extensions to `.config`
+
+### Commit Summary
+- **Total Commits**: 11 commits since v3-pre2
+- **Major Features**: IRIS cluster support, WGS performance optimization, workflow streamlining
+- **Configuration Updates**: Cluster-specific configs, resource allocation improvements
+- **Bug Fixes**: TEMPO_PROFILE assignment, IRIS pipeline enablement
+
+---
+
 ## v3-pre2 [2025-09-26] - Resource Optimizations for Cordelia
 
 ### Added

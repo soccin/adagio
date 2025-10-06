@@ -1,6 +1,12 @@
 # CHANGELOG - Tempo Submodule
 
-This changelog documents all changes to the tempo submodule from commit `00eb724` to `957a2949` (17 commits total).
+This changelog documents all changes to the tempo submodule from commit `00eb724` to `8e6312e0` (19 commits total).
+
+## Changes: 957a2949..8e6312e0 (2025-10-06)
+
+### IRIS Profile Support
+- **8e6312e0**: docs(adagio): update README with iris profile and date (Nicholas D. Socci, 2025-10-06)
+- **c7a3a026**: feat(iris): add iris profile configuration (Nicholas D. Socci, 2025-10-06)
 
 ## Changes: 00eb724..957a2949 (2025-09-25)
 
