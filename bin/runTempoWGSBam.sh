@@ -20,6 +20,8 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
+    TEMPO_PROFILE=iris
+
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
@@ -31,6 +33,8 @@ if [ "$CLUSTER" == "IRIS" ]; then
 elif [ "$CLUSTER" == "JUNO" ]; then
 
     CONFIG=juno
+    TEMPO_PROFILE=juno
+
     export NXF_OPTS='-Xms1g -Xmx4g'
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
@@ -49,7 +53,6 @@ fi
 # Use default CMO/MSKCC juno.config
 # Put any over-rides in config files in adagio/conf
 #
-TEMPO_PROFILE=juno
 
 PIPELINE_CONFIG=tempo-wgs-${CONFIG}
 ASSAY_TYPE=genome
