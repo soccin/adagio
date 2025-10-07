@@ -6,10 +6,8 @@ if [ "$#" != "1" ]; then
 fi
 
 ODIR=$1
-mkdir -p $ODIR/tempo-germline
-mkdir -p $ODIR/post/germlime
 
 rsync -avP  out/*/germline $ODIR/tempo-germline
-cp post/reports/* $ODIR/post/germlime
+rsync -avP germline/* $ODIR/tempo-germline/post
 
 
