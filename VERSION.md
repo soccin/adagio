@@ -2,8 +2,7 @@
 
 ## adagio
 - **Cordelia**
-- **Version:** v3-pre3
-- **Commit:** 4ec875c
+- **Version:** v3-rc1
 
 ## Submodules
 

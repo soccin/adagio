@@ -1,5 +1,56 @@
 # Changelog
 
+## v3-rc1 [2025-10-07] - Bug Fixes and Configuration Enhancements
+
+### Added
+- **Process-Specific Resource Configurations**: Added detailed resource allocation configs for IRIS cluster [`18a6468`, `61b5926`]
+  - Added comprehensive CPU and memory configurations for WES pipeline processes in `conf/tempo-wes-iris.config`
+  - Added detailed resource allocations for WGS pipeline processes in `conf/tempo-wgs-iris.config`
+  - Includes configurations for alignment, GATK4SPARK processes (MarkDuplicates, SetNmMdAndUqTags, BaseRecalibrator, ApplyBQSR), BQSR operations, and BAM merging/indexing
+  - Resources sized with dynamic scaling using task.attempt for retry scenarios
+  - Time allocations use maxWallTime/minWallTime based on data size (>100GB threshold)
+
+### Changed
+- **Germline Variant Deduplication**: Enhanced germline report to handle shared normals [`98080f1`]
+  - Added distinct() call to remove duplicate variant entries when same normal sample is used across multiple tumor samples
+  - Deduplication based on variant position, alleles, and sample barcode while preserving all variant metadata
+  - Updated report version from v2 to v3
+  - Cleaned up trailing whitespace in `scripts/reportGerm01.R`
+
+- **Germline Post-Processing**: Improved pipeline info collection and assay handling [`c2bca0d`]
+  - Updated to copy all pipeline info files (html, txt, pdf) from `out/*/pipeline_info/` directories
+  - Added ASSAY_TYPE detection from cmd.sh.log
+  - Made SV report generation conditional - only runs reportGermSV01.R for genome assays
+  - Removed premature exit statement to ensure version.txt logging completes
+
+- **Delivery Workflow**: Simplified germline delivery structure [`907e456`]
+  - Removed unnecessary mkdir commands for delivery directories
+  - Switched from cp to rsync for post-processing reports
+  - Consolidated output into tempo-germline/post directory
+  - Simplified delivery workflow by removing nested germline subdirectory
+
+### Performance Optimizations
+- **Alignment Resource Tuning**: Reduced AlignReads CPU allocation from 16 to 8 base CPUs in WES IRIS config [`156c4c8`]
+  - Maintains scaling on retry via task.attempt
+  - Optimizes resource usage based on actual process requirements
+
+### Technical Details
+- **Branch Integration**: Merged multiple development branches [`24800d6`, `6047f3d`, `c6dcb1d`]
+  - Merged fix/germline-report-dups branch
+  - Merged fix/wgs-iris-config branch
+  - Merged fix/iris-markDups branch
+- **Files Modified**: 5 files with 208 insertions and 123 deletions
+- **Configuration Strategy**: Process-specific resource configs for IRIS cluster optimization
+- **Report Improvements**: Enhanced germline variant reporting with deduplication logic
+
+### Commit Summary
+- **Total Commits**: 9 commits since v3-pre3 (6 non-merge commits)
+- **Major Features**: Process-specific IRIS configurations, germline deduplication, workflow simplification
+- **Configuration Updates**: WES and WGS IRIS resource allocations, alignment CPU tuning
+- **Bug Fixes**: Germline variant duplicates, pipeline info collection, delivery structure
+
+---
+
 ## v3-pre3 [2025-10-06] - IRIS Cluster Support and WGS Optimizations
 
 ### Added
