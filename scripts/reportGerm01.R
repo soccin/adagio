@@ -3,7 +3,11 @@ suppressPackageStartupMessages({
   require(openxlsx)
 })
 
+
 maffile=fs::dir_ls("out",recur=3,regex="mut_germline.maf")
+
+
+
 qcfile=fs::dir_ls("out",recur=3,regex="alignment_qc.txt")
 cmdlog=fs::dir_ls("out",recur=2,regex="cmd.sh.log")
 
@@ -33,7 +37,16 @@ assayType=readLines(cmdlog) %>% grep("ASSAY_TYPE:",.,value=T) %>% strsplit(" ") 
 qcTbl=read_tsv(qcfile) %>%
     filter(Sample %in% normals)
 
+#
+# If the same normal is used more than once you will get replicated events in the
+# combined mut_germline.maf. Unique them.
+#
 maf=read_tsv(maffile) %>%
+    distinct(
+      Hugo_Symbol,Chromosome,Start_Position,End_Position,
+      Reference_Allele,Tumor_Seq_Allele2,Matched_Norm_Sample_Barcode,
+      .keep_all=T
+      ) %>%
     mutate(n_var_freq=n_alt_count/n_depth)
 
 tbl1=maf %>%
@@ -105,7 +118,7 @@ if(len(projNo)==0) {
     projNo=""
 }
 
-rFile=cc(projNo,"ReportGermline","v2.xlsx")
+rFile=cc(projNo,"ReportGermline","v3.xlsx")
 rDir="germline/reports"
 fs::dir_create(rDir)
 
