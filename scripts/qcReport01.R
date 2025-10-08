@@ -116,7 +116,15 @@ plot_hsm<-function(dhi) {
 
 phsm=map(dh,plot_hsm)
 
-pdf(file=cc("Proj",projectNo,"qcRpt01.pdf"),width=11,height=8.5)
+rDir="post/reports"
+fs::dir_create(rDir)
+
+projNo <- basename(fs::dir_ls("out"))
+if(!grepl("^Proj_",projNo)) projNo=cc("Proj",projNo)
+
+rFile=cc(projNo,"qcRpt01.pdf")
+
+pdf(file=file.path(rDir,rFile),width=11,height=8.5)
 print(pg1)
 print(pg2)
 print(phsm)
@@ -146,5 +154,7 @@ dg %>%
     filter(!facets_qc) %>%
     pull(tumor_sample_id) %>%
     write("facetsFailedSamples")
-openxlsx::write.xlsx(dg,cc("Proj",projectNo,"facetsRpt.xlsx"))
+
+rFile=cc(projNo,"facetsQCRpt_v1.xlsx")
+openxlsx::write.xlsx(dg,file.path(rDir,rFile))
 
