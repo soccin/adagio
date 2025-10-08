@@ -13,6 +13,7 @@ cp out/*/pipeline_info/*pdf post/pipeline_info
 ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
 
 Rscript $RDIR/scripts/report01.R $ASSAY
+Rscript $RDIR/scripts/qcReport01.R
 
 if [ "$ASSAY" == "genome" ]; then
   Rscript $RDIR/scripts/reportSV01.R
@@ -38,5 +39,3 @@ GURL: $GURL
 GTAG: $GTAG
 ASSAY: $ASSAY
 END_VERSION
-
-

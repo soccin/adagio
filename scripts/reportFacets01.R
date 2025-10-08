@@ -1,3 +1,4 @@
+
 # FACETS Report Generation Script
 # ==============================
 # This script processes FACETS copy number analysis results and generates
@@ -33,6 +34,9 @@ sample_dir <- file.path("out", project_no, "somatic")
 
 reports_dir <- "post/reports"
 fs::dir_create(reports_dir)
+
+facets_dir <- "post/plots/facets"
+fs::dir_create(facets_dir)
 
 script_dir <- get_script_dir()
 
@@ -97,7 +101,7 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
     filter(!(ID %in% failed_samples))
 
   output_filename <- str_c("Proj_", project_no, "_Filtered_", output_suffix)
-  write_tsv(segmentation_data, file.path(reports_dir, output_filename))
+  write_tsv(segmentation_data, file.path(facets_dir, output_filename))
 
   message("Wrote ", nrow(segmentation_data), " segments to ", output_filename)
   return(segmentation_data)
