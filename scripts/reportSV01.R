@@ -1,36 +1,85 @@
-PROOT=get_script_dir()
-source(file.path(PROOT,"rsrc/read_tempo_sv.R"))
-argv=commandArgs(trailing=T)
+# Setup and dependencies
+PROOT <- get_script_dir()
+source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
+argv <- commandArgs(trailing = TRUE)
 require(tidyverse)
 
-fof=fs::dir_ls("out",recur=T,regex="\\.final\\.clustered\\.bedpe$")
-dd=map(fof,read_tempo_sv_somatic,.progress=T) %>% bind_rows
+# Read all SV BEDPE files and combine
+sv_files <- fs::dir_ls("out", recur = TRUE, regex = "\\.final\\.clustered\\.bedpe$")
+sv_data <- map(sv_files, read_tempo_sv_somatic, .progress = TRUE) |>
+  bind_rows()
 
-dd=dd %>% select(-INFO_A,-INFO_B,-FORMAT,-TUMOR,-NORMAL)
+# Remove unnecessary columns
+sv_data <- sv_data |>
+  select(-INFO_A, -INFO_B, -FORMAT, -TUMOR, -NORMAL)
 
-dd=dd %>% select(1:CC_Chr_Band,matches("_(AD|PE|SR|PR|PS)$"),matches("^CC|^DGv"),matches("CONSENSUS"),everything()) %>% type_convert
+# Reorder columns: core info, then AD/PE/SR/PR/PS, then annotations
+sv_data <- sv_data |>
+  select(
+    1:CC_Chr_Band,
+    matches("_(AD|PE|SR|PR|PS)$"),
+    matches("^CC|^DGv"),
+    matches("CONSENSUS"),
+    everything()
+  ) |>
+  type_convert()
 
-dd=dd %>%
-    mutate(t_delly_SpanVAF=t_delly_DV/(t_delly_DV+t_delly_DR)) %>%
-    mutate(t_delly_JuncVAF=t_delly_RV/(t_delly_RV+t_delly_RR)) %>%
-    mutate(n_delly_SpanVAF=n_delly_DV/(n_delly_DV+n_delly_DR)) %>%
-    mutate(n_delly_JuncVAF=n_delly_RV/(n_delly_RV+n_delly_RR)) %>%
-    separate(t_manta_SR,c("t_manta_SRR","t_manta_SRV"),remove=F) %>%
-    mutate(t_manta_JuncVAF=as.numeric(t_manta_SRV)/(as.numeric(t_manta_SRV)+as.numeric(t_manta_SRR))) %>%
-    mutate(t_svaba_VAF=t_svaba_AD/t_svaba_DP) %>%
-    mutate(n_svaba_VAF=n_svaba_AD/n_svaba_DP)
+# Calculate VAF for each caller
+sv_data <- sv_data |>
+  mutate(
+    # Delly VAFs
+    t_delly_SpanVAF = t_delly_DV / (t_delly_DV + t_delly_DR),
+    t_delly_JuncVAF = t_delly_RV / (t_delly_RV + t_delly_RR),
+    n_delly_SpanVAF = n_delly_DV / (n_delly_DV + n_delly_DR),
+    n_delly_JuncVAF = n_delly_RV / (n_delly_RV + n_delly_RR),
+    # Svaba VAFs
+    t_svaba_VAF = t_svaba_AD / t_svaba_DP,
+    n_svaba_VAF = n_svaba_AD / n_svaba_DP
+  ) |>
+  # Manta split reads need parsing
+  separate(t_manta_SR, c("t_manta_SRR", "t_manta_SRV"), remove = FALSE) |>
+  mutate(
+    t_manta_JuncVAF = as.numeric(t_manta_SRV) /
+      (as.numeric(t_manta_SRV) + as.numeric(t_manta_SRR))
+  )
 
-df=dd %>% select(1:CC_Chr_Band,matches("VAF"),matches("_(AD|PE|SR|PR|PS|DR|DV|RR|RV)$"),matches("^CC|^DGv"),matches("CONSENSUS"),NORMAL_ID,UUID)
-colDesc=read_csv(file.path(PROOT,"rsrc/svColTypeDescriptions.csv"))
+# Select final columns for output
+sv_events <- sv_data |>
+  select(
+    1:CC_Chr_Band,
+    matches("VAF"),
+    matches("_(AD|PE|SR|PR|PS|DR|DV|RR|RV)$"),
+    matches("^CC|^DGv"),
+    matches("CONSENSUS"),
+    NORMAL_ID,
+    UUID
+  )
 
-projNo <- basename(fs::dir_ls("out"))
+# Load column descriptions
+col_desc <- read_csv(file.path(PROOT, "rsrc/svColTypeDescriptions.csv"))
 
-rFile=cc(projNo,"SV_Report01","v4.xlsx")
-rDir="post/reports"
-fs::dir_create(rDir)
+# Create sample summary (count SVs per sample)
+sample_data <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
+  left_join(count(sv_events, TUMOR_ID), by = "TUMOR_ID") |>
+  mutate(n = ifelse(is.na(n), 0, n)) |>
+  rename(NumSVs=n)
 
+# Determine project number and output file name
+proj_no <- basename(fs::dir_ls("out"))
+if (!grepl("^Proj_", proj_no)) {
+  proj_no <- cc("Proj", proj_no)
+}
+report_file <- cc(proj_no, "SV_Report01", "v4.xlsx")
+report_dir <- "post/reports"
+fs::dir_create(report_dir)
+
+# Write Excel report
 write_xlsx(
-    list(SVEvents=df,ColDescriptions=colDesc),
-    file.path(rDir,rFile)
+  list(
+    SampleData = sample_data,
+    SVEvents = sv_events,
+    ColDescriptions = col_desc
+  ),
+  file.path(report_dir, report_file)
 )
 
