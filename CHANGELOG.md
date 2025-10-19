@@ -1,5 +1,73 @@
 # Changelog
 
+## v3-rc2 [2025-10-19] - Report Enhancements and WGS Support
+
+### Added
+- **TERT Mutation Reporting**: New dedicated TERT gene mutation report [`2015936`]
+  - Added `scripts/reportTERT.R` for extracting TERT gene mutations from somatic MAF files
+  - TERT mutations are important cancer biomarkers for telomerase reactivation
+  - Filters for TERT gene mutations and selects relevant annotation columns
+  - Outputs to Excel file: `Proj_<projNo>_TERT_Muts_v1.xlsx`
+
+- **Non-Synonymous Mutation Counts**: Enhanced sample QC metrics [`9041c57`]
+  - Added non-synonymous mutation count column to sample data output in `scripts/report01.R`
+  - Provides important QC metric showing total non-synonymous mutations per sample
+  - Integrated with existing sample data reporting
+
+- **Verbose Post-Processing Logging**: Improved pipeline visibility [`0cee940`]
+  - Added echo statements to `bin/doPost.sh` displaying which R scripts are executing
+  - Improves visibility into pipeline execution flow
+  - Easier debugging by clearly showing each processing step
+
+### Changed
+- **WGS QC Report Support**: Enhanced QC reporting for WGS data [`b3f8d6d`]
+  - Updated `scripts/qcReport01.R` to handle WGS data without hs_metrics files
+  - Added conditional check for hs_metrics files before processing hybrid selection metrics
+  - Refactored getSDIR() to use get_script_dir() helper from .Rprofile
+  - Sets phsm to NULL when no hs_metrics files found
+
+- **Project Name Handling**: Improved filename consistency [`f739e7f`]
+  - Added logic in `scripts/report01.R` to prepend "Proj_" to project numbers lacking prefix
+  - Ensures consistent naming in output report filenames
+  - Handles both Proj_XXXXX and XXXXX directory name formats
+
+- **SV Report Refactoring**: Major code clarity improvements [`7994397`]
+  - Refactored `scripts/reportSV01.R` with clarity-first approach
+  - Descriptive variable names: sv_files, sv_data, sv_events (vs fof, dd, df)
+  - Added clear section comments explaining each processing step
+  - Switched to native pipe operator |> for R consistency
+  - Grouped VAF calculations by caller (Delly, Svaba, Manta) with inline comments
+  - Multi-line formatting for complex operations
+  - Added sample count summary with renamed NumSVs column
+  - Added SampleData sheet to Excel output
+  - Functionality preserved while significantly improving readability
+
+### Fixed
+- **FACETS Purity Handling**: Preserved purity values for analysis [`9041c57`]
+  - Commented out purity NA assignment for failed FACETS samples
+  - Preserves original purity values for downstream analysis
+
+### Technical Details
+- **Branch Integration**: Merged multiple feature branches [`3ea2205`, `50e395a`]
+  - Merged fix/post-wgs branch
+  - Merged fix/filenames-report00 branch
+- **Files Modified**: 5 files with 189 insertions and 52 deletions
+  - bin/doPost.sh (13 insertions)
+  - scripts/qcReport01.R (26 insertions, 26 deletions)
+  - scripts/report01.R (7 insertions, 1 deletion)
+  - scripts/reportSV01.R (73 insertions, 24 deletions)
+  - scripts/reportTERT.R (44 insertions, new file)
+- **Report Improvements**: Enhanced mutation reporting, WGS support, code clarity
+- **Code Quality**: Tidyverse-style refactoring with improved documentation
+
+### Commit Summary
+- **Total Commits**: 8 commits since v3-rc1 (6 non-merge commits)
+- **Major Features**: TERT mutation reporting, WGS QC support, code refactoring
+- **Report Updates**: Non-synonymous mutation counts, SV report clarity, project naming
+- **Bug Fixes**: FACETS purity handling, WGS hs_metrics compatibility
+
+---
+
 ## v3-rc1 [2025-10-07] - Bug Fixes and Configuration Enhancements
 
 ### Added

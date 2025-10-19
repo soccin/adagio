@@ -2,7 +2,7 @@
 
 ## adagio
 - **Cordelia**
-- **Version:** v3-rc1
+- **Version:** v3-rc2
 
 ## Submodules
 
