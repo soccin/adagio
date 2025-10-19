@@ -7,17 +7,7 @@ sampleDir=file.path("out",projectNo,"somatic")
 
 x11 = function (...) grDevices::x11(...,type='cairo')
 
-getSDIR <- function(){
-    args=commandArgs(trailing=F)
-    TAG="--file="
-    path_idx=grep(TAG,args)
-    SDIR=fs::path_real(dirname(substr(args[path_idx],nchar(TAG)+1,nchar(args[path_idx]))))
-    if(length(SDIR)==0) {
-        return(fs::path_real(Sys.getenv("SDIR")))
-    } else {
-        return(SDIR)
-    }
-}
+SDIR=get_script_dir()
 
 dir_ls<-function(dir,re) {
     fs::dir_ls(dir,recur=T,regex=re)
@@ -98,23 +88,33 @@ Ng=round(nrow(typeMap)/12)
 Nb=round(nrow(typeMap)/Ng)
 typeMap=typeMap %>% mutate(R=floor((row_number()-1)/Nb))
 
-hsm=fs::dir_ls("out",recur=T,regex="hs_metrics.txt") %>%
-    map(read_tsv,comment="#",n_max=1,progress=F,show_col_types=F) %>%
-    bind_rows(.id="PATH") %>%
-    mutate(SAMPLE=basename(PATH)%>%gsub(".hs_metrics.*","",.)) %>%
-    select(-PATH) %>%
-    select(SAMPLE,everything()) %>%
-    select(SAMPLE,MEAN_TARGET_COVERAGE,ZERO_CVG_TARGETS_PCT,PCT_TARGET_BASES_20X,PCT_TARGET_BASES_100X) %>%
-    left_join(typeMap)
+hsmFiles=fs::dir_ls("out",recur=T,regex="hs_metrics.txt")
+#
+# WGS does not have hsmfiles
+#
+if(len(hsmFiles)>0) {
 
-caution=tibble(METRIC=colnames(hsm) %>% grep("_",.,value=T),CAUTION=c(100,0.02,.95,.50),FAIL=c(25,0.05,.80,.10))
-dh=hsm %>% gather(METRIC,VALUE,-SAMPLE,-TYPE) %>% left_join(typeMap) %>% group_split(.$R)
+  hsm=fs::dir_ls("out",recur=T,regex="hs_metrics.txt") %>%
+      map(read_tsv,comment="#",n_max=1,progress=F,show_col_types=F) %>%
+      bind_rows(.id="PATH") %>%
+      mutate(SAMPLE=basename(PATH)%>%gsub(".hs_metrics.*","",.)) %>%
+      select(-PATH) %>%
+      select(SAMPLE,everything()) %>%
+      select(SAMPLE,MEAN_TARGET_COVERAGE,ZERO_CVG_TARGETS_PCT,PCT_TARGET_BASES_20X,PCT_TARGET_BASES_100X) %>%
+      left_join(typeMap)
 
-plot_hsm<-function(dhi) {
-    ggplot(dhi,aes(SAMPLE,VALUE,fill=TYPE)) + theme_light(10) + geom_col(alpha=.85) + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm")) + guides() + geom_hline(aes(yintercept=CAUTION),data=caution,color="gold4",linewidth=1) + geom_hline(aes(yintercept=FAIL),data=caution,color="darkred",linewidth=1.4) + scale_fill_jama()
+  caution=tibble(METRIC=colnames(hsm) %>% grep("_",.,value=T),CAUTION=c(100,0.02,.95,.50),FAIL=c(25,0.05,.80,.10))
+  dh=hsm %>% gather(METRIC,VALUE,-SAMPLE,-TYPE) %>% left_join(typeMap) %>% group_split(.$R)
+
+  plot_hsm<-function(dhi) {
+      ggplot(dhi,aes(SAMPLE,VALUE,fill=TYPE)) + theme_light(10) + geom_col(alpha=.85) + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm")) + guides() + geom_hline(aes(yintercept=CAUTION),data=caution,color="gold4",linewidth=1) + geom_hline(aes(yintercept=FAIL),data=caution,color="darkred",linewidth=1.4) + scale_fill_jama()
+  }
+
+  phsm=map(dh,plot_hsm)
+
+} else {
+  phsm=NULL
 }
-
-phsm=map(dh,plot_hsm)
 
 rDir="post/reports"
 fs::dir_create(rDir)
@@ -130,7 +130,7 @@ print(pg2)
 print(phsm)
 dev.off()
 
-facetsQCColsFile=file.path(getSDIR(),"rsrc","facetsQCCols")
+facetsQCColsFile=file.path(SDIR,"rsrc","facetsQCCols")
 facetsQCCols=scan(facetsQCColsFile,"")
 facetsQCFiles=dir_ls(sampleDir,"\\.facets_qc\\.txt")
 df=map(facetsQCFiles,read_tsv,col_types=cols(.default="c"),progress=F,.progress=T) %>%
