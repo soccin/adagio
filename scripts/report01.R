@@ -165,6 +165,9 @@ setColWidths(wb,sheet=3,cols=1,widths=12)
 setColWidths(wb,sheet=3,cols=5:6,widths=14)
 
 projNo <- basename(fs::dir_ls("out"))
+if(!grepl("^Proj_",projNo)) {
+  projNo=cc("Proj",projNo)
+}
 rFile=cc(projNo,"SNV_Report01","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
