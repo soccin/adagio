@@ -12,16 +12,29 @@ cp out/*/pipeline_info/*pdf post/pipeline_info
 
 ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
 
+echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+echo Rscript $RDIR/scripts/report01.R $ASSAY
+echo
 Rscript $RDIR/scripts/report01.R $ASSAY
+
+echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+echo Rscript $RDIR/scripts/qcReport01.R
+echo
 Rscript $RDIR/scripts/qcReport01.R
 
 if [ "$ASSAY" == "genome" ]; then
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  echo Rscript $RDIR/scripts/reportSV01.R
+  echo
   Rscript $RDIR/scripts/reportSV01.R
 fi
 
 mkdir -p post/plots/facets
 cp $(find out -name '*purity.CNCF.png') post/plots/facets
 
+echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+echo Rscript $RDIR/scripts/reportFacets01.R
+echo
 Rscript $RDIR/scripts/reportFacets01.R
 
 CMD_LOG=post/pipeline_info/version.txt
