@@ -25,7 +25,7 @@ load_trace_file_list <- function(trace_file_list_path) {
 #' trace_files <- load_trace_file_list("trace_list.txt")
 #' combined_data <- process_multiple_traces(trace_files)
 process_multiple_traces <- function(trace_files) {
-  map_dfr(trace_files, read_nf_trace) %>%
+  map_dfr(sort(trace_files), read_nf_trace) %>%
     extract_samples_from_tags()
 }
 
