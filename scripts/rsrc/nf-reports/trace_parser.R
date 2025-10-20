@@ -17,13 +17,18 @@ read_nf_trace <- function(trace_file) {
     stop(paste("Trace file not found:", trace_file))
   }
   
+  statusLevels=c("COMPLETED","CACHED","FAILED","ABORTED")
+
   read_tsv(trace_file, show_col_types = FALSE, progress = FALSE) %>%
     # Clean percentage columns by removing % symbols
     mutate(across(matches("%"), ~ gsub("%", "", .))) %>%
-    mutate(across(matches("%"), as.numeric)) %>%
+    mutate(across(matches("%"), \(x) suppressWarnings(as.numeric(x)))) %>%
     # Remove % from column names
     rename_with(~ gsub("%", "", .), everything()) %>%
+    # Turn status into FACTOR to sort properly
+    mutate(status=factor(status,levels=statusLevels)) %>%
     # Calculate duration fields
+    mutate(complete=ymd_hms(complete,quiet=T)) %>%
     mutate(
       duration1 = as.numeric(complete - submit),
       realtime1 = as.numeric(complete - start),
