@@ -1,4 +1,9 @@
 #!/bin/bash
+#SBATCH -J Adagio-WGSBam
+#SBATCH -o SLM/adagioWGSBam.%j.out
+#SBATCH -c 4
+#SBATCH -t 7-00:00:00
+#SBATCH --partition cmobic_cpu,cmobic_pipeline
 
 OPWD=$PWD
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
