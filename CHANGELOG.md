@@ -1,5 +1,175 @@
 # Changelog
 
+## v3-rc2 [2025-10-19] - Report Enhancements and WGS Support
+
+### Added
+- **TERT Mutation Reporting**: New dedicated TERT gene mutation report [`2015936`]
+  - Added `scripts/reportTERT.R` for extracting TERT gene mutations from somatic MAF files
+  - TERT mutations are important cancer biomarkers for telomerase reactivation
+  - Filters for TERT gene mutations and selects relevant annotation columns
+  - Outputs to Excel file: `Proj_<projNo>_TERT_Muts_v1.xlsx`
+
+- **Non-Synonymous Mutation Counts**: Enhanced sample QC metrics [`9041c57`]
+  - Added non-synonymous mutation count column to sample data output in `scripts/report01.R`
+  - Provides important QC metric showing total non-synonymous mutations per sample
+  - Integrated with existing sample data reporting
+
+- **Verbose Post-Processing Logging**: Improved pipeline visibility [`0cee940`]
+  - Added echo statements to `bin/doPost.sh` displaying which R scripts are executing
+  - Improves visibility into pipeline execution flow
+  - Easier debugging by clearly showing each processing step
+
+### Changed
+- **WGS QC Report Support**: Enhanced QC reporting for WGS data [`b3f8d6d`]
+  - Updated `scripts/qcReport01.R` to handle WGS data without hs_metrics files
+  - Added conditional check for hs_metrics files before processing hybrid selection metrics
+  - Refactored getSDIR() to use get_script_dir() helper from .Rprofile
+  - Sets phsm to NULL when no hs_metrics files found
+
+- **Project Name Handling**: Improved filename consistency [`f739e7f`]
+  - Added logic in `scripts/report01.R` to prepend "Proj_" to project numbers lacking prefix
+  - Ensures consistent naming in output report filenames
+  - Handles both Proj_XXXXX and XXXXX directory name formats
+
+- **SV Report Refactoring**: Major code clarity improvements [`7994397`]
+  - Refactored `scripts/reportSV01.R` with clarity-first approach
+  - Descriptive variable names: sv_files, sv_data, sv_events (vs fof, dd, df)
+  - Added clear section comments explaining each processing step
+  - Switched to native pipe operator |> for R consistency
+  - Grouped VAF calculations by caller (Delly, Svaba, Manta) with inline comments
+  - Multi-line formatting for complex operations
+  - Added sample count summary with renamed NumSVs column
+  - Added SampleData sheet to Excel output
+  - Functionality preserved while significantly improving readability
+
+### Fixed
+- **FACETS Purity Handling**: Preserved purity values for analysis [`9041c57`]
+  - Commented out purity NA assignment for failed FACETS samples
+  - Preserves original purity values for downstream analysis
+
+### Technical Details
+- **Branch Integration**: Merged multiple feature branches [`3ea2205`, `50e395a`]
+  - Merged fix/post-wgs branch
+  - Merged fix/filenames-report00 branch
+- **Files Modified**: 5 files with 189 insertions and 52 deletions
+  - bin/doPost.sh (13 insertions)
+  - scripts/qcReport01.R (26 insertions, 26 deletions)
+  - scripts/report01.R (7 insertions, 1 deletion)
+  - scripts/reportSV01.R (73 insertions, 24 deletions)
+  - scripts/reportTERT.R (44 insertions, new file)
+- **Report Improvements**: Enhanced mutation reporting, WGS support, code clarity
+- **Code Quality**: Tidyverse-style refactoring with improved documentation
+
+### Commit Summary
+- **Total Commits**: 8 commits since v3-rc1 (6 non-merge commits)
+- **Major Features**: TERT mutation reporting, WGS QC support, code refactoring
+- **Report Updates**: Non-synonymous mutation counts, SV report clarity, project naming
+- **Bug Fixes**: FACETS purity handling, WGS hs_metrics compatibility
+
+---
+
+## v3-rc1 [2025-10-07] - Bug Fixes and Configuration Enhancements
+
+### Added
+- **Process-Specific Resource Configurations**: Added detailed resource allocation configs for IRIS cluster [`18a6468`, `61b5926`]
+  - Added comprehensive CPU and memory configurations for WES pipeline processes in `conf/tempo-wes-iris.config`
+  - Added detailed resource allocations for WGS pipeline processes in `conf/tempo-wgs-iris.config`
+  - Includes configurations for alignment, GATK4SPARK processes (MarkDuplicates, SetNmMdAndUqTags, BaseRecalibrator, ApplyBQSR), BQSR operations, and BAM merging/indexing
+  - Resources sized with dynamic scaling using task.attempt for retry scenarios
+  - Time allocations use maxWallTime/minWallTime based on data size (>100GB threshold)
+
+### Changed
+- **Germline Variant Deduplication**: Enhanced germline report to handle shared normals [`98080f1`]
+  - Added distinct() call to remove duplicate variant entries when same normal sample is used across multiple tumor samples
+  - Deduplication based on variant position, alleles, and sample barcode while preserving all variant metadata
+  - Updated report version from v2 to v3
+  - Cleaned up trailing whitespace in `scripts/reportGerm01.R`
+
+- **Germline Post-Processing**: Improved pipeline info collection and assay handling [`c2bca0d`]
+  - Updated to copy all pipeline info files (html, txt, pdf) from `out/*/pipeline_info/` directories
+  - Added ASSAY_TYPE detection from cmd.sh.log
+  - Made SV report generation conditional - only runs reportGermSV01.R for genome assays
+  - Removed premature exit statement to ensure version.txt logging completes
+
+- **Delivery Workflow**: Simplified germline delivery structure [`907e456`]
+  - Removed unnecessary mkdir commands for delivery directories
+  - Switched from cp to rsync for post-processing reports
+  - Consolidated output into tempo-germline/post directory
+  - Simplified delivery workflow by removing nested germline subdirectory
+
+### Performance Optimizations
+- **Alignment Resource Tuning**: Reduced AlignReads CPU allocation from 16 to 8 base CPUs in WES IRIS config [`156c4c8`]
+  - Maintains scaling on retry via task.attempt
+  - Optimizes resource usage based on actual process requirements
+
+### Technical Details
+- **Branch Integration**: Merged multiple development branches [`24800d6`, `6047f3d`, `c6dcb1d`]
+  - Merged fix/germline-report-dups branch
+  - Merged fix/wgs-iris-config branch
+  - Merged fix/iris-markDups branch
+- **Files Modified**: 5 files with 208 insertions and 123 deletions
+- **Configuration Strategy**: Process-specific resource configs for IRIS cluster optimization
+- **Report Improvements**: Enhanced germline variant reporting with deduplication logic
+
+### Commit Summary
+- **Total Commits**: 9 commits since v3-pre3 (6 non-merge commits)
+- **Major Features**: Process-specific IRIS configurations, germline deduplication, workflow simplification
+- **Configuration Updates**: WES and WGS IRIS resource allocations, alignment CPU tuning
+- **Bug Fixes**: Germline variant duplicates, pipeline info collection, delivery structure
+
+---
+
+## v3-pre3 [2025-10-06] - IRIS Cluster Support and WGS Optimizations
+
+### Added
+- **IRIS Cluster Support**: Complete IRIS cluster configuration and pipeline enablement
+  - Added `conf/tempo-wes-iris.config` with optimized WES configuration for IRIS cluster [`6c0079a`]
+  - Added `conf/tempo-wgs-iris.config` with comprehensive WGS configuration for IRIS cluster [`b54d8c2`]
+  - Added `publish_dir_mode` parameter to IRIS config for nf-core compatibility [`d7cf368`]
+  - Added IRIS profile configuration to tempo submodule [`c9faee7`]
+
+### Changed
+- **Cluster Configuration Management**: Enhanced cluster-specific configuration handling
+  - Fixed TEMPO_PROFILE assignment to correctly use 'iris' for IRIS and 'juno' for JUNO clusters [`20f4c98`]
+  - Renamed config files from `.conf` to `.config` extension for Nextflow compliance [`b54d8c2`]
+  - Removed placeholder `tempo-wes-iris.conf.NEEDTOFIX` and activated final configuration [`6c0079a`]
+
+- **Pipeline Enablement**: Enabled WES and WGS pipelines on IRIS cluster
+  - Removed blocking error message preventing WES cohort processing on IRIS [`38f9af7`]
+  - Removed blocking error message preventing WGS BAM processing on IRIS [`a358be6`]
+  - Memory configuration issues have been resolved for IRIS cluster operation
+
+- **Workflow Configuration**: Streamlined default workflows
+  - Removed structural variant (sv) and mutsig workflows from default WES configuration [`a0d0026`]
+  - Removed msisensor from default WGS workflows to align with WES configuration [`a358be6`]
+  - Default workflows now focus on snv, qc, and facets analyses
+
+- **Script Improvements**: Enhanced post-processing and file handling
+  - Simplified pipeline info file collection using direct glob patterns instead of find commands [`384c0b8`]
+  - Improved code maintainability with cleaner wildcard-based file copying
+
+### Performance Optimizations
+- **WGS Resource Allocation**: Optimized resource allocation for variant callers on JUNO cluster [`6c9e0be`]
+  - **SomaticDellyCall**: Increased memory from 10GB to 80GB
+  - **RunSvABA**: Increased CPUs to 32+ (observed 1561% parallelization), reduced memory from 4GB to 3GB
+  - **SomaticRunManta**: Adjusted CPUs to 4+12*attempt, increased memory from 2GB to 16GB
+  - **GermlineDellyCall**: Aligned with somatic settings (80GB memory)
+  - **GermlineRunManta**: Aligned with somatic settings (16GB memory)
+
+### Technical Details
+- **Branch Integration**: Merged multiple development branches into feat/wes [`4ec875c`]
+- **Files Modified**: 9 files with 221 insertions and 110 deletions
+- **Configuration Strategy**: Established cluster-specific configuration files for both WES and WGS on IRIS
+- **Naming Conventions**: Standardized Nextflow config file extensions to `.config`
+
+### Commit Summary
+- **Total Commits**: 11 commits since v3-pre2
+- **Major Features**: IRIS cluster support, WGS performance optimization, workflow streamlining
+- **Configuration Updates**: Cluster-specific configs, resource allocation improvements
+- **Bug Fixes**: TEMPO_PROFILE assignment, IRIS pipeline enablement
+
+---
+
 ## v3-pre2 [2025-09-26] - Resource Optimizations for Cordelia
 
 ### Added

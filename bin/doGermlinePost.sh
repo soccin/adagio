@@ -8,14 +8,19 @@ SDIR=$(dirname "$(readlink -f "$0")")
 RDIR=$(realpath $SDIR/..)
 
 mkdir -p germline/pipeline_info
-cp $(ls -rt run/report.html | tail -1) germline/pipeline_info
-cp $(ls -rt run/timeline.html | tail -1) germline/pipeline_info
+
+cp out/*/pipeline_info/*html germline/pipeline_info
+cp out/*/pipeline_info/*txt germline/pipeline_info
+cp out/*/pipeline_info/*pdf germline/pipeline_info
 
 Rscript $SDIR/../scripts/reportGerm01.R
-Rscript $SDIR/../scripts/reportGermSV01.R
-CMD_LOG=germline/pipeline_info/version.txt
 
-exit
+ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
+if [ "$ASSAY" == "genome" ]; then
+  Rscript $SDIR/../scripts/reportGermSV01.R
+fi
+
+CMD_LOG=germline/pipeline_info/version.txt
 
 GTAG=$(git --git-dir=$RDIR/.git --work-tree=$RDIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$RDIR/.git --work-tree=$RDIR config --get remote.origin.url)
