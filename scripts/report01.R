@@ -25,7 +25,7 @@ facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types
 #
 # If facets failed then set values to NA
 #
-facetsDat$purity[!facetsDat$facets_qc]=NA
+# facetsDat$purity[!facetsDat$facets_qc]=NA
 facetsDat$ploidy[!facetsDat$facets_qc]=NA
 facetsDat$fga[!facetsDat$facets_qc]=NA
 #facetsDat$wgd[!facetsDat$facets_qc]=NA
@@ -110,6 +110,8 @@ mutatedGenes=tbl1 %>%
 
 class(mutatedGenes$Freq)="percentage"
 
+nonSymCount=tbl1 %>% count(Sample) %>% rename(SampleID=Sample,`NonSyn Mutation Count`=n)
+sampleData=sampleData %>% left_join(nonSymCount)
 
 library(openxlsx)
 # set zoom
@@ -165,6 +167,9 @@ setColWidths(wb,sheet=3,cols=1,widths=12)
 setColWidths(wb,sheet=3,cols=5:6,widths=14)
 
 projNo <- basename(fs::dir_ls("out"))
+if(!grepl("^Proj_",projNo)) {
+  projNo=cc("Proj",projNo)
+}
 rFile=cc(projNo,"SNV_Report01","v2.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)

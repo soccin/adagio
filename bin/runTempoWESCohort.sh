@@ -1,7 +1,25 @@
 #!/bin/bash
+#SBATCH -J Adagio-WES
+#SBATCH -o SLM/adagioWES.%j.out
+#SBATCH -c 4
+#SBATCH -t 7-00:00:00
+#SBATCH --partition cmobic_cpu,cmobic_pipeline
 
 OPWD=$PWD
-SDIR="$( cd "$( dirname "$0" )" && pwd )"
+
+# Vanilla sbatch runs scripts from a temp folder copy, breaking
+# relative paths. I have an sbatch wrapper (~/bin/sbatch) that
+# preserves the original directory via:
+#   sbatch --export=SBATCH_SCRIPT_DIR="$SCRIPT_DIR"
+# allowing jobs to access their original location through
+# $SBATCH_SCRIPT_DIR for proper path resolution.
+#
+if [ -n "$SBATCH_SCRIPT_DIR" ]; then
+    SDIR="$SBATCH_SCRIPT_DIR"
+else
+    SDIR="$( cd "$( dirname "$0" )" && pwd )"
+fi
+
 ADIR=$(realpath $SDIR/..)
 export PATH=$ADIR/bin:$PATH
 
@@ -20,10 +38,7 @@ echo \$CLUSTER=$CLUSTER
 if [ "$CLUSTER" == "IRIS" ]; then
 
     CONFIG=iris
-
-    echo "NEED TO FIX \$PIPELINE_CONFIG FOR WES ON IRIS"
-    echo "MEM PER CORE OR MEM PER JOBS (F*CK LSF/SLURM/TEMPO)"
-    exit 1
+    TEMPO_PROFILE=iris
 
     export NXF_OPTS='-Xms1g -Xmx4g'
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
@@ -36,6 +51,8 @@ if [ "$CLUSTER" == "IRIS" ]; then
 elif [ "$CLUSTER" == "JUNO" ]; then
 
     CONFIG=juno
+    TEMPO_PROFILE=juno
+
     export WORKDIR=work/$UUID
     export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
     export TMPDIR=/scratch/socci
@@ -54,7 +71,6 @@ fi
 # Use default CMO/MSKCC juno.config
 # Put any over-rides in config files in adagio/conf
 #
-TEMPO_PROFILE=juno
 
 PIPELINE_CONFIG=tempo-wes-${CONFIG}
 ASSAY_TYPE=exome
@@ -108,7 +124,7 @@ esac
 #   --workflows="snv,sv,qc,facets,msisensor,mutsig"
 #
 
-WORKFLOWS=snv,qc,facets,msisensor,mutsig
+WORKFLOWS=snv,qc,facets
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
