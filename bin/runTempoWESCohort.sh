@@ -6,7 +6,20 @@
 #SBATCH --partition cmobic_cpu,cmobic_pipeline
 
 OPWD=$PWD
-SDIR="$( cd "$( dirname "$0" )" && pwd )"
+
+# Vanilla sbatch runs scripts from a temp folder copy, breaking
+# relative paths. I have an sbatch wrapper (~/bin/sbatch) that
+# preserves the original directory via:
+#   sbatch --export=SBATCH_SCRIPT_DIR="$SCRIPT_DIR"
+# allowing jobs to access their original location through
+# $SBATCH_SCRIPT_DIR for proper path resolution.
+#
+if [ -n "$SBATCH_SCRIPT_DIR" ]; then
+    SDIR="$SBATCH_SCRIPT_DIR"
+else
+    SDIR="$( cd "$( dirname "$0" )" && pwd )"
+fi
+
 ADIR=$(realpath $SDIR/..)
 export PATH=$ADIR/bin:$PATH
 
