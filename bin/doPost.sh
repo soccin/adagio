@@ -8,7 +8,7 @@ mkdir -p post/pipeline_info
 
 cp out/*/pipeline_info/*html post/pipeline_info
 cp out/*/pipeline_info/*txt post/pipeline_info
-cp out/*/pipeline_info/*pdf post/pipeline_info
+cp out/*/pipeline_info/*pdf post/pipeline_info 2>/dev/null || true
 
 ASSAY=$(cat out/*/runlog/cmd.sh.log | fgrep ASSAY_TYPE | awk '{print $2}')
 
