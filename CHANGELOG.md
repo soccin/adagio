@@ -1,5 +1,69 @@
 # Changelog
 
+## v3-rc3 [2025-10-23] - Nextflow Trace Reporting and SLURM Integration
+
+### Added
+- **Nextflow Trace Report Generation**: New comprehensive trace file analysis [`becc945`, `cb6d303`]
+  - Added `scripts/nfTraceReport.R` for analyzing and reporting on Nextflow trace files
+  - Generates Excel report with two sheets:
+    - Summary: Status counts for processes with failures (marked WARN if some completed, ERROR if none)
+    - FAILED: Detailed records of all failed process instances
+  - Output saved to `nfTraceReport_v1.xlsx` for pipeline failure analysis
+  - Includes examples of trace analysis workflows: status summaries, failure reports, and SLURM status integration
+
+- **SLURM Job Configuration**: Enhanced SLURM support for cluster execution [`43356f5`]
+  - Added SLURM batch directives to `bin/runTempoWESCohort.sh` and `bin/runTempoWGSBam.sh`
+  - Configured job name, output log paths, and CPU allocation (4 cores)
+  - Set 7-day runtime limit
+  - Partition settings (cmobic_cpu, cmobic_pipeline)
+  - Scripts can now be submitted directly via sbatch
+
+### Changed
+- **Trace Parser Improvements**: Enhanced trace data handling [`becc945`, `cb6d303`]
+  - Updated `scripts/rsrc/nf-reports/trace_parser.R` to handle status as ordered factor (COMPLETED, CACHED, FAILED, ABORTED) for proper sorting
+  - Improved percentage column conversion with safe handling and warning suppression
+  - Enhanced timestamp parsing with lubridate for complete timestamp handling
+  - Sort trace files before processing in `process_multiple_traces()` for consistent ordering
+
+- **Trace Report Refinement**: Streamlined analysis workflow [`f6ac869`]
+  - Simplified `scripts/nfTraceReport.R` to focus on failure analysis
+  - Removed debug halt and example code for cleaner production use
+  - Improved report generation with focused failure tracking
+
+### Fixed
+- **SLURM Script Directory Handling**: Resolved path issues with sbatch [`b2e0f7f`]
+  - Added logic to preserve script directory location when running under SLURM's sbatch
+  - When sbatch runs a script, it copies to temporary folder, breaking relative paths
+  - Fix checks for `SBATCH_SCRIPT_DIR` environment variable set by custom sbatch wrapper
+  - Falls back to standard directory resolution method
+  - Affected scripts: `bin/runTempoWESCohort.sh`, `bin/runTempoWGSBam.sh`
+
+### Removed
+- **Script Archival**: Cleanup of obsolete reporting scripts [`750852c`]
+  - Moved `scripts/runReport.R` to `scripts/attic/` as no longer used in current pipeline workflow
+
+### Technical Details
+- **Branch Integration**: Merged multiple feature branches [`e92fe04`, `83cc477`, `619928a`]
+  - Merged feat/nf-reports branch
+  - Merged devs/iris branch
+- **Files Modified**: 7 files with 89 insertions and 4 deletions
+  - bin/runTempoWESCohort.sh (20 insertions, 1 deletion)
+  - bin/runTempoWGSBam.sh (20 insertions, 1 deletion)
+  - scripts/nfTraceReport.R (44 insertions, new file)
+  - scripts/rsrc/nf-reports/trace_parser.R (7 insertions, 1 deletion)
+  - scripts/rsrc/nf-reports/nextflow_analysis.R (2 insertions, 1 deletion)
+  - scripts/runReport.R (renamed to scripts/attic/runReport.R)
+- **Report Improvements**: New Nextflow trace reporting, SLURM integration, script cleanup
+- **Infrastructure**: Enhanced cluster job submission capabilities
+
+### Commit Summary
+- **Total Commits**: 11 commits since v3-rc2 (5 non-merge commits)
+- **Major Features**: Nextflow trace reporting, SLURM job configuration, path handling fixes
+- **Script Updates**: Trace analysis, SLURM headers, directory resolution
+- **Code Cleanup**: Archived obsolete scripts, streamlined reporting workflow
+
+---
+
 ## v3-rc2 [2025-10-19] - Report Enhancements and WGS Support
 
 ### Added

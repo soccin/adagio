@@ -4,7 +4,7 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v3.0.0
+## Version: v3-rc3
 
 Cordelia: current tempo submodule at `cordelia-01`.
 
