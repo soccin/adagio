@@ -1,4 +1,4 @@
-require(tidyverse)
+suppressPackageStartupMessages(require(tidyverse))
 
 argv=commandArgs(trailingOnly=TRUE)
 ASSAY=argv[1]
@@ -7,8 +7,7 @@ if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
 SDIR=get_script_dir()
 source(file.path(SDIR,"get_cluster_name.R"))
 CLUSTER=get_cluster_name()
-cat("\n\n  CLUSTER =",CLUSTER,"\n\n")
-
+cat("CLUSTER =",CLUSTER,"\n\n")
 
 #
 # Get Facets QC info
@@ -18,7 +17,7 @@ facetsQCFiles=fs::dir_ls("out",recurs=3,regex="somatic.*facets") %>% fs::dir_ls(
 
 facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types=cols(.default="c")) %>%
     bind_rows %>%
-    type_convert %>%
+    quietly(type_convert)(.) %>% pluck("result") %>%
     select(tumor_sample_id,facets_qc,purity=purity_run_Purity,ploidy,fga) %>%
     separate(tumor_sample_id,c("SampleID","NormalID"),sep="__")
 
@@ -41,11 +40,11 @@ if(len(sampleDataFile)==0) {
     rlang::abort("FATAL::ERROR")
 }
 
-sampleData=read_tsv(sampleDataFile) %>%
+sampleData=read_tsv(sampleDataFile,show_col_types=FALSE,progress=F) %>%
     separate(sample,c("Sample","NormalID"),sep="__") %>%
     select(-matches("^SB|^HLA|^MSI")) %>%
     select(SampleID=Sample,NormalID,`Mutation Count`=Number_of_Mutations,TMB) %>%
-    left_join(facetsDat) %>%
+    left_join(facetsDat,by = join_by(SampleID, NormalID)) %>%
     select(-facets_qc,facets_qc) %>%
     rename(`Facets Purity`=purity,`Facets Ploidy`=ploidy,`Fraction Genome Altered`=fga)
 
@@ -55,7 +54,7 @@ if(!(ASSAY=="WES" || ASSAY=="exome")) {
 
 mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mut_somatic.maf")
 
-maf=read_tsv(mafFile,comment="#")
+maf=read_tsv(mafFile,comment="#",show_col_types=FALSE,progress=F)
 
 switch(CLUSTER,
     "JUNO"={
@@ -70,7 +69,7 @@ switch(CLUSTER,
     }
 )
 
-af_MSK_WES=read_tsv(portalWESGeneFreqFile) %>% mutate(AF=`#`/`Profiled Samples`) %>% select(Gene,AF)
+af_MSK_WES=read_tsv(portalWESGeneFreqFile,show_col_types=FALSE,progress=F) %>% mutate(AF=`#`/`Profiled Samples`) %>% select(Gene,AF)
 
 extraCols=c("non_cancer_AF_popmax","SIFT","PolyPhen","IMPACT")
 extraCols=intersect(extraCols,colnames(maf))
@@ -89,7 +88,7 @@ tbl1=maf %>%
     rename(VEP_IMPACT=IMPACT) %>%
     filter(!is.na(Alteration) & !grepl("=$",Alteration)) %>%
     arrange(Gene,Sample) %>%
-    left_join(af_MSK_WES) %>%
+    left_join(af_MSK_WES,by = join_by(Gene)) %>%
     rename(MSKWES_GENE_Frac=AF)
 
 
@@ -111,7 +110,7 @@ mutatedGenes=tbl1 %>%
 class(mutatedGenes$Freq)="percentage"
 
 nonSymCount=tbl1 %>% count(Sample) %>% rename(SampleID=Sample,`NonSyn Mutation Count`=n)
-sampleData=sampleData %>% left_join(nonSymCount)
+sampleData=sampleData %>% left_join(nonSymCount,by = join_by(SampleID))
 
 library(openxlsx)
 # set zoom
