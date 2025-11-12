@@ -2,67 +2,77 @@
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 argv <- commandArgs(trailing = TRUE)
-require(tidyverse)
+
+suppressPackageStartupMessages(require(tidyverse))
 
 # Read all SV BEDPE files and combine
 sv_files <- fs::dir_ls("out", recur = TRUE, regex = "\\.final\\.clustered\\.bedpe$")
 sv_data <- map(sv_files, read_tempo_sv_somatic, .progress = TRUE) |>
   bind_rows()
 
-# Remove unnecessary columns
-sv_data <- sv_data |>
-  select(-INFO_A, -INFO_B, -FORMAT, -TUMOR, -NORMAL)
+if(nrow(sv_data)==0) {
+  cat("\nNo structure variants found\n\n")
+} else {
 
-# Reorder columns: core info, then AD/PE/SR/PR/PS, then annotations
-sv_data <- sv_data |>
-  select(
-    1:CC_Chr_Band,
-    matches("_(AD|PE|SR|PR|PS)$"),
-    matches("^CC|^DGv"),
-    matches("CONSENSUS"),
-    everything()
-  ) |>
-  type_convert()
+  quiet_type_convert<-function(x) {
+    quietly(type_convert)(x) %>% pluck("result")
+  }
 
-# Calculate VAF for each caller
-sv_data <- sv_data |>
-  mutate(
-    # Delly VAFs
-    t_delly_SpanVAF = t_delly_DV / (t_delly_DV + t_delly_DR),
-    t_delly_JuncVAF = t_delly_RV / (t_delly_RV + t_delly_RR),
-    n_delly_SpanVAF = n_delly_DV / (n_delly_DV + n_delly_DR),
-    n_delly_JuncVAF = n_delly_RV / (n_delly_RV + n_delly_RR),
-    # Svaba VAFs
-    t_svaba_VAF = t_svaba_AD / t_svaba_DP,
-    n_svaba_VAF = n_svaba_AD / n_svaba_DP
-  ) |>
-  # Manta split reads need parsing
-  separate(t_manta_SR, c("t_manta_SRR", "t_manta_SRV"), remove = FALSE) |>
-  mutate(
-    t_manta_JuncVAF = as.numeric(t_manta_SRV) /
-      (as.numeric(t_manta_SRV) + as.numeric(t_manta_SRR))
-  )
+  # Remove unnecessary columns
+  sv_data <- sv_data |>
+    select(-INFO_A, -INFO_B, -FORMAT, -TUMOR, -NORMAL)
 
-# Select final columns for output
-sv_events <- sv_data |>
-  select(
-    1:CC_Chr_Band,
-    matches("VAF"),
-    matches("_(AD|PE|SR|PR|PS|DR|DV|RR|RV)$"),
-    matches("^CC|^DGv"),
-    matches("CONSENSUS"),
-    NORMAL_ID,
-    UUID
-  )
+  # Reorder columns: core info, then AD/PE/SR/PR/PS, then annotations
+  sv_data <- sv_data |>
+    select(
+      1:CC_Chr_Band,
+      matches("_(AD|PE|SR|PR|PS)$"),
+      matches("^CC|^DGv"),
+      matches("CONSENSUS"),
+      everything()
+    ) |>
+    quite_type_convert()
 
-# Load column descriptions
-col_desc <- read_csv(file.path(PROOT, "rsrc/svColTypeDescriptions.csv"))
+  # Calculate VAF for each caller
+  sv_data <- sv_data |>
+    mutate(
+      # Delly VAFs
+      t_delly_SpanVAF = t_delly_DV / (t_delly_DV + t_delly_DR),
+      t_delly_JuncVAF = t_delly_RV / (t_delly_RV + t_delly_RR),
+      n_delly_SpanVAF = n_delly_DV / (n_delly_DV + n_delly_DR),
+      n_delly_JuncVAF = n_delly_RV / (n_delly_RV + n_delly_RR),
+      # Svaba VAFs
+      t_svaba_VAF = t_svaba_AD / t_svaba_DP,
+      n_svaba_VAF = n_svaba_AD / n_svaba_DP
+    ) |>
+    # Manta split reads need parsing
+    separate(t_manta_SR, c("t_manta_SRR", "t_manta_SRV"), remove = FALSE) |>
+    mutate(
+      t_manta_JuncVAF = as.numeric(t_manta_SRV) /
+        (as.numeric(t_manta_SRV) + as.numeric(t_manta_SRR))
+    )
 
-# Create sample summary (count SVs per sample)
-sample_data <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
-  left_join(count(sv_events, TUMOR_ID), by = "TUMOR_ID") |>
-  mutate(n = ifelse(is.na(n), 0, n)) |>
-  rename(NumSVs=n)
+  # Select final columns for output
+  sv_events <- sv_data |>
+    select(
+      1:CC_Chr_Band,
+      matches("VAF"),
+      matches("_(AD|PE|SR|PR|PS|DR|DV|RR|RV)$"),
+      matches("^CC|^DGv"),
+      matches("CONSENSUS"),
+      NORMAL_ID,
+      UUID
+    )
+
+  # Load column descriptions
+  col_desc <- read_csv(file.path(PROOT, "rsrc/svColTypeDescriptions.csv"))
+
+  # Create sample summary (count SVs per sample)
+  sample_data <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
+    left_join(count(sv_events, TUMOR_ID), by = "TUMOR_ID") |>
+    mutate(n = ifelse(is.na(n), 0, n)) |>
+    rename(NumSVs=n)
+}
 
 # Determine project number and output file name
 proj_no <- basename(fs::dir_ls("out"))
@@ -73,13 +83,22 @@ report_file <- cc(proj_no, "SV_Report01", "v4.xlsx")
 report_dir <- "post/reports"
 fs::dir_create(report_dir)
 
-# Write Excel report
-write_xlsx(
-  list(
-    SampleData = sample_data,
-    SVEvents = sv_events,
-    ColDescriptions = col_desc
-  ),
-  file.path(report_dir, report_file)
-)
+if(nrow(sv_data)>0) {
 
+  # Write Excel report
+  write_xlsx(
+    list(
+      SampleData = sample_data,
+      SVEvents = sv_events,
+      ColDescriptions = col_desc
+    ),
+    file.path(report_dir, report_file)
+  )
+
+} else {
+  write("
+There are no SV's
+",
+    file.path(report_dir,"README_NoSVs.txt")
+  )
+}
