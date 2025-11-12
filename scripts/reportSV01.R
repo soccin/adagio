@@ -14,8 +14,8 @@ if(nrow(sv_data)==0) {
   cat("\nNo structure variants found\n\n")
 } else {
 
-  quiet_type_convert<-function(x) {
-    quietly(type_convert)(x) %>% pluck("result")
+  type_convert<-function(x) {
+    quietly(readr::type_convert)(x) %>% pluck("result")
   }
 
   # Remove unnecessary columns
@@ -31,7 +31,7 @@ if(nrow(sv_data)==0) {
       matches("CONSENSUS"),
       everything()
     ) |>
-    quite_type_convert()
+    type_convert()
 
   # Calculate VAF for each caller
   sv_data <- sv_data |>
