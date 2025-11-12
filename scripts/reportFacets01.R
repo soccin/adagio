@@ -8,9 +8,18 @@
 # - Individual segmentation files (purity and hisens modes)
 # - Multi-sheet Excel workbook with run info, arm-level, and gene-level CNAs
 
-library(tidyverse)
-library(readxl)
-library(openxlsx)
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(readxl)
+  library(openxlsx)
+})
+
+#
+# Silence type_convert silently
+#
+type_convert<-function(x) {
+  quietly(readr::type_convert)(x) %>% pluck("result")
+}
 
 # Load FACETS parameter columns configuration
 param_cols <- readLines(file.path(get_script_dir(), "rsrc", "facetsParamCols")) |>
@@ -95,16 +104,21 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
 
   segmentation_data <- segmentation_files |>
     read_tsv(show_col_types = FALSE) |>
-    # Clean sample IDs by removing pipeline suffixes (everything after __)
-    mutate(ID = str_remove(ID, "__.*")) |>
     # Exclude samples that failed QC
-    filter(!(ID %in% failed_samples))
+    filter(!(ID %in% failed_samples)) |>
+    # Clean sample IDs by removing pipeline suffixes (everything after __)
+    mutate(ID = str_remove(ID, "__.*"))
 
-  output_filename <- str_c("Proj_", project_no, "_Filtered_", output_suffix)
-  write_tsv(segmentation_data, file.path(facets_dir, output_filename))
+  if(nrow(segmentation_data)>0) {
 
-  message("Wrote ", nrow(segmentation_data), " segments to ", output_filename)
-  return(segmentation_data)
+    output_filename <- str_c("Proj_", project_no, "_Filtered_", output_suffix)
+    write_tsv(segmentation_data, file.path(facets_dir, output_filename))
+
+    message("Wrote ", nrow(segmentation_data), " segments to ", output_filename)
+    return(segmentation_data)
+
+  }
+
 }
 
 # Process Purity Mode Segmentation

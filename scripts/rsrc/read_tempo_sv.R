@@ -1,6 +1,8 @@
-library(dplyr)
-library(readr)
-library(tidyr)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readr)
+  library(tidyr)
+})
 
 # infoAFlds=c("Callers", "NumCallers", "NumCallersPass", "STRANDS",
 # "brass_PS", "brass_RC",

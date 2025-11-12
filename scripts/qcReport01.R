@@ -1,5 +1,7 @@
-require(tidyverse)
-require(ggsci)
+suppressPackageStartupMessages({
+  require(tidyverse)
+  require(ggsci)
+})
 
 projectNo=basename(fs::dir_ls("out"))
 cohortDir=file.path("out",projectNo,"cohort_level")
@@ -23,13 +25,17 @@ nSamps=nrow(sampDat)
 
 if(nSamps==1) {
 
+    projNo=strsplit(dir_ls(sampleDir,"contamination.txt"),"/")[[1]][2]
+
     d2=read_tsv_quiet(dir_ls(sampleDir,"contamination.txt")) %>%
-        mutate(Contamination=Contamination/100)
+        mutate(Contamination=Contamination/100) %>%
+        mutate(Pair=paste0("p",projNo))
 
     d1=read_tsv_quiet(dir_ls(sampleDir,"concordance.txt")) %>%
         rename(Sample_ID=concordance) %>%
         rename(Concordance=2) %>%
-        mutate(QC=case_when(Concordance<90 ~ "FAIL", Concordance<95 ~ "WARN", T ~ "PASS"))
+        mutate(QC=case_when(Concordance<90 ~ "FAIL", Concordance<95 ~ "WARN", T ~ "PASS")) %>%
+        mutate(Pair=paste0("p",projNo))
 
     pg1=d1 %>%
     ggplot(aes(Sample_ID,Concordance,fill=QC)) +
@@ -130,21 +136,26 @@ print(pg2)
 print(phsm)
 dev.off()
 
+quiet_type_convert<-function(x) {
+  quietly(type_convert)(x) %>% pluck("result")
+}
+
 facetsQCColsFile=file.path(SDIR,"rsrc","facetsQCCols")
 facetsQCCols=scan(facetsQCColsFile,"")
 facetsQCFiles=dir_ls(sampleDir,"\\.facets_qc\\.txt")
 df=map(facetsQCFiles,read_tsv,col_types=cols(.default="c"),progress=F,.progress=T) %>%
     bind_rows %>%
-    type_convert
+    quiet_type_convert
 flags=df %>%
     select(tumor_sample_id,matches("pass")) %>%
     gather(filter,value,matches("pass")) %>%
     filter(!value) %>%
     group_by(tumor_sample_id) %>%
-    summarize(FailedFilters=paste(filter,collapse=";"))
+    summarize(FailedFilters=paste(filter,collapse=";")) %>%
+    ungroup
 dg=df %>%
     select(all_of(facetsQCCols)) %>%
-    left_join(flags) %>%
+    left_join(flags,by = join_by(tumor_sample_id)) %>%
     mutate(tumor_sample_id=gsub("__.*","",tumor_sample_id))
 
 dg=dg %>%
