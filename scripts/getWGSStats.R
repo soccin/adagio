@@ -39,12 +39,10 @@ read_metrics <- function(files, n_max, select_cols, filter_fn = NULL) {
 # Extract WGS coverage statistics
 wgs_files <- find_metrics_files("wgs.txt")
 
-if(len(wgs_files)==0) {
-  cat("
-  Can not find any WGS stats file.
-  Did you generate them (SMap/bin/collect...)
-\n\n")
-  quit()
+if (len(wgs_files) == 0) {
+  cat("\nERROR: Cannot find any WGS stats files.\n")
+  cat("Did you generate them (SMap/bin/collect...)?\n\n")
+  quit(status = 1)
 }
 
 wgs_stats <- read_metrics(
@@ -70,5 +68,43 @@ asm_stats <- read_metrics(
   filter_fn = \(x) filter(x, category == "PAIR")
 )
 
-# Combine WGS and alignment statistics
-stats <- full_join(wgs_stats, asm_stats, by = join_by(sample))
+# Combine and convert data types
+stats <- full_join(wgs_stats, asm_stats) |>
+  mutate(sample = ifelse(grepl("WGSCtrl", sample), "WGSCtrl", sample)) |>
+  quietly(readr::type_convert)() %>%
+  pluck("result")
+
+# Create visualization
+plot_stats <- stats |>
+  mutate(total_reads = total_reads / 1e9) |>
+  rename(total_reads_Gb = total_reads) |>
+  gather(metric, value, -sample) |>
+  mutate(value = ifelse(grepl("^pct", metric), value * 100, value)) |>
+  ggplot(aes(sample, value)) +
+    theme_light(14) +
+    geom_col() +
+    facet_wrap(~metric, scale = "free_x") +
+    coord_flip() +
+    xlab(NULL) +
+    ylab(NULL)
+
+# Determine output paths
+proj_no <- basename(fs::dir_ls("out"))
+if (!grepl("^Proj_", proj_no)) {
+  proj_no <- cc("Proj", proj_no)
+}
+
+output_file <- cc(proj_no, "WGSStats", "v1.xlsx")
+output_dir <- "post/reports"
+fs::dir_create(output_dir)
+
+# Write outputs
+write_xlsx(stats, file.path(output_dir, output_file))
+pdf(
+  file = file.path(output_dir, gsub(".xlsx", ".pdf", output_file)),
+  width = 11,
+  height = 8.5
+)
+print(plot_stats)
+invisible(dev.off())
+
