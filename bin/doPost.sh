@@ -37,6 +37,11 @@ echo Rscript $RDIR/scripts/reportFacets01.R
 echo
 Rscript $RDIR/scripts/reportFacets01.R
 
+echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+echo Rscript $RDIR/scripts/getWGSStats.R
+echo
+Rscript $RDIR/scripts/getWGSStats.R
+
 CMD_LOG=post/pipeline_info/version.txt
 
 GTAG=$(git --git-dir=$RDIR/.git --work-tree=$RDIR describe --long --tags --dirty="-UNCOMMITED" --always)
