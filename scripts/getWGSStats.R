@@ -1,12 +1,17 @@
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(patchwork)
+  library(ggforce)
+})
 
 #' Find metrics files by pattern
 #'
 #' @param pattern Regex pattern to match file names (e.g., "wgs.txt", "asm.txt")
-#' @return Character vector of file paths
+#' @return Character vector of named file paths
 find_metrics_files <- function(pattern) {
-  fs::dir_ls(".", recur = 2, regex = "out/metrics") |>
-    fs::dir_ls(recur = TRUE, regex = pattern)
+  list.files(recur = TRUE) |>
+    grep(pattern, x = _, value = TRUE) |>
+    set_names()
 }
 
 #' Read and process metrics files
@@ -35,6 +40,12 @@ read_metrics <- function(files, n_max, select_cols, filter_fn = NULL) {
 
   select(stats, sample, all_of(select_cols))
 }
+
+# Load sample type information (Normal vs Tumor)
+sample_type <- fs::dir_ls("out", recur = 2, regex = "pairing_bam_tempo.tsv") |>
+  read_tsv() |>
+  gather(type, sample) |>
+  mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor"))
 
 # Extract WGS coverage statistics
 wgs_files <- find_metrics_files("wgs.txt")
@@ -74,19 +85,32 @@ stats <- full_join(wgs_stats, asm_stats) |>
   quietly(readr::type_convert)() %>%
   pluck("result")
 
-# Create visualization
-plot_stats <- stats |>
+# Prepare data for visualization
+ds <- stats |>
   mutate(total_reads = total_reads / 1e9) |>
   rename(total_reads_Gb = total_reads) |>
   gather(metric, value, -sample) |>
   mutate(value = ifelse(grepl("^pct", metric), value * 100, value)) |>
-  ggplot(aes(sample, value)) +
+  left_join(sample_type) |>
+  filter(!is.na(type))
+
+# Plot configuration
+Nr <- 1
+Nc <- 2
+
+plot_stats <- function(dd, page, ncol = Nc, nrow = Nr) {
+  ggplot(dd, aes(sample, value, fill = type)) +
     theme_light(14) +
     geom_col() +
-    facet_wrap(~metric, scale = "free_x") +
+    facet_wrap_paginate(~metric, scale = "free_x", ncol = ncol, nrow = nrow, page = page) +
     coord_flip() +
     xlab(NULL) +
-    ylab(NULL)
+    ylab(NULL) +
+    ggsci::scale_fill_jama()
+}
+
+num_pages <- n_pages(plot_stats(ds, 1))
+plots <- map(1:num_pages, ~plot_stats(ds, .))
 
 # Determine output paths
 proj_no <- basename(fs::dir_ls("out"))
@@ -105,6 +129,6 @@ pdf(
   width = 11,
   height = 8.5
 )
-print(plot_stats)
+print(plots)
 invisible(dev.off())
 
