@@ -1,0 +1,79 @@
+FIELD,DESCRIPTION
+brass_BAS,Brass Assembly Score:A maximum score of 100 indicates a perfect pattern of 5 vertices in Velvet's de Bruijn graph
+brass_SVCLASS,basic SV class
+brass_MATEID,ID of mate breakend
+brass_BKDIST,Distance between breakpoints (-1 if difference chromosomes)
+brass_FFV,Fusion Flag value. Best one reported.
+brass_OCC,How many time the breakpoint appears in this dataset
+brass_SID,Unique identifier from gene annotation source or unknown
+brass_GENE,HUGO gene symbol or Unknown
+brass_TID,Transcript id for transcript associated with breakpoint
+brass_AS,Breakpoint annotation on this strand (+ or -)
+brass_EPH,End phase - phase of the first coding base following the breakpoint
+brass_PH,Phase at the breakpoint
+brass_RGN,Region where nucleotide variant (breakpoint) occurs in relation to a gene
+brass_RGNNO,Number of intron/exon where nucleotide variant (breakpoint) occurs in relation to a gene
+brass_RGNC,Count of total number of introns/exons in stated transcript
+brass_TSRDS,Reads from the tumour sample (C-LK5HRU_K5869-T) that span to this rearrangement
+brass_TRDS,Reads from the tumour sample (C-LK5HRU_K5869-T) that contribute to this rearrangement
+delly_CIEND,PE confidence interval around END
+delly_CIPOS,PE confidence interval around POS
+delly_PE,Paired-end support of the structural variant
+delly_MAPQ,Median mapping quality of paired-ends
+delly_CT,Paired-end signature induced connection type
+delly_IMPRECISE,Imprecise structural variation
+delly_SVMETHOD,Type of approach used to detect SV
+delly_RDRATIO,Read-depth ratio of tumor vs. normal.
+delly_SOMATIC,Somatic structural variant.
+delly_AC,Allele count in genotypes
+delly_AN,Total number of alleles in called genotypes
+manta_IMPRECISE,Imprecise structural variation
+manta_CIPOS,Confidence interval around POS
+manta_CIEND,Confidence interval around END
+manta_MATEID,ID of mate breakend
+manta_SVINSLEN,Length of insertion
+manta_SVINSSEQ,Sequence of insertion
+manta_BND_DEPTH,Read depth at local translocation breakend
+manta_MATE_BND_DEPTH,Read depth at remote translocation mate breakend
+manta_SOMATIC,Somatic mutation
+manta_SOMATICSCORE,Somatic variant quality score
+svaba_DISC_MAPQ,Mean mapping quality of discordant reads mapped here
+svaba_NUMPARTS,If detected with assembly
+svaba_MATEID,ID of mate breakends
+svaba_MAPQ,Mapping quality (BWA-MEM) of this fragement of the contig (-1 if discordant only)
+svaba_SCTG,Identifier for the contig assembled by svaba to make the SV call
+svaba_NM,Number of mismatches of this alignment fragment to reference
+svaba_MATENM,Number of mismatches of partner alignment fragment to reference
+svaba_SPAN,Distance between the breakpoints. -1 for interchromosomal
+svaba_INSERTION,Sequence insertion at the breakpoint.
+svaba_IMPRECISE,Imprecise structural variation
+svaba_EVDNC,Evidence for variant. ASSMB assembly only
+Callers,Callers that made this call
+NumCallers,Number of callers that made this call
+CHR2,Chromosome for END coordinate in case of a translocation
+END,End position of the structural variant
+SVTYPE,Type of structural variant
+SVLEN,Length of structural variant
+STRANDS,Strand orientation of the adjacency in BEDPE format (DEL:+-
+NumCallersPass,Number of callers that made this call without filters
+delly_filters,Filter values from delly caller
+delly_GQ,Genotype Quality
+delly_FT,Per-sample genotype filter
+delly_RC,Raw high-quality read counts for the SV
+delly_RCL,Raw high-quality read counts for the left control region
+delly_RCR,Raw high-quality read counts for the right control region
+delly_CN,Read-depth based copy-number estimate for autosomal sites
+delly_DR,# high-quality reference pairs
+delly_DV,# high-quality variant pairs
+delly_RR,# high-quality reference junction reads
+delly_RV,# high-quality variant junction reads
+manta_PR,Spanning paired-read support for the ref and alt alleles in the order listed
+manta_SR,Split reads for the ref and alt alleles in the order listed
+svaba_LR,Log-odds that this variant is REF vs AF=0.5
+svaba_DR,Number of discordant-supported reads for this variant
+svaba_SR,Number of spanning reads for this variants
+svaba_PL,Normalized likelihood of the current genotype
+svaba_GQ,Genotype quality (currently not supported. Always 0)
+svaba_LO,Log-odds that this variant is real vs artifact
+svaba_DP,Depth of coverage: Number of reads covering site.
+svaba_AD,Allele depth: Number of reads supporting the variant

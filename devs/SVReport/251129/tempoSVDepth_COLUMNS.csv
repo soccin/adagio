@@ -1,0 +1,43 @@
+Column_Number,Column_Name,Category,Description,Data_Type,Recommended_Threshold,For_Biologists,For_Analysts
+1,TUMOR_ID,Identifier,Sample identifier,Text,N/A,Which sample this variant is from,Primary key for joining
+2,TYPE,Annotation,Structural variant type,Text (DEL/DUP/INV/BND),N/A,BND=translocation often most important,Filter by SV class
+3,fusion,Annotation,Predicted gene fusion with frame status,Text,in frame preferred,In-frame fusions are functional,Use for fusion detection
+4,gene1,Annotation,First gene affected,Text (gene symbol),Known cancer gene,Check cancer gene databases,Filter by gene list
+5,gene2,Annotation,Second gene affected,Text (gene symbol),Known cancer gene,Partner in fusion events,Filter by gene list
+6,site1,Annotation,Breakpoint location in/near gene1,Text,Exonic preferred,Exon breaks disrupt coding,Parse for functional impact
+7,site2,Annotation,Breakpoint location in/near gene2,Text,Exonic preferred,Exon breaks disrupt coding,Parse for functional impact
+8,CHROM_A,Coordinates,Chromosome of first breakpoint,Text (1-22 X Y),N/A,First chromosome,Genomic coordinate
+9,START_A,Coordinates,Start position of first breakpoint,Integer,N/A,Position in base pairs,Genomic coordinate
+10,END_A,Coordinates,End position of first breakpoint,Integer,N/A,Usually START+1,Genomic coordinate
+11,CHROM_B,Coordinates,Chromosome of second breakpoint,Text (1-22 X Y),N/A,Second chromosome,Genomic coordinate
+12,START_B,Coordinates,Start position of second breakpoint,Integer,N/A,Position in base pairs,Genomic coordinate
+13,END_B,Coordinates,End position of second breakpoint,Integer,N/A,Usually START+1,Genomic coordinate
+14,STRANDS,Orientation,Breakpoint strand orientation,Text (++/--/+-/-+),N/A,How DNA strands connect,Determines SV mechanism
+15,repeat.site1,Annotation,Repetitive element at first breakpoint,Text,Blank preferred,Repeats can cause artifacts,Filter repeat-associated SVs
+16,repeat.site2,Annotation,Repetitive element at second breakpoint,Text,Blank preferred,Repeats can cause artifacts,Filter repeat-associated SVs
+17,Callers,Evidence,Which programs detected variant,Text (comma-separated),brass/manta preferred,More callers = more confident,Check caller agreement
+18,NumCallers,Evidence,Number of detecting callers,Integer (1-4),≥2,Higher = more confident,Caller consensus metric
+19,NumCallersPass,Evidence,Number of callers passing filters,Integer (0-4),≥2,More stringent than NumCallers,Primary quality filter
+20,CC_Chr_Band,Annotation,Cancer Gene Census chromosomal band,Text,If present = known gene,Known cancer gene location,Link to cancer databases
+21,manta_paired_reads,Depth (MANTA),Paired-end reads from MANTA,Integer,≥5,MANTA uses highest quality reads,Single caller (MAPQ≥30)
+22,manta_split_reads,Depth (MANTA),Split reads from MANTA,Integer,≥3,Split reads span exact breakpoint,Single caller (MAPQ≥30)
+23,max_paired_reads,Depth (Aggregate),Maximum paired reads across callers,Integer,≥5,Highest detection sensitivity,Most sensitive aggregation
+24,max_split_reads,Depth (Aggregate),Maximum split reads across callers,Integer,≥3,Highest split read evidence,Most sensitive aggregation
+25,median_paired_reads,Depth (Aggregate),Median paired reads across callers,Numeric,≥5,Typical evidence level,Central tendency
+26,median_split_reads,Depth (Aggregate),Median split reads across callers,Numeric,≥3,Typical split read level,Central tendency
+27,total_max_reads,Depth (Aggregate),Sum of max paired + max split,Integer,≥10,Total supporting reads,Combined evidence metric
+28,has_paired_evidence,Quality Flag,Any paired-end reads detected?,Boolean (TRUE/FALSE),TRUE,PE evidence present?,Quick check
+29,has_split_evidence,Quality Flag,Any split reads detected?,Boolean (TRUE/FALSE),TRUE,SR evidence present?,Quick check
+30,multi_evidence_type,Quality Flag,Both PE and SR present?,Boolean (TRUE/FALSE),TRUE,Strongest evidence = both types,Independent validation
+31,callers_with_3plus_split,Quality Score,Callers seeing ≥3 split reads,Integer (0-3),≥2,Caller agreement on splits,Agreement metric
+32,callers_with_5plus_paired,Quality Score,Callers seeing ≥5 paired reads,Integer (0-3),≥2,Caller agreement on paired,Agreement metric
+33,meets_split_threshold,Quality Flag,max_split_reads ≥ 3?,Boolean (TRUE/FALSE),TRUE,Passes split threshold?,Threshold check
+34,meets_paired_threshold,Quality Flag,max_paired_reads ≥ 5?,Boolean (TRUE/FALSE),TRUE,Passes paired threshold?,Threshold check
+35,high_quality_evidence,Quality Flag,Passes all quality criteria?,Boolean (TRUE/FALSE),TRUE,Primary filter - use this!,Comprehensive quality flag
+36,delly_paired,Depth (Individual),DELLY paired-end variant reads,Integer,Reference only,DELLY variant pairs,t_delly_DV from original
+37,delly_split,Depth (Individual),DELLY split/junction reads,Integer,Reference only,DELLY junction reads,t_delly_RV from original
+38,manta_paired,Depth (Individual),MANTA paired-end ALT count,Integer,Reference only,Same as col 21,Extracted from t_manta_PR
+39,manta_split,Depth (Individual),MANTA split read ALT count,Integer,Reference only,Same as col 22,Extracted from t_manta_SR
+40,svaba_paired,Depth (Individual),SvABA discordant read count,Integer,Reference only,SvABA discordant reads,t_svaba_DR from original
+41,svaba_split,Depth (Individual),SvABA spanning read count,Integer,Reference only,SvABA spanning reads,t_svaba_SR from original
+42,svaba_total,Depth (Individual),SvABA total variant allele depth,Integer,Reference only,SvABA total (DR+SR),t_svaba_AD from original

@@ -1,0 +1,19 @@
+Question,Answer,Excel_Columns_to_Use,Formula_Example,Interpretation
+Can I sum read counts from different callers?,NO - callers count the same reads leading to 2-3x overcounting,N/A,N/A,Summing would double/triple count the same physical reads
+What's the best single metric for split reads?,Use MANTA split reads (highest quality),AE (t_manta_SR),"=VALUE(RIGHT(AE2,LEN(AE2)-FIND("","",AE2)))",Extract ALT count from MANTA's REF,ALT format. MANTA uses MAPQ≥30 filtering
+What's the best single metric for paired reads?,Use MANTA paired reads (highest quality),AD (t_manta_PR),"=VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2)))",Extract ALT count from MANTA's REF,ALT format
+How do I get maximum split reads across callers?,Take MAX of DELLY/MANTA/SvABA split reads,"AO, AE (ALT), AG","=MAX(AO2,VALUE(RIGHT(AE2,LEN(AE2)-FIND("","",AE2))),AG2)",Shows highest detection across methods (most sensitive caller)
+How do I get maximum paired reads across callers?,Take MAX of DELLY/MANTA/SvABA paired reads,"AM, AD (ALT), AP","=MAX(AM2,VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2))),AP2)",Shows highest detection across methods (most sensitive caller)
+How do I get median split reads?,Take MEDIAN across callers,"AO, AE (ALT), AG","=MEDIAN(AO2,VALUE(RIGHT(AE2,LEN(AE2)-FIND("","",AE2))),AG2)",Shows typical/central tendency of evidence
+How do I get median paired reads?,Take MEDIAN across callers,"AM, AD (ALT), AP","=MEDIAN(AM2,VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2))),AP2)",Shows typical/central tendency of evidence
+Can I add t_svaba_AD to other counts?,NO - it's already a sum of DR+SR,AF (t_svaba_AD),N/A,SvABA's allele depth already combines discordant and spanning reads
+How do I know if callers agree?,Use existing NumCallersPass field,S (NumCallersPass),=S2,Shows how many callers passed filters (0-4). ≥2 is good
+What's a good threshold for split reads?,Minimum 3 split reads,AE (extract ALT),"=VALUE(RIGHT(AE2,LEN(AE2)-FIND("","",AE2)))>=3","TRUE if meets threshold. Split reads span exact breakpoint"
+What's a good threshold for paired reads?,Minimum 5 for BND (translocation) or 3 for DEL/DUP/INV,AD (extract ALT),"=IF(B2=""BND"",VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2)))>=5,VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2)))>=3)",Different thresholds by variant type
+Is there both paired AND split read evidence?,Check if both types present,"AD (ALT), AE (ALT)","=AND(VALUE(RIGHT(AD2,LEN(AD2)-FIND("","",AD2)))>=3,VALUE(RIGHT(AE2,LEN(AE2)-FIND("","",AE2)))>=3)",Multiple independent evidence types = stronger call
+Which caller has the strictest quality filtering?,MANTA (uses MAPQ≥30),"AD, AE",N/A,MANTA only counts high-quality reads (mapping quality ≥30)
+Why do DELLY and MANTA show the same counts?,They analyze the same BAM file and count the same physical reads,"AM vs AD (ALT), AO vs AE (ALT)",N/A,This proves you cannot sum them - it's double counting!
+What if a caller shows NA?,That caller didn't run or didn't detect the variant,Various,Use IFERROR or IF(ISNUMBER()) to handle,Common when variant only called by 1-2 callers
+Should I look at tumor or normal reads?,BOTH - tumor high + normal zero = somatic,"Tumor (t_) vs Normal (n_) columns",Compare t_manta_SR vs n_manta_SR,Somatic variants: present in tumor (high) absent in normal (zero)
+What's the simplest approach?,Use MANTA counts + NumCallersPass,"AE (split), AD (paired), S (NumCallersPass)",Extract ALT from MANTA + check S≥2,Cleanest format and already quality-filtered
+What's better: high paired reads or high split reads?,Split reads are more precise (span exact breakpoint),AE > AD,N/A,Split reads pinpoint the junction. Paired reads suggest rearrangement but less precise

@@ -1,0 +1,57 @@
+Column_Number,Column_Name,Category,Plain_Language_Description,What_Biologists_Need_to_Know,Typical_Values,Higher_is_Better
+1,TUMOR_ID,Sample Info,Identifier for the tumor sample being analyzed,This tells you which patient/sample the variant came from,Sample name/ID,N/A
+2,TYPE,Variant Type,Type of structural variant,DEL=deletion DUP=duplication INV=inversion BND=translocation/breakend. Most clinically relevant are translocations (BND) affecting cancer genes,"DEL, DUP, INV, BND",N/A
+3,fusion,Gene Fusion,Predicted protein fusion and whether it's in-frame,Critical for cancer biology - in-frame fusions often create oncogenic fusion proteins. Look for known cancer gene fusions,"Protein Fusion: in frame {GENE1:GENE2}, out of frame, or blank",In-frame fusions more functional
+4,gene1,Gene 1,First gene affected by the structural variant,One of the genes disrupted or fused by this rearrangement. Check if it's a known cancer gene,HUGO gene symbol,Known cancer genes important
+5,gene2,Gene 2,Second gene affected by the structural variant,The partner gene in a fusion or second breakpoint. Important for identifying known fusion pairs,HUGO gene symbol,Known cancer genes important
+6,site1,Location 1,Precise location within or near gene1,Tells you if breakpoint is in an exon (coding) intron or regulatory region. Exonic breaks more likely to disrupt function,Example: Intron of GENE(+):2Kb before exon 3,Exonic breaks more impactful
+7,site2,Location 2,Precise location within or near gene2,Same as site1 but for the second breakpoint location,Example: 5'-UTR of GENE(+):3Kb before coding start,Exonic breaks more impactful
+8,CHROM_A,Chr A,Chromosome of first breakpoint,Chromosome where the first break occurred. Chr 1-22 X Y,1-22 X Y,N/A
+9,START_A,Start A,Start coordinate of first breakpoint,Genomic position (base pair number) where first break starts,Integer position,N/A
+10,END_A,End A,End coordinate of first breakpoint,Genomic position where first break ends (usually START+1 for precise breaks),Integer position,N/A
+11,CHROM_B,Chr B,Chromosome of second breakpoint,Chromosome where the second break occurred. If different from CHROM_A it's a translocation,1-22 X Y,N/A
+12,START_B,Start B,Start coordinate of second breakpoint,Genomic position where second break starts,Integer position,N/A
+13,END_B,End B,End coordinate of second breakpoint,Genomic position where second break ends,Integer position,N/A
+14,STRANDS,Strand Orient,Orientation of the DNA strands at the breakpoint,Indicates how the DNA strands are joined. Important for understanding rearrangement mechanism,"++, --, +-, -+",N/A
+15,repeat.site1,Repeat 1,Repetitive DNA element at first breakpoint,Alu and LINE elements are common. Repeats can cause false positives or indicate mechanism,AluSq L1MB3 SVA_F or blank,Blank better (no repeat)
+16,repeat.site2,Repeat 2,Repetitive DNA element at second breakpoint,Same as repeat.site1 for second breakpoint,AluSq L1MB3 SVA_F or blank,Blank better (no repeat)
+17,Callers,Which Callers,Which analysis programs detected this variant,"More callers = higher confidence. brass and manta are most reliable. Format: comma-separated list","brass,manta,svaba,delly",Multiple callers better
+18,NumCallers,Num Callers,Total number of callers that detected this variant,Count of supporting programs. 2+ is good 3+ is very confident,1-4,Higher better
+19,NumCallersPass,Callers Passed,Number of callers where variant passed quality filters,More stringent than NumCallers - only counts high-quality calls,0-4,Higher better
+20,CC_Chr_Band,Cancer Census Band,Chromosomal band from Cancer Gene Census,Cytogenetic band location if variant affects a known cancer gene,Example: 1p36.33,N/A
+21,t_delly_SpanVAF,Tumor Spanning VAF (DELLY),Tumor variant allele fraction from spanning reads (DELLY),What fraction of tumor DNA has this variant (spanning read evidence). 0.5 = 50% of cells,0.0-1.0,Higher = more tumor cells
+22,t_delly_JuncVAF,Tumor Junction VAF (DELLY),Tumor variant allele fraction from junction reads (DELLY),Same as SpanVAF but from junction/split reads (more precise evidence),0.0-1.0,Higher = more tumor cells
+23,n_delly_SpanVAF,Normal Spanning VAF (DELLY),Normal variant allele fraction from spanning reads (DELLY),VAF in matched normal tissue. Should be 0 for somatic variants. >0.05 suggests germline,0.0-1.0,Lower better (want 0)
+24,n_delly_JuncVAF,Normal Junction VAF (DELLY),Normal variant allele fraction from junction reads (DELLY),VAF in normal from junction reads. Should be 0 for true somatic mutations,0.0-1.0,Lower better (want 0)
+25,t_svaba_VAF,Tumor VAF (SvABA),Tumor variant allele fraction from SvABA caller,Fraction of tumor cells with variant calculated by SvABA assembly method,0.0-1.0,Higher = more tumor cells
+26,n_svaba_VAF,Normal VAF (SvABA),Normal variant allele fraction from SvABA caller,VAF in normal tissue from SvABA. Should be near 0 for somatic variants,0.0-1.0,Lower better (want 0)
+27,t_manta_JuncVAF,Tumor Junction VAF (MANTA),Tumor variant allele fraction from junction reads (MANTA),Fraction of tumor cells from MANTA split-read evidence,0.0-1.0,Higher = more tumor cells
+28,delly_PE,Paired-End Support,Number of paired-end reads supporting variant (DELLY),How many read-pairs support this SV. Higher = more evidence. Need 3+ for deletions 5+ for translocations,Integer count,Higher better
+29,delly_SR,Split-Read Support,Number of split-reads supporting variant (DELLY),Split reads span the exact breakpoint. Very strong evidence. Often lower than PE but more precise,Integer count,Higher better
+30,t_manta_PR,Tumor Paired Reads (MANTA),Paired-read counts in tumor: reference and variant (MANTA),"Format: REF,ALT. Example: 106,6 means 106 normal pairs 6 variant pairs","Integer,Integer",Higher ALT better
+31,t_manta_SR,Tumor Split Reads (MANTA),Split-read counts in tumor: reference and variant (MANTA),"Format: REF,ALT. Split reads are highest quality evidence","Integer,Integer",Higher ALT better
+32,t_svaba_AD,Tumor Allele Depth (SvABA),Number of tumor reads supporting the variant allele (SvABA),Direct count of reads with the variant. Higher = more confident call,Integer count,Higher better
+33,t_svaba_SR,Tumor Spanning Reads (SvABA),Number of tumor spanning reads supporting variant (SvABA),Spanning read support from SvABA,Integer count,Higher better
+34,n_manta_PR,Normal Paired Reads (MANTA),Paired-read counts in normal: reference and variant (MANTA),"Format: REF,ALT. ALT should be 0 or very low for somatic","Integer,Integer",Lower ALT better (want 0)
+35,n_manta_SR,Normal Split Reads (MANTA),Split-read counts in normal: reference and variant (MANTA),"Format: REF,ALT. ALT should be 0 for true somatic variants","Integer,Integer",Lower ALT better (want 0)
+36,n_svaba_AD,Normal Allele Depth (SvABA),Number of normal reads supporting the variant allele (SvABA),Should be 0 or very low for somatic variants. High values suggest germline,Integer count,Lower better (want 0)
+37,n_svaba_SR,Normal Spanning Reads (SvABA),Number of normal spanning reads supporting variant (SvABA),Should be low/zero for somatic variants,Integer count,Lower better (want 0)
+38,t_delly_DR,Tumor Reference Pairs (DELLY),Number of tumor read-pairs supporting reference (normal) allele,Reference evidence in tumor. Used with DV to calculate VAF,Integer count,N/A
+39,t_delly_DV,Tumor Variant Pairs (DELLY),Number of tumor read-pairs supporting variant allele,Variant-supporting pairs in tumor. DV/(DR+DV) gives approximate VAF,Integer count,Higher better
+40,t_delly_RR,Tumor Reference Junction (DELLY),Number of tumor junction reads supporting reference allele,Reference junction reads in tumor,Integer count,N/A
+41,t_delly_RV,Tumor Variant Junction (DELLY),Number of tumor junction reads supporting variant allele,Variant junction reads in tumor. Independent evidence from split reads,Integer count,Higher better
+42,t_svaba_DR,Tumor Discordant Reads (SvABA),Number of tumor discordant reads supporting variant (SvABA),Discordant read-pair evidence from SvABA in tumor,Integer count,Higher better
+43,n_delly_DR,Normal Reference Pairs (DELLY),Number of normal read-pairs supporting reference allele,Reference evidence in normal tissue,Integer count,N/A
+44,n_delly_DV,Normal Variant Pairs (DELLY),Number of normal read-pairs supporting variant allele,Should be 0 for somatic. >0 suggests germline or contamination,Integer count,Lower better (want 0)
+45,n_delly_RR,Normal Reference Junction (DELLY),Number of normal junction reads supporting reference allele,Reference junction reads in normal,Integer count,N/A
+46,n_delly_RV,Normal Variant Junction (DELLY),Number of normal junction reads supporting variant allele,Should be 0 for true somatic variants,Integer count,Lower better (want 0)
+47,n_svaba_DR,Normal Discordant Reads (SvABA),Number of normal discordant reads supporting variant (SvABA),Should be low/zero for somatic variants,Integer count,Lower better (want 0)
+48,CC_Tumour_Types(Somatic),Cancer Census Tumors,Tumor types where this gene has somatic mutations (Cancer Gene Census),Lists cancer types where this gene is known to be somatically mutated. Helps assess clinical relevance,Cancer type names or blank,Known associations important
+49,CC_Cancer_Syndrome,Cancer Census Syndrome,Cancer syndromes associated with germline mutations in this gene,Lists hereditary cancer syndromes if this is a known germline cancer gene,Syndrome names or blank,N/A
+50,CC_Mutation_Type,Cancer Census Mutation,Type of mutation typically seen in this gene in cancer,Indicates whether gene acts as oncogene (gain-of-function) or tumor suppressor (loss-of-function),"Oncogene, TSG (tumor suppressor), fusion, etc.",N/A
+51,CC_Translocation_Partner,Cancer Census Partner,Known translocation partner genes from Cancer Gene Census,Lists genes known to fuse with this gene in cancer. Important for identifying recurrent fusions,Gene names or blank,Known partners important
+52,DGv_Name-DGv_VarType-site1,Genomic Variants Site1,Database of Genomic Variants entries at first breakpoint,Shows if this region has known benign structural variants in healthy populations. Many entries may indicate common variant,Variant IDs or blank,Blank better (novel)
+53,DGv_Name-DGv_VarType-site2,Genomic Variants Site2,Database of Genomic Variants entries at second breakpoint,Same as DGv site1 but for second breakpoint,Variant IDs or blank,Blank better (novel)
+54,delly_CONSENSUS,Consensus Sequence,Consensus sequence at breakpoint from DELLY assembly,Actual DNA sequence assembled across the breakpoint. Can reveal insertions or microhomology,DNA sequence (ATCG) or NA,N/A
+55,NORMAL_ID,Normal Sample ID,Identifier for the matched normal sample,The normal tissue sample used for comparison to identify somatic variants,Sample name/ID,N/A
+56,UUID,Unique ID,Unique identifier for this specific variant call,Universal unique identifier for tracking this exact variant across analyses,Long alphanumeric string,N/A

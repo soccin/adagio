@@ -1,0 +1,15 @@
+EMAIL SUMMARY - Copy/paste into your email:
+
+---
+
+I'm sharing a new streamlined output file (tempoSVDepth.csv) containing 457 structural variants with aggregated read depth metrics. This file includes the core variant annotations (columns 1-20: sample IDs, genes, coordinates, fusion predictions, Cancer Gene Census annotations) plus computed depth metrics (columns 21-42) that consolidate evidence across the DELLY, MANTA, and SvABA callers. Key new columns include manta_split_reads (col 22) and max_split_reads (col 24) for read evidence, and high_quality_evidence (col 35) which flags the 379 variants (83%) meeting all quality thresholds (≥3 split reads, ≥5 paired reads, multiple evidence types, ≥2 callers passing filters). The aggregated metrics use MAX/MEDIAN approaches rather than summing to avoid double-counting, since different callers analyze the same underlying reads. Complete column documentation is provided in tempoSVDepth_COLUMNS.md and tempoSVDepth_COLUMNS.csv - for quick filtering in Excel, simply filter column 35 to TRUE, or in R/Python use the high_quality_evidence flag to identify high-confidence variants.
+
+---
+
+ALTERNATE SHORTER VERSION:
+
+---
+
+Attached is tempoSVDepth.csv containing 457 structural variants with aggregated read depth metrics from the TEMPO pipeline. This file streamlines the analysis by consolidating evidence across DELLY, MANTA, and SvABA callers into aggregate depth metrics (columns 21-27) and quality flags (columns 28-35). The high_quality_evidence flag (column 35) identifies 379 high-confidence variants (83%) meeting stringent thresholds. Complete documentation is in tempoSVDepth_COLUMNS.md/csv - for quick analysis, filter column 35 to TRUE for high-quality variants.
+
+---

@@ -1,0 +1,28 @@
+Excel_Column,Column_Number,Column_Name,Category,Caller,Sample,Data_Type,What_It_Measures,Good_Values,Notes_For_Biologists
+U,21,t_delly_SpanVAF,VAF,DELLY,Tumor,Percentage,Percent of tumor cells with variant (spanning reads),0.15-0.50,Higher = variant in more tumor cells (clonal)
+V,22,t_delly_JuncVAF,VAF,DELLY,Tumor,Percentage,Percent of tumor cells with variant (junction reads - more precise),0.15-0.50,More precise than SpanVAF. Higher = more clonal
+W,23,n_delly_SpanVAF,VAF,DELLY,Normal,Percentage,Percent of normal cells with variant (spanning reads),0.00-0.02,Want ZERO. >0.40 suggests germline (inherited)
+X,24,n_delly_JuncVAF,VAF,DELLY,Normal,Percentage,Percent of normal cells with variant (junction reads),0.00-0.02,Want ZERO for true somatic mutations
+Y,25,t_svaba_VAF,VAF,SvABA,Tumor,Percentage,Percent of tumor cells with variant,0.15-0.50,Easiest VAF to use. Higher = more important
+Z,26,n_svaba_VAF,VAF,SvABA,Normal,Percentage,Percent of normal cells with variant,0.00-0.02,Must be near zero for somatic variants
+AA,27,t_manta_JuncVAF,VAF,MANTA,Tumor,Percentage,Percent of tumor cells with variant (junction reads),0.15-0.50,Junction reads are high quality evidence
+AB,28,delly_PE,Read Count,DELLY,Both,Integer,Paired-end reads supporting variant,"≥5 (BND), ≥3 (DEL/DUP/INV)",Total PE support (tumor+normal combined)
+AC,29,delly_SR,Read Count,DELLY,Both,Integer,Split reads supporting variant (most precise evidence),≥3,Most reliable evidence type. Spans exact breakpoint
+AD,30,t_manta_PR,Read Count,MANTA,Tumor,Pair (REF,ALT),Paired reads in tumor (reference count,variant count),ALT ≥5,"Format: ""106,6"" = 106 ref, 6 variant"
+AE,31,t_manta_SR,Read Count,MANTA,Tumor,Pair (REF,ALT),Split reads in tumor (reference count,variant count),ALT ≥3,Highest quality evidence. Look at 2nd number (ALT)
+AF,32,t_svaba_AD,Read Count,SvABA,Tumor,Integer,Reads with variant allele in tumor,≥5,Direct count of variant reads. Higher = better
+AG,33,t_svaba_SR,Read Count,SvABA,Tumor,Integer,Spanning reads supporting variant in tumor,≥3,Reads crossing the breakpoint region
+AH,34,n_manta_PR,Read Count,MANTA,Normal,Pair (REF,ALT),Paired reads in normal (reference count,variant count),ALT = 0,Want variant count (2nd number) to be ZERO
+AI,35,n_manta_SR,Read Count,MANTA,Normal,Pair (REF,ALT),Split reads in normal (reference count,variant count),ALT = 0,Want variant count (2nd number) to be ZERO
+AJ,36,n_svaba_AD,Read Count,SvABA,Normal,Integer,Reads with variant allele in normal,0,Must be zero for true somatic variants
+AK,37,n_svaba_SR,Read Count,SvABA,Normal,Integer,Spanning reads in normal,0,Must be zero for true somatic variants
+AL,38,t_delly_DR,Read Count,DELLY,Tumor,Integer,Tumor paired-end reads supporting reference (normal) allele,N/A,Used to calculate VAF: DV/(DR+DV)
+AM,39,t_delly_DV,Read Count,DELLY,Tumor,Integer,Tumor paired-end reads supporting variant allele,≥5,Higher = stronger evidence. DV/(DR+DV) = VAF
+AN,40,t_delly_RR,Read Count,DELLY,Tumor,Integer,Tumor junction reads supporting reference allele,N/A,Reference junction read count
+AO,41,t_delly_RV,Read Count,DELLY,Tumor,Integer,Tumor junction reads supporting variant allele,≥3,Independent split-read validation. RV/(RR+RV) = JuncVAF
+AP,42,t_svaba_DR,Read Count,SvABA,Tumor,Integer,Tumor discordant read pairs,≥3,Pairs with wrong orientation/distance
+AQ,43,n_delly_DR,Read Count,DELLY,Normal,Integer,Normal paired-end reads supporting reference allele,N/A,Reference reads in normal
+AR,44,n_delly_DV,Read Count,DELLY,Normal,Integer,Normal paired-end reads supporting variant allele,0,MUST be zero for somatic variants
+AS,45,n_delly_RR,Read Count,DELLY,Normal,Integer,Normal junction reads supporting reference allele,N/A,Reference junction reads in normal
+AT,46,n_delly_RV,Read Count,DELLY,Normal,Integer,Normal junction reads supporting variant allele,0,MUST be zero for somatic variants
+AU,47,n_svaba_DR,Read Count,SvABA,Normal,Integer,Normal discordant read pairs,0,Should be zero for true somatic variants
