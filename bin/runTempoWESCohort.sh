@@ -80,9 +80,46 @@ TARGETS_BASE="${REFERENCE_BASE}/mskcc-igenomes/grch37/tempo_targets"
 
 set -ue
 
+#
+# Default workflows
+#
+DEFAULT_WORKFLOWS=snv,qc,facets
+WORKFLOWS=$DEFAULT_WORKFLOWS
+WORKFLOW_MODE="default"
+
+#
+# Parse optional workflow arguments
+#
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --workflows=*)
+            WORKFLOWS="${1#*=}"
+            WORKFLOW_MODE="replace"
+            shift
+            ;;
+        --add-workflows=*)
+            ADD_WORKFLOWS="${1#*=}"
+            WORKFLOWS="${DEFAULT_WORKFLOWS},${ADD_WORKFLOWS}"
+            WORKFLOW_MODE="add"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWESCohort.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWESCohort.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo
+    echo "  --workflows=W1,W2,...      Replace default workflows (default: snv,qc,facets)"
+    echo "  --add-workflows=W3,W4,...  Add to default workflows"
+    echo
+    echo "  Available workflows:"
+    echo "    Somatic: snv, sv, mutsig, lohhla, facets, msisensor"
+    echo "    Germline: germsnv, germsv"
+    echo "    QC: qc"
     echo
     exit
 fi
@@ -120,11 +157,11 @@ case $(ps -o stat= -p $$) in
 esac
 
 #
-# Full workflow
-#   --workflows="snv,sv,qc,facets,msisensor,mutsig"
+# Full workflow options
+#   Somatic: --workflows="snv,sv,qc,facets,msisensor,mutsig,lohhla"
+#   Germline: --workflows="germsnv,germsv,qc"
 #
-
-WORKFLOWS=snv,qc,facets
+# WORKFLOWS is now set earlier based on command-line arguments
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
@@ -167,7 +204,9 @@ TEMPO_PROFILE: $TEMPO_PROFILE
 ASSAY_TYPE: $ASSAY_TYPE
 REFERENCE_BASE: $REFERENCE_BASE
 TARGETS_BASE: $TARGETS_BASE
+DEFAULT_WORKFLOWS: $DEFAULT_WORKFLOWS
 WORKFLOWS: $WORKFLOWS
+WORKFLOW_MODE: $WORKFLOW_MODE
 
 Script: $0 $*
 
