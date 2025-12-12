@@ -3,7 +3,7 @@
 #SBATCH -o SLM/adagioWGSBam.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition cmobic_cpu,cmobic_pipeline
+#SBATCH --partition cmobic_cpu,cmobic_pipeline,test02
 
 OPWD=$PWD
 
