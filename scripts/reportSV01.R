@@ -75,7 +75,7 @@ if(nrow(sv_data)==0) {
 }
 
 # Determine project number and output file name
-proj_no <- basename(fs::dir_ls("out"))
+proj_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if (!grepl("^Proj_", proj_no)) {
   proj_no <- cc("Proj", proj_no)
 }

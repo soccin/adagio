@@ -113,7 +113,7 @@ num_pages <- n_pages(plot_stats(ds, 1))
 plots <- map(1:num_pages, ~plot_stats(ds, .))
 
 # Determine output paths
-proj_no <- basename(fs::dir_ls("out"))
+proj_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if (!grepl("^Proj_", proj_no)) {
   proj_no <- cc("Proj", proj_no)
 }

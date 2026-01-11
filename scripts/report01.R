@@ -54,7 +54,13 @@ if(!(ASSAY=="WES" || ASSAY=="exome")) {
 
 mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mut_somatic.maf")
 
-maf=read_tsv(mafFile,comment="#",show_col_types=FALSE,progress=F)
+#maf=read_tsv(mafFile,comment="#",show_col_types=FALSE,progress=F,col_types=cols(.default=""))
+#
+# read_tsv is very fussy about something I am not sure
+# complains about missing columns but nothing appears
+# to be missing.
+#
+maf <- data.table::fread(mafFile, skip = "Hugo_Symbol", sep = "\t", na.strings = c("", "NA")) %>% tibble
 
 switch(CLUSTER,
     "JUNO"={
@@ -165,7 +171,7 @@ setColWidths(wb,sheet=3,cols=1:ncol(tbl1),widths="auto")
 setColWidths(wb,sheet=3,cols=1,widths=12)
 setColWidths(wb,sheet=3,cols=5:6,widths=14)
 
-projNo <- basename(fs::dir_ls("out"))
+projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) {
   projNo=cc("Proj",projNo)
 }

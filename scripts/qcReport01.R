@@ -3,9 +3,17 @@ suppressPackageStartupMessages({
   require(ggsci)
 })
 
-projectNo=basename(fs::dir_ls("out"))
+#projectNo=basename(fs::dir_ls("out"))
+projectNo=fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 cohortDir=file.path("out",projectNo,"cohort_level")
 sampleDir=file.path("out",projectNo,"somatic")
+
+if(len(cohortDir)!=1) {
+  cat("\n\n   Did you break something in the output directory [out]\n")
+  cat("   Unable to parse cohortDir\n\n")
+  cat("     ",paste0(cohortDir,collapse=";"),"\n\n")
+  quit()
+}
 
 x11 = function (...) grDevices::x11(...,type='cairo')
 
@@ -125,7 +133,7 @@ if(len(hsmFiles)>0) {
 rDir="post/reports"
 fs::dir_create(rDir)
 
-projNo <- basename(fs::dir_ls("out"))
+projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) projNo=cc("Proj",projNo)
 
 rFile=cc(projNo,"qcRpt01.pdf")

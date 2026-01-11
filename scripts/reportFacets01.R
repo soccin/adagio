@@ -38,7 +38,7 @@ dir_ls <- function(dir, pattern) {
 # ===========================
 # The project number is embedded in the output directory structure
 
-project_no <- basename(fs::dir_ls("out"))
+project_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 sample_dir <- file.path("out", project_no, "somatic")
 
 reports_dir <- "post/reports"
