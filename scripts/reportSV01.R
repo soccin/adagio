@@ -1,4 +1,5 @@
 # Setup and dependencies
+VERSION="v5"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 argv <- commandArgs(trailing = TRUE)
@@ -6,7 +7,11 @@ argv <- commandArgs(trailing = TRUE)
 suppressPackageStartupMessages(require(tidyverse))
 
 # Read all SV BEDPE files and combine
-sv_files <- fs::dir_ls("out", recur = TRUE, regex = "\\.final\\.clustered\\.bedpe$")
+#
+# read .final.bedpe instead of clustered output which
+# fails on unmatched samples often
+#
+sv_files <- fs::dir_ls("out", recur = TRUE, regex = "\\.final\\.bedpe$")
 sv_data <- map(sv_files, read_tempo_sv_somatic, .progress = TRUE) |>
   bind_rows()
 
@@ -79,7 +84,7 @@ proj_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basenam
 if (!grepl("^Proj_", proj_no)) {
   proj_no <- cc("Proj", proj_no)
 }
-report_file <- cc(proj_no, "SV_Report01", "v4.xlsx")
+report_file <- cc(proj_no, "SV_Report01", paste0(VERSION,".xlsx"))
 report_dir <- "post/reports"
 fs::dir_create(report_dir)
 
