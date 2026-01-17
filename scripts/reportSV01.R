@@ -1,5 +1,5 @@
 # Setup and dependencies
-VERSION="v5"
+VERSION <- "v5"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 argv <- commandArgs(trailing = TRUE)
@@ -7,20 +7,24 @@ argv <- commandArgs(trailing = TRUE)
 suppressPackageStartupMessages(require(tidyverse))
 
 # Read all SV BEDPE files and combine
-#
-# read .final.bedpe instead of clustered output which
-# fails on unmatched samples often
-#
+# Using .final.bedpe instead of clustered output which fails on unmatched samples
 sv_files <- fs::dir_ls("out", recur = TRUE, regex = "\\.final\\.bedpe$")
 sv_data <- map(sv_files, read_tempo_sv_somatic, .progress = TRUE) |>
   bind_rows()
 
-if(nrow(sv_data)==0) {
+# Get full list of tumors from pairing file
+# Handles cases where samples have no SVs
+pairing_files <- fs::dir_ls("out", recur = TRUE, regex = "pairing_bam_tempo.tsv")
+tumors <- pairing_files |>
+  read_tsv(show_col_types = FALSE, progress = FALSE) |>
+  pull(TUMOR_ID)
+
+if (nrow(sv_data) == 0) {
   cat("\nNo structure variants found\n\n")
 } else {
 
-  type_convert<-function(x) {
-    quietly(readr::type_convert)(x) %>% pluck("result")
+  type_convert <- function(x) {
+    quietly(readr::type_convert)(x) |> pluck("result")
   }
 
   # Remove unnecessary columns
@@ -74,21 +78,25 @@ if(nrow(sv_data)==0) {
 
   # Create sample summary (count SVs per sample)
   sample_data <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
-    left_join(count(sv_events, TUMOR_ID), by = "TUMOR_ID") |>
+    left_join(count(sv_events, TUMOR_ID)) |>
     mutate(n = ifelse(is.na(n), 0, n)) |>
-    rename(NumSVs=n)
+    rename(NumSVs = n)
 }
 
 # Determine project number and output file name
-proj_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
+proj_no <- fs::dir_ls("out") |>
+  grep("/metrics", x = _, invert = TRUE, value = TRUE) |>
+  basename()
+
 if (!grepl("^Proj_", proj_no)) {
   proj_no <- cc("Proj", proj_no)
 }
-report_file <- cc(proj_no, "SV_Report01", paste0(VERSION,".xlsx"))
+
+report_file <- cc(proj_no, "SV_Report01", paste0(VERSION, ".xlsx"))
 report_dir <- "post/reports"
 fs::dir_create(report_dir)
 
-if(nrow(sv_data)>0) {
+if (nrow(sv_data) > 0) {
 
   # Write Excel report
   write_xlsx(
@@ -101,9 +109,8 @@ if(nrow(sv_data)>0) {
   )
 
 } else {
-  write("
-There are no SV's
-",
-    file.path(report_dir,"README_NoSVs.txt")
+  write(
+    "\nThere are no SV's\n",
+    file.path(report_dir, "README_NoSVs.txt")
   )
 }
