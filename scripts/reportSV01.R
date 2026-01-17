@@ -77,7 +77,7 @@ if (nrow(sv_data) == 0) {
   col_desc <- read_csv(file.path(PROOT, "rsrc/svColTypeDescriptions.csv"),show_col_types=F,progress=F)
 
   # Create sample summary (count SVs per sample)
-  event_counts <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
+  sv_counts <- tibble(TUMOR_ID = basename(sv_files) |> gsub("__.*", "", x = _)) |>
     left_join(count(sv_events, TUMOR_ID),by=join_by(TUMOR_ID)) |>
     mutate(n = ifelse(is.na(n), 0, n)) |>
     rename(NumSVs = n)
