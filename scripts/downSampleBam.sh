@@ -45,7 +45,7 @@ SM=$(samtools view -H $BAM | egrep "^@RG" | head -1 | tr '\t' '\n' | fgrep SM: |
 ODIR=out/$SM
 mkdir -p $ODIR
 
-picardV2 DownsampleSam I=$BAM P=$P O=$ODIR/${BASE}.dn.bam
+picard DownsampleSam I=$BAM P=$P O=$ODIR/${BASE}.dn.bam
 
 samtools index -@ $NPROC $ODIR/${BASE}.dn.bam
 
