@@ -37,10 +37,12 @@ echo Rscript $RDIR/scripts/reportFacets01.R
 echo
 Rscript $RDIR/scripts/reportFacets01.R
 
-echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-echo Rscript $RDIR/scripts/getWGSStats.R
-echo
-Rscript $RDIR/scripts/getWGSStats.R
+if [ "$ASSAY" == "genome" ]; then
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  echo Rscript $RDIR/scripts/getWGSStats.R
+  echo
+  Rscript $RDIR/scripts/getWGSStats.R
+fi
 
 CMD_LOG=post/pipeline_info/version.txt
 
