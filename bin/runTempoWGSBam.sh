@@ -187,6 +187,8 @@ if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
 
+Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
 
