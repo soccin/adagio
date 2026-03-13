@@ -59,5 +59,10 @@ get_status_summary <- function(trace_data) {
     select(process, tag, name, status) %>%
     group_by(name) %>%
     count(status) %>%
-    spread(status, n, fill = 0)
+    pivot_wider(
+          names_from  = status,
+          values_from = n,
+          values_fill = 0,
+          names_expand = TRUE   # expands to all factor levels
+      )
 }
