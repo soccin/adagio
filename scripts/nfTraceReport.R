@@ -5,7 +5,7 @@
 
 
 # Load required libraries
-require(tidyverse)
+suppressPackageStartupMessages(require(tidyverse))
 
 # Source the function modules
 SDIR=get_script_dir()
@@ -13,6 +13,7 @@ RDIR=file.path(SDIR,"rsrc/nf-reports")
 source(file.path(RDIR,"trace_parser.R"))
 source(file.path(RDIR,"nextflow_analysis.R"))
 source(file.path(RDIR,"status_reports.R"))
+source(file.path(RDIR,"slurm_utils.R"))
 
 # Example 1: Basic workflow from history.R
 # Load trace file list and process all traces
@@ -29,11 +30,12 @@ trace_data=all_trace_data %>%
 
 # Get status summary
 qc0=get_status_summary(trace_data) %>% filter(FAILED>0) %>% mutate(STATUS=ifelse(COMPLETED>0,"WARN","ERROR")) %>% arrange(STATUS,name)
-print(qc0)
 
 # Identify failed processes
 failed=qc0 %>% pull(name)
 failed_rpt=trace_data %>% filter(name %in% failed) %>% arrange(name,RID) %>% select(sample,process,status,exit,native_id,hash,everything())
+
+failed_states=failed_rpt %>% filter(status=="FAILED") %>% rowwise %>% mutate(slurm_state=seff_field(native_id,"State")) %>% select(name,exit,slurm_state,hash,native_id,sample)
 
 write_xlsx(
   list(
@@ -42,3 +44,10 @@ write_xlsx(
   ),
   "nfTraceReport_v1.xlsx"
 )
+
+writeLines("\n# Nextflow Trace Report")
+writeLines("\n## Failed/Warn job list\n")
+knitr::kable(qc0) |> writeLines()
+writeLines("\n## Failed Reasons\n")
+knitr::kable(failed_states) |> writeLines()
+writeLines("\n\n")

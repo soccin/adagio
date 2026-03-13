@@ -1,3 +1,18 @@
+library(stringr)
+library(glue)
+
+#' Extract a single field value from seff output
+#'
+#' @param jobid SLURM job ID (numeric or character)
+#' @param field Field name to extract (e.g. "CPU Efficiency", "Memory Utilized")
+#' @return Character string with the field value, or NA if not found
+seff_field <- function(jobid, field) {
+  system2("seff", as.character(jobid), stdout = TRUE) |>
+    str_subset(glue("^{field}:")) |>
+    str_remove(glue("^{field}:\\s*")) |>
+    first()
+}
+
 #' Get SLURM Job State (Single Job)
 #'
 #' Internal function to get the SLURM state for a single job ID.
