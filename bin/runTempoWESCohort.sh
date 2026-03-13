@@ -138,7 +138,7 @@ ODIR=$(pwd -P)/out/${PROJECT_ID}
 echo \$ODIR=$ODIR
 
 mkdir -p $WORKDIR
-cd $WORKDIR
+pushd $WORKDIR
 
 LOG=${PROJECT_ID}_runTempoWESCohort.log
 
@@ -187,8 +187,6 @@ if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
 
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
-
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
 
@@ -227,3 +225,6 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --pairing $PAIRING \
     --outDir $ODIR
 END_VERSION
+
+popd
+Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
