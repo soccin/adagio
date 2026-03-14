@@ -92,7 +92,7 @@ tbl1=maf %>%
         all_of(extraCols)
     ) %>%
     rename(VEP_IMPACT=IMPACT) %>%
-    filter(!is.na(Alteration) & !grepl("=$",Alteration)) %>%
+    filter((!is.na(Alteration) & !grepl("=$",Alteration)) | (Gene=="TERT" & Type=="5'Flank")) %>%
     arrange(Gene,Sample) %>%
     left_join(af_MSK_WES,by = join_by(Gene)) %>%
     rename(MSKWES_GENE_Frac=AF)
@@ -175,7 +175,7 @@ projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) {
   projNo=cc("Proj",projNo)
 }
-rFile=cc(projNo,"SNV_Report01","v2.xlsx")
+rFile=cc(projNo,"SNV_Report01","v3.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 

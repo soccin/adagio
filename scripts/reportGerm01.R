@@ -59,8 +59,10 @@ tbl1=maf %>%
         GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2
     ) %>%
     arrange(Gene,GPos,Sample) %>%
-    filter(!is.na(Alteration) | Gene=="TERT") %>%
-    filter(!grepl("=$",Alteration))
+    filter(
+      (!is.na(Alteration) & !grepl("=$",Alteration)) |
+      (Gene=="TERT" & Type=="5'Flank")
+    )
 
 class(tbl1$VAF)="percentage"
 

@@ -14,8 +14,12 @@ mkdir -p $ODIR/tempo
 rsync -rvP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ $ODIR/tempo
 rsync -rvP post $ODIR
 
-BIC_DELIVERY=/rtsess01/juno/home/socci/Code/BIC/Delivery/Version2j
-Rscript $BIC_DELIVERY/readme2yaml.R tempo
+BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
+Rscript $BIC_DELIVERY/readme2yaml.R adagio
+
+module purge
+module load python/3.8.0
+module load py-python-ldap/3.4.2
 python3 $BIC_DELIVERY/authorization_db/init_impact_project_permissions.py -p project.yaml
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
