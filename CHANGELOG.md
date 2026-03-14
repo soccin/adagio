@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.0.0 [2026-03-14] - Official v3 Release
+
+### Added
+- docs/releases/ directory with CHANGE_REPORT_v3.md release narrative
+
+### Fixed
+- fix(reports): TERT promoter mutations now retained in somatic and
+  germline reports (Gene=="TERT" & Type=="5'Flank" exception added)
+- fix(bin): nfTraceReport.R now runs after nextflow completes
+  (pushd/popd fix); output saved to dated RUN_REPORT_YYMMDD_.md
+- fix(nf-reports): replace deprecated spread() with pivot_wider()
+- fix(conf): QcQualimap memory formula changed to additive base
+  (128GB + 128GB*attempt) ensuring 256GB minimum on first attempt
+- fix(doPost): getWGSStats.R guarded with genome assay check
+
+### Changed
+- bin/deliver.sh, bin/deliverGermline.sh: BIC_DELIVERY path
+  switched to $HOME-relative; module loads added; deliverGermline
+  now includes permissions step
+
+See sections v3-rc3, v3-rc2, v3-rc1, v3-pre3, v3-pre2, v3-pre
+below for full pre-release change history.
+
 ## v3-rc3 [2025-10-23] - Nextflow Trace Reporting and SLURM Integration
 
 ### Added
