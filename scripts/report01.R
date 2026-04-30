@@ -146,30 +146,32 @@ setColWidths(wb,sheet=1,cols=3:7,widths=8)
 
 wb$worksheets[[1]]$sheetViews=set_zoom(wb$worksheets[[1]]$sheetViews,120)
 
-#
-# Sheet 2 - Gene Stats
-#
-addWorksheet(wb,sheetName="Gene Stats")
-writeDataTable(wb,sheet=2,mutatedGenes,tableStyle="none",withFilter=F)
-rows=2:(nrow(mutatedGenes)+1)
+if (nSamples > 1) {
+    #
+    # Sheet 2 - Gene Stats
+    #
+    addWorksheet(wb,sheetName="Gene Stats")
+    writeDataTable(wb,sheet="Gene Stats",mutatedGenes,tableStyle="none",withFilter=F)
+    rows=2:(nrow(mutatedGenes)+1)
 
-addStyle(wb,sheet=2,cols=1:ncol(mutatedGenes),row=1,style=styleHeader,gridExpand=T)
+    addStyle(wb,sheet="Gene Stats",cols=1:ncol(mutatedGenes),row=1,style=styleHeader,gridExpand=T)
 
-wb$worksheets[[2]]$sheetViews=set_zoom(wb$worksheets[[2]]$sheetViews,120)
-setColWidths(wb,sheet=2,cols=1:ncol(mutatedGenes),widths="auto")
-setColWidths(wb,sheet=2,cols=3,widths=6.5)
+    wb$worksheets[[which(wb$sheet_names=="Gene Stats")]]$sheetViews=set_zoom(wb$worksheets[[which(wb$sheet_names=="Gene Stats")]]$sheetViews,120)
+    setColWidths(wb,sheet="Gene Stats",cols=1:ncol(mutatedGenes),widths="auto")
+    setColWidths(wb,sheet="Gene Stats",cols=3,widths=6.5)
+}
 
 #
 # Sheet 3 - MAF0
 #
 
 addWorksheet(wb,sheetName="Mutations")
-writeDataTable(wb,sheet=3,tbl1,tableStyle="none",withFilter=F)
-addStyle(wb,sheet=3,cols=1:ncol(tbl1),row=1,style=styleHeader,gridExpand=T)
-wb$worksheets[[3]]$sheetViews=set_zoom(wb$worksheets[[3]]$sheetViews,120)
-setColWidths(wb,sheet=3,cols=1:ncol(tbl1),widths="auto")
-setColWidths(wb,sheet=3,cols=1,widths=12)
-setColWidths(wb,sheet=3,cols=5:6,widths=14)
+writeDataTable(wb,sheet="Mutations",tbl1,tableStyle="none",withFilter=F)
+addStyle(wb,sheet="Mutations",cols=1:ncol(tbl1),row=1,style=styleHeader,gridExpand=T)
+wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews=set_zoom(wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews,120)
+setColWidths(wb,sheet="Mutations",cols=1:ncol(tbl1),widths="auto")
+setColWidths(wb,sheet="Mutations",cols=1,widths=12)
+setColWidths(wb,sheet="Mutations",cols=5:6,widths=14)
 
 projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) {
