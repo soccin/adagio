@@ -52,8 +52,8 @@ if (nrow(sv_data) == 0) {
       n_delly_SpanVAF = n_delly_DV / (n_delly_DV + n_delly_DR),
       n_delly_JuncVAF = n_delly_RV / (n_delly_RV + n_delly_RR),
       # Svaba VAFs
-      t_svaba_VAF = t_svaba_AD / t_svaba_DP,
-      n_svaba_VAF = n_svaba_AD / n_svaba_DP
+      t_svaba_VAF = pmin(t_svaba_AD / t_svaba_DP, 1),
+      n_svaba_VAF = pmin(n_svaba_AD / n_svaba_DP, 1)
     ) |>
     # Manta split reads need parsing
     separate(t_manta_SR, c("t_manta_SRR", "t_manta_SRV"), remove = FALSE) |>
