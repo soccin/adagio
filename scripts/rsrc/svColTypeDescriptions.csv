@@ -1,79 +1,60 @@
 FIELD,DESCRIPTION
-brass_BAS,Brass Assembly Score:A maximum score of 100 indicates a perfect pattern of 5 vertices in Velvet's de Bruijn graph
-brass_SVCLASS,basic SV class
-brass_MATEID,ID of mate breakend
-brass_BKDIST,Distance between breakpoints (-1 if difference chromosomes)
-brass_FFV,Fusion Flag value. Best one reported.
-brass_OCC,How many time the breakpoint appears in this dataset
-brass_SID,Unique identifier from gene annotation source or unknown
-brass_GENE,HUGO gene symbol or Unknown
-brass_TID,Transcript id for transcript associated with breakpoint
-brass_AS,Breakpoint annotation on this strand (+ or -)
-brass_EPH,End phase - phase of the first coding base following the breakpoint
-brass_PH,Phase at the breakpoint
-brass_RGN,Region where nucleotide variant (breakpoint) occurs in relation to a gene
-brass_RGNNO,Number of intron/exon where nucleotide variant (breakpoint) occurs in relation to a gene
-brass_RGNC,Count of total number of introns/exons in stated transcript
-brass_TSRDS,Reads from the tumour sample (C-LK5HRU_K5869-T) that span to this rearrangement
-brass_TRDS,Reads from the tumour sample (C-LK5HRU_K5869-T) that contribute to this rearrangement
-delly_CIEND,PE confidence interval around END
-delly_CIPOS,PE confidence interval around POS
-delly_PE,Paired-end support of the structural variant
-delly_MAPQ,Median mapping quality of paired-ends
-delly_CT,Paired-end signature induced connection type
-delly_IMPRECISE,Imprecise structural variation
-delly_SVMETHOD,Type of approach used to detect SV
-delly_RDRATIO,Read-depth ratio of tumor vs. normal.
-delly_SOMATIC,Somatic structural variant.
-delly_AC,Allele count in genotypes
-delly_AN,Total number of alleles in called genotypes
-manta_IMPRECISE,Imprecise structural variation
-manta_CIPOS,Confidence interval around POS
-manta_CIEND,Confidence interval around END
-manta_MATEID,ID of mate breakend
-manta_SVINSLEN,Length of insertion
-manta_SVINSSEQ,Sequence of insertion
-manta_BND_DEPTH,Read depth at local translocation breakend
-manta_MATE_BND_DEPTH,Read depth at remote translocation mate breakend
-manta_SOMATIC,Somatic mutation
-manta_SOMATICSCORE,Somatic variant quality score
-svaba_DISC_MAPQ,Mean mapping quality of discordant reads mapped here
-svaba_NUMPARTS,If detected with assembly
-svaba_MATEID,ID of mate breakends
-svaba_MAPQ,Mapping quality (BWA-MEM) of this fragement of the contig (-1 if discordant only)
-svaba_SCTG,Identifier for the contig assembled by svaba to make the SV call
-svaba_NM,Number of mismatches of this alignment fragment to reference
-svaba_MATENM,Number of mismatches of partner alignment fragment to reference
-svaba_SPAN,Distance between the breakpoints. -1 for interchromosomal
-svaba_INSERTION,Sequence insertion at the breakpoint.
-svaba_IMPRECISE,Imprecise structural variation
-svaba_EVDNC,Evidence for variant. ASSMB assembly only
-Callers,Callers that made this call
-NumCallers,Number of callers that made this call
-CHR2,Chromosome for END coordinate in case of a translocation
-END,End position of the structural variant
-SVTYPE,Type of structural variant
-SVLEN,Length of structural variant
-STRANDS,Strand orientation of the adjacency in BEDPE format (DEL:+-
-NumCallersPass,Number of callers that made this call without filters
-delly_filters,Filter values from delly caller
-delly_GQ,Genotype Quality
-delly_FT,Per-sample genotype filter
-delly_RC,Raw high-quality read counts for the SV
-delly_RCL,Raw high-quality read counts for the left control region
-delly_RCR,Raw high-quality read counts for the right control region
-delly_CN,Read-depth based copy-number estimate for autosomal sites
-delly_DR,# high-quality reference pairs
-delly_DV,# high-quality variant pairs
-delly_RR,# high-quality reference junction reads
-delly_RV,# high-quality variant junction reads
-manta_PR,Spanning paired-read support for the ref and alt alleles in the order listed
-manta_SR,Split reads for the ref and alt alleles in the order listed
-svaba_LR,Log-odds that this variant is REF vs AF=0.5
-svaba_DR,Number of discordant-supported reads for this variant
-svaba_SR,Number of spanning reads for this variants
-svaba_PL,Normalized likelihood of the current genotype
-svaba_GQ,Genotype quality (currently not supported. Always 0)
-svaba_LO,Log-odds that this variant is real vs artifact
-svaba_DP,Depth of coverage: Number of reads covering site.
-svaba_AD,Allele depth: Number of reads supporting the variant
+TUMOR_ID,Identifier for the tumor sample being analyzed
+TYPE,"Type of structural variant: DEL (deletion), DUP (duplication), INV (inversion), BND (translocation/breakend)"
+fusion,"Predicted protein fusion status: ""Protein Fusion: in frame {GENE1:GENE2}"", ""out of frame"", or blank"
+gene1,HUGO gene symbol for the gene at the first breakpoint
+gene2,HUGO gene symbol for the gene at the second breakpoint
+site1,"Precise location of the first breakpoint within or near gene1 (e.g., ""Intron of GENE(+):2Kb before exon 3"")"
+site2,Precise location of the second breakpoint within or near gene2
+CHROM_A,Chromosome of the first breakpoint
+START_A,Start coordinate (bp) of the first breakpoint
+END_A,End coordinate (bp) of the first breakpoint
+CHROM_B,Chromosome of the second breakpoint
+START_B,Start coordinate (bp) of the second breakpoint
+END_B,End coordinate (bp) of the second breakpoint
+STRANDS,"Strand orientation of the adjacency in BEDPE format (DEL: +-, DUP: -+, INV: ++/--, BND: varies)"
+repeat.site1,"Repetitive DNA element (e.g., Alu, LINE, SVA) at the first breakpoint, or blank"
+repeat.site2,"Repetitive DNA element at the second breakpoint, or blank"
+SCORE,"max(SCORE_SPAN, SCORE_SPLIT) - overall read-support score across all callers"
+SCORE_SPAN,"maximum of paired-end/discordant ALT read counts across callers (manta_PR ALT, delly_DV, svaba_DR)"
+SCORE_SPLIT,"maximum of split/junction ALT read counts across callers (manta_SR ALT, delly_RV, svaba_SR)"
+Callers,"Comma-separated list of callers that detected this variant (brass, delly, manta, svaba)"
+NumCallers,Number of callers that detected this variant
+NumCallersPass,Number of callers where the variant passed quality filters (more stringent than NumCallers)
+CC_Chr_Band,Cytogenetic band annotation from the COSMIC Cancer Gene Census
+t_delly_SpanVAF,Tumor variant allele fraction from DELLY spanning/paired-end reads: t_delly_DV / (t_delly_DV + t_delly_DR)
+t_delly_JuncVAF,Tumor variant allele fraction from DELLY junction/split reads: t_delly_RV / (t_delly_RV + t_delly_RR)
+n_delly_SpanVAF,Normal variant allele fraction from DELLY spanning reads (expect ~0 for somatic variants)
+n_delly_JuncVAF,Normal variant allele fraction from DELLY junction reads (expect ~0 for somatic variants)
+t_svaba_VAF,Tumor variant allele fraction from SVABA: t_svaba_AD / t_svaba_DP
+n_svaba_VAF,Normal variant allele fraction from SVABA (expect ~0 for somatic variants)
+t_manta_JuncVAF,Tumor variant allele fraction from MANTA junction/split reads
+delly_PE,Paired-end support of the structural variant (DELLY)
+delly_SR,Split-read support of the structural variant (DELLY)
+t_manta_PR,"Tumor spanning paired-read counts for ref and alt alleles from MANTA, format ""REF,ALT"""
+t_manta_SR,"Tumor split-read counts for ref and alt alleles from MANTA, format ""REF,ALT"""
+t_svaba_AD,Allele depth: number of tumor reads supporting the variant allele (SVABA)
+t_svaba_SR,Number of tumor spanning reads supporting the variant (SVABA)
+n_manta_PR,"Normal spanning paired-read counts for ref and alt alleles from MANTA, format ""REF,ALT"""
+n_manta_SR,"Normal split-read counts for ref and alt alleles from MANTA, format ""REF,ALT"""
+n_svaba_AD,Allele depth: number of normal reads supporting the variant allele (SVABA; expect 0 for somatic)
+n_svaba_SR,Number of normal spanning reads supporting the variant (SVABA; expect 0 for somatic)
+t_delly_DR,Number of high-quality tumor read-pairs supporting the reference allele (DELLY)
+t_delly_DV,Number of high-quality tumor read-pairs supporting the variant allele (DELLY)
+t_delly_RR,Number of high-quality tumor junction reads supporting the reference allele (DELLY)
+t_delly_RV,Number of high-quality tumor junction reads supporting the variant allele (DELLY)
+t_svaba_DR,Number of tumor discordant read-pairs supporting the variant (SVABA)
+n_delly_DR,Number of high-quality normal read-pairs supporting the reference allele (DELLY)
+n_delly_DV,Number of high-quality normal read-pairs supporting the variant allele (DELLY; expect 0 for somatic)
+n_delly_RR,Number of high-quality normal junction reads supporting the reference allele (DELLY)
+n_delly_RV,Number of high-quality normal junction reads supporting the variant allele (DELLY; expect 0 for somatic)
+n_svaba_DR,Number of normal discordant read-pairs supporting the variant (SVABA; expect 0 for somatic)
+CC_Tumour_Types(Somatic),Cancer types where this gene has known somatic mutations (COSMIC Cancer Gene Census)
+CC_Cancer_Syndrome,Hereditary cancer syndromes associated with germline mutations in this gene (Cancer Gene Census)
+CC_Mutation_Type,"Cancer Gene Census classification of the gene's mutation role (e.g., oncogene, TSG, fusion)"
+CC_Translocation_Partner,Known translocation partner genes from the Cancer Gene Census
+DGv_Name-DGv_VarType-site1,Database of Genomic Variants entries (name and variant type) overlapping the first breakpoint
+DGv_Name-DGv_VarType-site2,Database of Genomic Variants entries (name and variant type) overlapping the second breakpoint
+delly_CONSENSUS,"Consensus breakpoint sequence from the DELLY CONSENSUS INFO field (DNA sequence, or NA)"
+NORMAL_ID,Identifier for the matched normal sample
+UUID,Unique identifier for this specific variant call
