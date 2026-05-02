@@ -1,7 +1,8 @@
 # Setup and dependencies
-VERSION <- "v5"
+VERSION <- "v6"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
+source(file.path(PROOT, "rsrc/add_sv_scores.R"))
 argv <- commandArgs(trailing = TRUE)
 
 suppressPackageStartupMessages(require(tidyverse))
@@ -51,8 +52,8 @@ if (nrow(sv_data) == 0) {
       n_delly_SpanVAF = n_delly_DV / (n_delly_DV + n_delly_DR),
       n_delly_JuncVAF = n_delly_RV / (n_delly_RV + n_delly_RR),
       # Svaba VAFs
-      t_svaba_VAF = t_svaba_AD / t_svaba_DP,
-      n_svaba_VAF = n_svaba_AD / n_svaba_DP
+      t_svaba_VAF = pmin(t_svaba_AD / t_svaba_DP, 1),
+      n_svaba_VAF = pmin(n_svaba_AD / n_svaba_DP, 1)
     ) |>
     # Manta split reads need parsing
     separate(t_manta_SR, c("t_manta_SRR", "t_manta_SRV"), remove = FALSE) |>
@@ -72,6 +73,8 @@ if (nrow(sv_data) == 0) {
       NORMAL_ID,
       UUID
     )
+
+  sv_events=add_sv_scores(sv_events) %>% select(TUMOR_ID:repeat.site2,SCORE,SCORE_SPAN,SCORE_SPLIT,everything()) %>% arrange(desc(SCORE))
 
   # Load column descriptions
   col_desc <- read_csv(file.path(PROOT, "rsrc/svColTypeDescriptions.csv"),show_col_types=F,progress=F)
