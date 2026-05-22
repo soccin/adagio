@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=6
 #SBATCH --time=1-00:00:00
 #SBATCH --mem=36G
-#SBATCH --partition=cmobic_cpu,cmobic_short
+#SBATCH --partition=cmobic_cpu,cmobic_pipeline
 
 # Downsample a BAM file using Picard DownsampleSam
 #
