@@ -3,7 +3,7 @@
 #SBATCH -o SLM/adagioWES.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition cmobic_cpu
+#SBATCH --partition bic_devs,cmobic_cpu
 
 OPWD=$PWD
 
