@@ -3,7 +3,7 @@
 #SBATCH -o SLM/adagioWES.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition cmobic_cpu
+#SBATCH --partition bic_devs,cmobic_cpu
 
 OPWD=$PWD
 
@@ -163,6 +163,8 @@ esac
 #
 # WORKFLOWS is now set earlier based on command-line arguments
 
+NF_PARAMS="--anonymizeFQ"
+
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
     -profile $TEMPO_PROFILE \
@@ -177,6 +179,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
+    "$NF_PARAMS" \
     2> ${LOG/.log/.err} \
     | tee -a $LOG
 
@@ -223,7 +226,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
-    --outDir $ODIR
+    --outDir $ODIR \
+    "$NF_PARAMS"
 END_VERSION
 
 popd
