@@ -3,7 +3,7 @@
 #SBATCH -o SLM/adagioWES.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition cmobic_cpu
+#SBATCH --partition bic_devs,cmobic_cpu
 
 OPWD=$PWD
 
@@ -86,6 +86,7 @@ set -ue
 DEFAULT_WORKFLOWS=snv,qc,facets
 WORKFLOWS=$DEFAULT_WORKFLOWS
 WORKFLOW_MODE="default"
+ANONYMIZE=false
 
 #
 # Parse optional workflow arguments
@@ -103,6 +104,12 @@ while [[ $# -gt 0 ]]; do
             WORKFLOW_MODE="add"
             shift
             ;;
+        --anonymize)
+            # WES-only: anonymizes FASTQ read IDs before alignment.
+            # WGS pipeline starts from BAMs, so this flag has no meaning there.
+            ANONYMIZE=true
+            shift
+            ;;
         *)
             break
             ;;
@@ -111,10 +118,11 @@ done
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWESCohort.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWESCohort.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] [--anonymize] PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     echo "  --workflows=W1,W2,...      Replace default workflows (default: snv,qc,facets)"
     echo "  --add-workflows=W3,W4,...  Add to default workflows"
+    echo "  --anonymize                Pass --anonymizeFQ to Tempo"
     echo
     echo "  Available workflows:"
     echo "    Somatic: snv, sv, mutsig, lohhla, facets, msisensor"
@@ -163,6 +171,12 @@ esac
 #
 # WORKFLOWS is now set earlier based on command-line arguments
 
+if [ "$ANONYMIZE" == "true" ]; then
+    NF_PARAMS="--anonymizeFQ"
+else
+    NF_PARAMS=""
+fi
+
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
     -profile $TEMPO_PROFILE \
@@ -177,6 +191,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --mapping $MAPPING \
     --pairing $PAIRING \
     --outDir $ODIR \
+    $NF_PARAMS \
     2> ${LOG/.log/.err} \
     | tee -a $LOG
 
@@ -223,7 +238,8 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --aggregate $AGGREGATE \
     --mapping $MAPPING \
     --pairing $PAIRING \
-    --outDir $ODIR
+    --outDir $ODIR \
+    $NF_PARAMS
 END_VERSION
 
 popd
