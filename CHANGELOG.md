@@ -1,5 +1,50 @@
 # Changelog
 
+## v3.1.0 [2026-05-26] - Cordelia Minor: SLURM/IRIS Optimization
+
+Minor bump on the Cordelia line. Tempo submodule unchanged (`8e6312e0`,
+`cordelia-01`). Focus is IRIS/SLURM resource optimization for WES; also
+includes SV scoring, single-sample report fix, an opt-in `--anonymize` flag
+for WES, and infrastructure housekeeping. WGS-iris tier-ladder parity is
+deferred to a future release.
+
+### Added
+- IRIS WES tiered queue/time picker with reusable `queueFor`/`timeFor`
+  helpers and a `shortMediumLongLadder` for AlignReads
+  (`conf/tempo-wes-iris.config`) [`913a5ea`, `9e7526a`]
+- `--anonymize` opt-in flag for `runTempoWESCohort.sh` (passes
+  `--anonymizeFQ` to Tempo only when set; previously was always on)
+  [`6bcad83`, `ac1284e`]
+- Resource config for `GermlineRunHaplotypecaller` on IRIS WES [`9eb147b`]
+- SV evidence scores (`SCORE`, `SCORE_SPAN`, `SCORE_SPLIT`) in SV report;
+  new helper `scripts/rsrc/add_sv_scores.R` [`bbd21c3`, `0098d3a`]
+- `CLAUDE.md` codebase guide for AI assistants at repo root [`2065799`]
+- `bin/.gitignore` for shell-script swap/backup files [`ecbc6a0`]
+- `errorStrategy = retry` with `maxRetries = 2` set globally in
+  `conf/iris.config`
+
+### Changed
+- IRIS WES jobs now submit to short queues first
+  (`cpushort,cmobic_short` with 2h cap); escalate to `cmobic_cpu` only
+  when the prior attempt hit the walltime cap. Non-walltime failures
+  (OOM, transient) retry in the short queue. [`b45de4d`, `c522288`]
+- AlignReads CPU scaling reduced from `8 + 8*attempt` to `4 + 4*attempt`
+  [`b946826`, `6bcad83`]
+- WES driver partition widened to `bic_devs,cmobic_cpu`; defunct
+  `cmobic_pipeline` partition removed across all configs and scripts
+  [`8106c2b`, `445e1e3`, `3914503`, `d1b4c70`]
+- SvABA tumor/normal VAF capped at 1 using `pmin` to prevent
+  greater-than-1 values from coverage edge cases [`6d30e1d`]
+- `svColTypeDescriptions.csv` rewritten to describe actual report columns
+  rather than raw VCF INFO fields [`ac5e15f`]
+- Pin Nextflow version to `25.10.4` in `00.SETUP.sh` [`ae330e7`]
+
+### Fixed
+- Skip "Gene Stats" sheet when running on a single sample (the sheet is
+  meaningless with n=1) in `scripts/report01.R` [`5819c87`]
+
+See `docs/releases/CHANGE_REPORT_v3.1.md` for the full release narrative.
+
 ## v3.0.0 [2026-03-14] - Official v3 Release
 
 ### Added
