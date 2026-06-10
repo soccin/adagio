@@ -4,6 +4,9 @@ suppressPackageStartupMessages({
   library(ggforce)
 })
 
+PROOT <- get_script_dir()
+source(file.path(PROOT, "rsrc/read_pairing.R"))
+
 #' Find metrics files by pattern
 #'
 #' @param pattern Regex pattern to match file names (e.g., "wgs.txt", "asm.txt")
@@ -42,8 +45,7 @@ read_metrics <- function(files, n_max, select_cols, filter_fn = NULL) {
 }
 
 # Load sample type information (Normal vs Tumor)
-sample_type <- fs::dir_ls("out", recur = 2, regex = "pairing_bam_tempo.tsv") |>
-  read_tsv() |>
+sample_type <- read_pairing() |>
   gather(type, sample) |>
   mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor"))
 
