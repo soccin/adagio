@@ -3,6 +3,7 @@ VERSION <- "v6"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 source(file.path(PROOT, "rsrc/add_sv_scores.R"))
+source(file.path(PROOT, "rsrc/read_pairing.R"))
 argv <- commandArgs(trailing = TRUE)
 
 suppressPackageStartupMessages(require(tidyverse))
@@ -15,9 +16,7 @@ sv_data <- map(sv_files, read_tempo_sv_somatic, .progress = TRUE) |>
 
 # Get full list of tumors from pairing file
 # Handles cases where samples have no SVs
-pairing_files <- fs::dir_ls("out", recur = TRUE, regex = "pairing_bam_tempo.tsv")
-tumors <- pairing_files |>
-  read_tsv(show_col_types = FALSE, progress = FALSE) |>
+tumors <- read_pairing() |>
   pull(TUMOR_ID)
 
 if (nrow(sv_data) == 0) {
