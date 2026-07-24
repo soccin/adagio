@@ -1,5 +1,5 @@
 # Setup and dependencies
-VERSION <- "v7"
+VERSION <- "v8"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 source(file.path(PROOT, "rsrc/add_sv_scores.R"))
@@ -144,6 +144,115 @@ if (!has_svs) {
 
 }
 
+#
+# Excel formatting (openxlsx2; called with :: so nothing is attached or masked)
+#
+
+#' Excel number format for one column
+#'
+#' VAF columns are fractions and are shown as percentages; whole-number columns
+#' get a thousands separator (genomic coordinates included); other numerics get
+#' two decimals. Non-numeric columns get no format.
+#'
+#' @param col_name Column name
+#' @param values Column values
+#' @return Excel format code, or NA if the column needs none
+excel_num_fmt <- function(col_name, values) {
+  if (!is.numeric(values)) {
+    return(NA_character_)
+  }
+  if (str_detect(col_name, "VAF")) {
+    return("0.0%")
+  }
+  if (all(values == round(values), na.rm = TRUE)) {
+    return("#,##0")
+  }
+  "0.00"
+}
+
+#' Column widths that fit their content, capped
+#'
+#' The cap matters: a single long CC/DGv annotation would otherwise stretch one
+#' column past the width of the screen.
+#'
+#' @param tbl Table being written
+#' @param max_width Widest column allowed, in characters
+#' @return Numeric width per column
+fit_col_widths <- function(tbl, max_width = 60) {
+  header_width <- nchar(names(tbl)) * 1.2  # fudge for the bold header font
+  # na.rm matters: nchar(NA_character_) is NA, not 2
+  value_width <- map_dbl(tbl, \(x) max(nchar(as.character(x)), 0, na.rm = TRUE))
+  pmin(pmax(header_width, value_width) + 2, max_width)
+}
+
+#' Add one table to the workbook as a reader-friendly sheet
+#'
+#' Bold wrapped header, frozen header row, fitted column widths, per-column
+#' number formats.
+#'
+#' Excel cannot represent NaN/Inf, so both packages write them as error codes
+#' (#VALUE!/#NUM!) -- the VAF divisions produce NaN whenever a caller had no
+#' reads at all. Those become empty cells here instead. `na.strings = NULL`
+#' leaves NA cells genuinely absent rather than openxlsx2's default #N/A or an
+#' empty text cell, so ISBLANK works and numeric columns stay numeric.
+#'
+#' @param wb openxlsx2 workbook
+#' @param sheet_name Name for the new worksheet
+#' @param tbl Table to write
+#' @return The workbook with the sheet added
+add_report_sheet <- function(wb, sheet_name, tbl) {
+  tbl <- tbl |>
+    mutate(across(where(is.numeric), \(x) replace(x, !is.finite(x), NA)))
+
+  header <- openxlsx2::wb_dims(rows = 1, cols = seq_along(tbl))
+
+  wb <- wb |>
+    openxlsx2::wb_add_worksheet(sheet_name) |>
+    openxlsx2::wb_add_data(x = tbl, na.strings = NULL) |>
+    openxlsx2::wb_add_font(dims = header, bold = "1") |>
+    openxlsx2::wb_add_cell_style(
+      dims = header,
+      wrap_text = TRUE,
+      horizontal = "left"
+    ) |>
+    openxlsx2::wb_freeze_pane(first_active_row = 2) |>
+    openxlsx2::wb_set_col_widths(
+      cols = seq_along(tbl),
+      widths = fit_col_widths(tbl)
+    )
+
+  # One call per distinct format, covering all its columns at once: openxlsx2
+  # registers a new format entry on every call and Excel only tolerates ~200
+  # per workbook, which per-column calls would exceed on the wide SVEvents sheet
+  if (nrow(tbl) > 0) {
+    data_rows <- 1 + seq_len(nrow(tbl))
+    col_fmts <- map2_chr(names(tbl), tbl, excel_num_fmt)
+
+    for (fmt in unique(na.omit(col_fmts))) {
+      dims <- which(col_fmts == fmt) |>
+        map_chr(\(j) openxlsx2::wb_dims(rows = data_rows, cols = j)) |>
+        str_c(collapse = ",")
+      wb <- openxlsx2::wb_add_numfmt(wb, dims = dims, numfmt = fmt)
+    }
+  }
+
+  wb
+}
+
+#' Write the report sheets to a formatted xlsx file
+#'
+#' @param sheets Named list of tables, one worksheet each
+#' @param path Output .xlsx path
+#' @return Invisibly, path
+write_report_workbook <- function(sheets, path) {
+  wb <- openxlsx2::wb_workbook()
+  for (sheet_name in names(sheets)) {
+    wb <- add_report_sheet(wb, sheet_name, sheets[[sheet_name]])
+  }
+  openxlsx2::wb_save(wb, path, overwrite = TRUE)
+  invisible(path)
+}
+
 # Determine project number and output file name
 proj_no <- fs::dir_ls("out") |>
   str_subset("/metrics", negate = TRUE) |>
@@ -159,7 +268,7 @@ fs::dir_create(report_dir)
 
 if (has_svs) {
 
-  write_xlsx(
+  write_report_workbook(
     list(
       SampleData = sample_data,
       SVFreq = sv_freq,
