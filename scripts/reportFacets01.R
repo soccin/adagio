@@ -14,6 +14,43 @@ suppressPackageStartupMessages({
   library(openxlsx)
 })
 
+# Command-line options
+# ====================
+# Handle --help before any file access so it works outside a project directory
+
+usage <- "
+reportFacets01.R -- FACETS copy number report
+
+Usage:
+  Rscript reportFacets01.R [options]
+
+Processes FACETS copy number results from the Tempo output tree and writes
+consolidated segmentation and Excel reports. Run from the project directory
+(the one containing out/).
+
+Options:
+  --keep-failed   Include samples that failed FACETS QC. By default those
+                  samples are dropped from the segmentation and CNA tables.
+                  Output filenames are tagged NO_FILT when this is set.
+  -h, --help      Print this message and exit.
+
+Outputs:
+  post/reports/Proj_<no>[_NO_FILT]_facets_v3.xlsx
+      Multi-sheet workbook: runInfo, armLevel, geneLevel, facetsQC,
+      facetsParams.
+  post/plots/facets/Proj_<no>_{Filtered,NO_FILT}_facets_{purity,hisens}.seg
+      Segmentation files for each FACETS mode.
+"
+
+argv <- commandArgs(trailing = TRUE)
+
+if (any(c("-h", "--help") %in% argv)) {
+  cat(usage)
+  quit(status = 0)
+}
+
+keep_failed <- "--keep-failed" %in% argv
+
 #
 # Silence type_convert silently
 #
@@ -86,6 +123,14 @@ if (length(failed_samples) > 0) {
   message("Failed samples: ", str_c(failed_samples, collapse = ", "))
 }
 
+# Optionally override the failed-sample filter. Setting failed_samples to NULL
+# makes the downstream `filter(!sample %in% failed_samples)` calls a no-op, so
+# every sample is retained in the output.
+if (keep_failed) {
+  message("--keep-failed set: retaining all samples (failed QC filter disabled)")
+  failed_samples <- NULL
+}
+
 #' Process FACETS segmentation files
 #'
 #' This function handles the common pattern of reading, cleaning, and filtering
@@ -111,7 +156,8 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
 
   if(nrow(segmentation_data)>0) {
 
-    output_filename <- str_c("Proj_", project_no, "_Filtered_", output_suffix)
+    filter_tag <- if (keep_failed) "_NO_FILT_" else "_Filtered_"
+    output_filename <- str_c("Proj_", project_no, filter_tag, output_suffix)
     write_tsv(segmentation_data, file.path(facets_dir, output_filename))
 
     message("Wrote ", nrow(segmentation_data), " segments to ", output_filename)
@@ -211,7 +257,9 @@ cna_gene_level <- if (length(gene_level_files) > 0) {
 # - armLevel: Chromosomal arm gains/losses across samples
 # - geneLevel: Gene-specific copy number changes
 
-excel_filename <- str_c("Proj_", project_no, "_facets_v3.xlsx")
+excel_filename <- str_c(
+  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v3.xlsx"
+)
 
 write.xlsx(
   list(
