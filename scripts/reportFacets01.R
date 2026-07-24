@@ -16,9 +16,39 @@ suppressPackageStartupMessages({
 
 # Command-line options
 # ====================
-# --keep-failed  Do not filter out samples that failed FACETS QC; include all
-#                samples in the output (overrides the failed_samples filter).
+# Handle --help before any file access so it works outside a project directory
+
+usage <- "
+reportFacets01.R -- FACETS copy number report
+
+Usage:
+  Rscript reportFacets01.R [options]
+
+Processes FACETS copy number results from the Tempo output tree and writes
+consolidated segmentation and Excel reports. Run from the project directory
+(the one containing out/).
+
+Options:
+  --keep-failed   Include samples that failed FACETS QC. By default those
+                  samples are dropped from the segmentation and CNA tables.
+                  Output filenames are tagged NO_FILT when this is set.
+  -h, --help      Print this message and exit.
+
+Outputs:
+  post/reports/Proj_<no>[_NO_FILT]_facets_v3.xlsx
+      Multi-sheet workbook: runInfo, armLevel, geneLevel, facetsQC,
+      facetsParams.
+  post/plots/facets/Proj_<no>_{Filtered,NO_FILT}_facets_{purity,hisens}.seg
+      Segmentation files for each FACETS mode.
+"
+
 argv <- commandArgs(trailing = TRUE)
+
+if (any(c("-h", "--help") %in% argv)) {
+  cat(usage)
+  quit(status = 0)
+}
+
 keep_failed <- "--keep-failed" %in% argv
 
 #
