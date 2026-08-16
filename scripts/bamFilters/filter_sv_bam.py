@@ -7,7 +7,7 @@ Removes: duplicates, QC-fail, secondary alignments,
 Keeps:   supplementary alignments (split-read evidence),
          one-end-anchored pairs, soft-clipped and discordant reads.
 
-Usage: filter_sv_bam.py input.bam [--threads N]
+Usage: filter_sv_bam.py input.bam [--threads N] [-v]
 Output: input.flt.bam (+ .bai index)
 """
 
@@ -34,14 +34,32 @@ def head_has_duplicates(bam_path: str, n_records: int = 1_000_000) -> bool:
     return False
 
 
-def filter_bam(in_path: str, out_path: str, threads: int) -> dict:
+def count_reads(bam_path: str) -> int | None:
+    """Total reads from the BAM index, or None if it cannot be read."""
+    try:
+        with pysam.AlignmentFile(bam_path, "rb") as bam:
+            return bam.mapped + bam.unmapped
+    except (ValueError, OSError):
+        return None
+
+
+def filter_bam(in_path: str, out_path: str, threads: int,
+               verbose: bool = False) -> dict:
     stats = {"total": 0, "kept": 0, "flag_filtered": 0, "both_unmapped": 0}
+
+    progress = None
+    if verbose:
+        from tqdm import tqdm
+        progress = tqdm(total=count_reads(in_path), unit="reads",
+                        unit_scale=True, file=sys.stderr)
 
     with pysam.AlignmentFile(in_path, "rb", threads=threads) as bam_in, \
          pysam.AlignmentFile(out_path, "wb", template=bam_in,
                              threads=threads) as bam_out:
         for read in bam_in.fetch(until_eof=True):
             stats["total"] += 1
+            if progress is not None:
+                progress.update(1)
 
             if read.flag & EXCLUDE_MASK:
                 stats["flag_filtered"] += 1
@@ -57,6 +75,9 @@ def filter_bam(in_path: str, out_path: str, threads: int) -> dict:
             bam_out.write(read)
             stats["kept"] += 1
 
+    if progress is not None:
+        progress.close()
+
     return stats
 
 
@@ -65,6 +86,8 @@ def main() -> None:
     parser.add_argument("bam", help="input BAM file")
     parser.add_argument("--threads", type=int, default=4,
                         help="threads for BAM (de)compression [4]")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="show a progress bar on stderr")
     args = parser.parse_args()
 
     in_path = Path(args.bam)
@@ -84,7 +107,8 @@ def main() -> None:
               "or this script removes none.", file=sys.stderr)
 
     print(f"Filtering {in_path} -> {out_path}")
-    stats = filter_bam(str(in_path), str(out_path), args.threads)
+    stats = filter_bam(str(in_path), str(out_path), args.threads,
+                       args.verbose)
 
     print(f"Indexing {out_path}")
     pysam.index("-@", str(args.threads), str(out_path))

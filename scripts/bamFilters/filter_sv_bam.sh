@@ -13,7 +13,7 @@ THREADS=${2:-4}
 [[ -f "$BAM" ]] || { echo "ERROR: $BAM not found" >&2; exit 1; }
 [[ "$BAM" == *.bam ]] || { echo "ERROR: input must end in .bam" >&2; exit 1; }
 
-OUT=${BAM/%.bam/.flt.bam}
+OUT=$(basename ${BAM/%.bam/.flt.bam})
 [[ "$OUT" != "$BAM" ]] || { echo "ERROR: output would overwrite input" >&2; exit 1; }
 
 # samtools >= 1.12 required for -e filter expressions
