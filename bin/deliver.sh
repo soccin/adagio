@@ -87,8 +87,6 @@ ssh $BDSERVER mkdir -p $ODIR/$CURRDIR/tempo
 rsync -rvP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ ${BDSERVER}:$ODIR/$CURRDIR/tempo
 rsync -rvP post ${BDSERVER}:$ODIR/$CURRDIR
 
-exit
-
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 
 if [ -e "Map/sbam" ]; then
