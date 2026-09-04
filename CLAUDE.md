@@ -99,8 +99,15 @@ Key rules, in full detail in those files:
 
 ### Environment setup
 
+No setup step is required. The run scripts resolve `$CLUSTER` themselves and
+export `NXF_SINGULARITY_CACHEDIR`, `TMPDIR`, `WORKDIR`, `REFERENCE_BASE`, and
+`PATH` for the detected cluster.
+
+Optionally set `NXF_HOME` in your shell profile to keep Nextflow's framework
+jars, plugins, and assets out of `$HOME`:
+
 ```bash
-source SETENVRC   # sets NXF_SINGULARITY_CACHEDIR, TMPDIR, PATH
+export NXF_HOME=/scratch/core001/bic/socci/opt/nextflow
 ```
 
 ### WGS from BAMs
@@ -142,8 +149,7 @@ Then re-run the same script — all run scripts use `-resume` by default.
 ### Cleanup
 
 ```bash
-source SETENVRC
-clean   # alias: removes out*/ work/ .nextflow.log* trace* report.html timeline.html *.tsv
+bin/clean.sh   # removes out*/ work/ .nextflow.log* trace* report.html timeline.html *.tsv
 ```
 
 ## Commit message conventions
