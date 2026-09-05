@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Runs on two HPC clusters: **JUNO** (LSF) and **IRIS** (SLURM) — see
   [HPC clusters](#hpc-clusters) for the scheduling rules; they are not
   interchangeable
+- **JUNO is decommissioned 2026-10-01. IRIS is the only target for new work;
+  leave all JUNO code and config untouched.**
 
 ## Architecture
 
@@ -63,6 +65,28 @@ Shared R utilities in `scripts/rsrc/`:
 
 Cluster is chosen by `$CLUSTER` (`bin/getClusterName.sh`); the run scripts switch
 config, Singularity cache, and `REFERENCE_BASE` on it.
+
+### JUNO is being decommissioned on 2026-10-01 — do not touch it
+
+**No further work will be done on the JUNO code paths.** Leave everything JUNO
+as it is: do not edit it, do not modernise it, do not port IRIS changes onto it,
+and do not "fix" inconsistencies between the two clusters. A difference between
+the IRIS and JUNO configs is not a bug to be reconciled — it is a path that is
+about to be deleted.
+
+Off-limits:
+
+- `conf/juno.config`, `conf/tempo-wgs-juno.config`, `conf/tempo-wes-juno.config`
+- `docs/JUNO_LSF.md`
+- the `juno` branches in `bin/` run scripts and any
+  `workflow.profile == "juno"` blocks in `tempo/`
+
+If a change would touch a JUNO path, make the IRIS change only and say what was
+left alone. The one exception is a change to shared code that would *break* JUNO
+before 2026-10-01 while a run is still in flight; keeping it compiling is fine,
+improving it is not.
+
+**IRIS is the only target for new work.**
 
 **IRIS is SLURM. JUNO is LSF. Assumptions do not transfer between them.**
 **Read the relevant reference before changing any resource setting:**
