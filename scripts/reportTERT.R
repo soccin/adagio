@@ -29,11 +29,12 @@ require(tidyverse)
 
 # Read all somatic MAF files, combine them, and filter for TERT mutations
 maf0 <- fs::dir_ls("out", recur = TRUE, regex = ".somatic.unfiltered.maf$") |>
-  map(read_tsv) |>
+  map(\(f) read_tsv(f, col_types = cols(.default = "c"))) |>
   bind_rows(.id="Sample") |>
-  mutate(Sample=basename(Sample)%>%gsub(".somatic.*","",.)) %>%
+  mutate(Sample=basename(Sample) |> str_remove("\\.somatic.*")) |>
   select(all_of(reportCols00)) |>
-  filter(grepl("^TERT$", Hugo_Symbol))
+  filter(Hugo_Symbol == "TERT") |>
+  type_convert(col_types = cols())
 
 # Generate output filename based on project number
 projNo <- basename(fs::dir_ls("out"))
