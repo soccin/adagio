@@ -80,26 +80,51 @@ af_MSK_WES=read_tsv(portalWESGeneFreqFile,show_col_types=FALSE,progress=F) %>% m
 extraCols=c("non_cancer_AF_popmax","SIFT","PolyPhen","IMPACT")
 extraCols=intersect(extraCols,colnames(maf))
 
+mafToReportTbl=function(maf) {
+    maf %>%
+        mutate(GPos=paste0(Chromosome,":",Start_Position,"-",End_Position)) %>%
+        select(
+            Sample=Tumor_Sample_Barcode,Gene=Hugo_Symbol,Type=Variant_Classification,
+            dbSNP_RS,Alteration=HGVSp_Short,oncogenic,
+            VAF=t_var_freq,t_depth,t_alt_count,
+            n_depth,n_alt_count,
+            Normal_Sample=Matched_Norm_Sample_Barcode,
+            GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2,
+            all_of(extraCols)
+        ) %>%
+        rename(VEP_IMPACT=IMPACT) %>%
+        left_join(af_MSK_WES,by = join_by(Gene)) %>%
+        rename(MSKWES_GENE_Frac=AF)
+}
+
 tbl1=maf %>%
-    mutate(GPos=paste0(Chromosome,":",Start_Position,"-",End_Position)) %>%
-    select(
-        Sample=Tumor_Sample_Barcode,Gene=Hugo_Symbol,Type=Variant_Classification,
-        dbSNP_RS,Alteration=HGVSp_Short,oncogenic,
-        VAF=t_var_freq,t_depth,t_alt_count,
-        n_depth,n_alt_count,
-        Normal_Sample=Matched_Norm_Sample_Barcode,
-        GPos,REF=Reference_Allele,ALT=Tumor_Seq_Allele2,
-        all_of(extraCols)
-    ) %>%
-    rename(VEP_IMPACT=IMPACT) %>%
+    mafToReportTbl %>%
     filter((!is.na(Alteration) & !grepl("=$",Alteration)) | (Gene=="TERT" & Type=="5'Flank")) %>%
-    arrange(Gene,Sample) %>%
-    left_join(af_MSK_WES,by = join_by(Gene)) %>%
-    rename(MSKWES_GENE_Frac=AF)
+    arrange(Gene,Sample)
 
+#
+# TERT promoter (5'Flank) mutations are usually flagged by tempo (e.g.
+# repeatmasker) so they never reach the filtered cohort MAF. Add back any
+# non-PASS ones from the unfiltered per-pair MAFs. They go in the Mutations
+# sheet only and are not counted in the sample or gene stats.
+#
+unfilteredMafFiles=fs::dir_ls("out",recurse=TRUE,regex="\\.somatic\\.unfiltered\\.maf$")
 
-class(tbl1$VAF)="percentage"
-class(tbl1$MSKWES_GENE_Frac)="percentage"
+# Read as character since column types differ between the per-pair MAFs
+tertRescued=unfilteredMafFiles |>
+    map(\(f) data.table::fread(f, skip = "Hugo_Symbol", sep = "\t", na.strings = c("", "NA"), colClasses = "character") |> tibble()) |>
+    bind_rows() |>
+    filter(FILTER != "PASS") |>
+    mafToReportTbl() |>
+    filter(Gene=="TERT" & Type=="5'Flank")
+
+tertRescued=quietly(type_convert)(tertRescued) |> pluck("result")
+
+tblMutations=bind_rows(tbl1,tertRescued) |>
+    arrange(Gene,Sample)
+
+class(tblMutations$VAF)="percentage"
+class(tblMutations$MSKWES_GENE_Frac)="percentage"
 
 numMutations=tbl1 %>% count(Sample,name="NumMutations") %>% arrange(desc(NumMutations))
 nSamples=distinct(tbl1,Sample) %>% nrow
@@ -166,10 +191,10 @@ if (nSamples > 1) {
 #
 
 addWorksheet(wb,sheetName="Mutations")
-writeDataTable(wb,sheet="Mutations",tbl1,tableStyle="none",withFilter=F)
-addStyle(wb,sheet="Mutations",cols=1:ncol(tbl1),row=1,style=styleHeader,gridExpand=T)
+writeDataTable(wb,sheet="Mutations",tblMutations,tableStyle="none",withFilter=F)
+addStyle(wb,sheet="Mutations",cols=1:ncol(tblMutations),row=1,style=styleHeader,gridExpand=T)
 wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews=set_zoom(wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews,120)
-setColWidths(wb,sheet="Mutations",cols=1:ncol(tbl1),widths="auto")
+setColWidths(wb,sheet="Mutations",cols=1:ncol(tblMutations),widths="auto")
 setColWidths(wb,sheet="Mutations",cols=1,widths=12)
 setColWidths(wb,sheet="Mutations",cols=5:6,widths=14)
 
