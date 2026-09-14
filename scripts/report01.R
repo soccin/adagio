@@ -18,7 +18,7 @@ facetsQCFiles=fs::dir_ls("out",recurs=3,regex="somatic.*facets") %>% fs::dir_ls(
 facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types=cols(.default="c")) %>%
     bind_rows %>%
     quietly(type_convert)(.) %>% pluck("result") %>%
-    select(tumor_sample_id,facets_qc,purity=purity_run_Purity,ploidy,fga) %>%
+    select(tumor_sample_id,facets_qc,purity=purity_run_Purity,ploidy,fga,dipLogR) %>%
     separate(tumor_sample_id,c("SampleID","NormalID"),sep="__")
 
 #
@@ -45,7 +45,7 @@ sampleData=read_tsv(sampleDataFile,show_col_types=FALSE,progress=F) %>%
     select(-matches("^SB|^HLA|^MSI")) %>%
     select(SampleID=Sample,NormalID,`Mutation Count`=Number_of_Mutations,TMB) %>%
     left_join(facetsDat,by = join_by(SampleID, NormalID)) %>%
-    select(-facets_qc,facets_qc) %>%
+    select(-facets_qc,-dipLogR,facets_qc,dipLogR) %>%
     rename(`Facets Purity`=purity,`Facets Ploidy`=ploidy,`Fraction Genome Altered`=fga)
 
 if(!(ASSAY=="WES" || ASSAY=="exome")) {
@@ -164,6 +164,7 @@ addStyle(wb,sheet=1,cols=4,rows=rows,style=createStyle(numFmt="0.00"))
 addStyle(wb,sheet=1,cols=5,rows=rows,style=createStyle(numFmt="0.00"))
 addStyle(wb,sheet=1,cols=6,rows=rows,style=createStyle(numFmt="0.00"))
 addStyle(wb,sheet=1,cols=7,rows=rows,style=createStyle(numFmt="0.00"))
+addStyle(wb,sheet=1,cols=which(names(sampleData)=="dipLogR"),rows=rows,style=createStyle(numFmt="0.00"))
 
 setColWidths(wb,sheet=1,cols=1:ncol(sampleData),widths="auto")
 setColWidths(wb,sheet=1,cols=1,widths=14)
