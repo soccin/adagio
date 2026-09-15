@@ -44,9 +44,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-BDSERVER=isvzeta
-BDSERVER=pyr
-DROOT=/ifs/rtsia01/bic/results
+DROOT=/data1/core002/res/bic/results
 
 if [[ "$USE_DEFAULT" -eq 1 && -z "$ODIR" ]]; then
     if [[ -z "$DPATH" ]]; then
@@ -62,41 +60,36 @@ if [[ -z "$ODIR" ]]; then
     exit
 fi
 
-# CURRDIR: trailing /r_NNN on ARG1 as-is; else next after latest on BDSERVER; else r_001
+# CURRDIR: trailing /r_NNN on ARG1 as-is; else next after latest in ODIR; else r_001
 CURRDIR=r_001
 if [[ "$ODIR" =~ /r_[0-9]+$ ]]; then
     CURRDIR="${ODIR##*/}"
     ODIR="${ODIR%/*}"
-else
-    echo "Probing $BDSERVER for existing delivery folders under $ODIR ..."
-    if ssh "$BDSERVER" "test -d '$ODIR'"; then
-        last=$(ssh "$BDSERVER" "ls -1 '$ODIR' | grep -E '^r_[0-9]+\$' | sort | tail -1")
-        if [[ "$last" =~ ^r_([0-9]+)$ ]]; then
-            CURRDIR=$(printf 'r_%03d' $((10#${BASH_REMATCH[1]} + 1)))
-        fi
+elif [[ -d "$ODIR" ]]; then
+    last=$(ls -1 "$ODIR" | grep -E '^r_[0-9]+$' | sort | tail -1)
+    if [[ "$last" =~ ^r_([0-9]+)$ ]]; then
+        CURRDIR=$(printf 'r_%03d' $((10#${BASH_REMATCH[1]} + 1)))
     fi
-    echo "Probe complete."
 fi
 
 echo "ODIR=$ODIR"
 echo "CURRDIR=$CURRDIR"
 
-echo "Making $ODIR/$CURRDIR/tempo on $BDSERVER ..."
-ssh $BDSERVER mkdir -p $ODIR/$CURRDIR/tempo
+mkdir -p "$ODIR/$CURRDIR/tempo"
 
-rsync -rvP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ ${BDSERVER}:$ODIR/$CURRDIR/tempo
-rsync -rvP post ${BDSERVER}:$ODIR/$CURRDIR
+rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ "$ODIR/$CURRDIR/tempo"
+rsync -aP post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 
 if [ -e "Map/sbam" ]; then
-  mkdir $ODIR/mapping
-  rsync -rvP --exclude="*.ba[mi]" Map/sbam/ $ODIR/mapping
+  mkdir -p "$ODIR/$CURRDIR/mapping"
+  rsync -aP --exclude="*.ba[mi]" Map/sbam/ "$ODIR/$CURRDIR/mapping"
 fi
 
 if [ -e "Map/out/metrics" ]; then
-  mkdir -p $ODIR/mapping
-  rsync -rvP Map/out/metrics $ODIR/mapping
+  mkdir -p "$ODIR/$CURRDIR/mapping"
+  rsync -aP Map/out/metrics "$ODIR/$CURRDIR/mapping"
 fi
 
 echo
@@ -106,14 +99,11 @@ sed "s/{PROJNO}/$PROJECT_ID/g" \
   $RDIR/assets/delivery_email_template.txt \
   | tee deliveryEmail_${PROJECT_ID}_$(date +%y%m%d).txt
 
-CLUSTER=$(getCluster.sh)
-if [ "$CLUSTER" != "IRIS" ]; then
-  BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
-  Rscript $BIC_DELIVERY/readme2yaml.R adagio
+BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
+Rscript $SDIR/readme2yaml.R adagio $CURRDIR
 
-  module purge
-  module load python/3.8.0
-  module load py-python-ldap/3.4.2
-  . $BIC_DELIVERY/venv/bin/activate
-  python3 $BIC_DELIVERY/authorization_db/init_impact_project_permissions.py -p project.yaml
-fi
+module purge
+module load python/3.8.0
+PYTHON38=$(which python3.8)
+module load py-python-ldap/3.4.2
+$PYTHON38 $BIC_DELIVERY/authorization_db/init_impact_project_permissions.py -p project.yaml
