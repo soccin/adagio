@@ -29,9 +29,11 @@ consolidated segmentation and Excel reports. Run from the project directory
 (the one containing out/).
 
 Options:
-  --keep-failed   Include samples that failed FACETS QC. By default those
-                  samples are dropped from the segmentation and CNA tables.
-                  Output filenames are tagged NO_FILT when this is set.
+  --keep-failed   Include samples that failed the sample filter. By default a
+                  sample is kept if it passed FACETS QC or has
+                  |dipLogR| < 0.5; other samples are dropped from the
+                  segmentation and CNA tables. Output filenames are tagged
+                  NO_FILT when this is set.
   -h, --help      Print this message and exit.
 
 Outputs:
@@ -89,8 +91,11 @@ script_dir <- get_script_dir()
 # Quality Control: Identify Failed Samples
 # =========================================
 # Read individual FACETS QC files from each sample directory to identify
-# samples that failed quality control. These samples will be excluded from
-# final outputs to ensure reliable results.
+# samples that fail the sample filter. A sample passes if it passed FACETS QC,
+# or if it failed QC but its dipLogR is close to 0. Failing samples are
+# excluded from final outputs.
+
+max_abs_diplogr <- 0.5
 
 # Find all QC files across sample directories
 facets_qc_files <- dir_ls(sample_dir, "\\.facets_qc\\.txt")
@@ -113,12 +118,16 @@ qc_data <- map(
 qc_data <- qc_data |>
   select(-path, -purity_run_prefix, -hisens_run_prefix)
 
-# Extract samples that failed QC (facets_qc == FALSE)
+# Extract samples that fail the filter: facets_qc || |dipLogR| < max_abs_diplogr
+# A missing dipLogR does not rescue a sample that failed QC
 failed_samples <- qc_data |>
-  filter(!facets_qc) |>
+  filter(!(facets_qc | coalesce(abs(dipLogR) < max_abs_diplogr, FALSE))) |>
   pull(tumor_sample_id)
 
-message("Found ", length(failed_samples), " samples that failed FACETS QC")
+message(
+  "Found ", length(failed_samples), " samples that failed FACETS QC with ",
+  "|dipLogR| >= ", max_abs_diplogr
+)
 if (length(failed_samples) > 0) {
   message("Failed samples: ", str_c(failed_samples, collapse = ", "))
 }
@@ -127,7 +136,7 @@ if (length(failed_samples) > 0) {
 # makes the downstream `filter(!sample %in% failed_samples)` calls a no-op, so
 # every sample is retained in the output.
 if (keep_failed) {
-  message("--keep-failed set: retaining all samples (failed QC filter disabled)")
+  message("--keep-failed set: retaining all samples (sample filter disabled)")
   failed_samples <- NULL
 }
 
