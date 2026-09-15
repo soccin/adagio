@@ -106,7 +106,7 @@ tbl1=maf %>%
 # TERT promoter (5'Flank) mutations are usually flagged by tempo (e.g.
 # repeatmasker) so they never reach the filtered cohort MAF. Add back any
 # non-PASS ones from the unfiltered per-pair MAFs. They go in the Mutations
-# sheet only and are not counted in the sample or gene stats.
+# and Gene Stats sheets but are not counted in the sample stats.
 #
 unfilteredMafFiles=fs::dir_ls("out",recurse=TRUE,regex="\\.somatic\\.unfiltered\\.maf$")
 
@@ -140,9 +140,9 @@ class(tblMutations$VAF)="percentage"
 class(tblMutations$MSKWES_GENE_Frac)="percentage"
 
 numMutations=tbl1 %>% count(Sample,name="NumMutations") %>% arrange(desc(NumMutations))
-nSamples=distinct(tbl1,Sample) %>% nrow
+nSamples=distinct(tblMutations,Sample) %>% nrow
 
-mutatedGenes=tbl1 %>%
+mutatedGenes=tblMutations %>%
     distinct(Sample,Gene) %>%
     group_by(Gene) %>%
     summarize(Count=n(),Samples=paste0(sort(Sample),collapse=",")) %>%
