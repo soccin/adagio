@@ -118,7 +118,20 @@ tertRescued=unfilteredMafFiles |>
     mafToReportTbl() |>
     filter(Gene=="TERT" & Type=="5'Flank")
 
-tertRescued=quietly(type_convert)(tertRescued) |> pluck("result")
+#
+# Convert using tbl1 column types. Guessing fails when there are no rescued
+# rows (all columns stay character and bind_rows errors on VAF). Logical
+# columns in tbl1 are all NA, so guess those.
+#
+tertColTypes=tbl1 |>
+    map(\(x) switch(class(x)[1],
+        numeric=col_double(),
+        integer=col_double(),
+        logical=col_guess(),
+        col_character()
+    ))
+
+tertRescued=type_convert(tertRescued,col_types=cols(!!!tertColTypes))
 
 tblMutations=bind_rows(tbl1,tertRescued) |>
     arrange(Gene,Sample)
