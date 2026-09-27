@@ -124,6 +124,15 @@ In practice this is generous: at 160 GB per task the memory cap allows ~370
 concurrent jobs; at 2 CPUs per task the CPU cap allows ~1500. Neither binds for
 a typical pipeline. It can bind if many tasks each request 246 GB or more.
 
+`cpushort` allows only QoS `normal` (`AllowQos=normal`). A job submitted to
+`cpushort,cmobic_short` with `--qos=priority` is rejected at submission with
+`Invalid qos specification`; Nextflow reports this as "Error submitting
+process". `SBATCH_QOS` in the environment overrides `#SBATCH --qos` lines, so
+it has the same effect. `conf/tempo-{wgs,wes}-iris.config` set QoS per task
+(`qosFor`: `priority` unless the queue includes `cpushort`), and
+`bin/runTempoWGSBam.sh`, `bin/runTempoWESCohort.sh` and
+`bin/makeTempoBams.sh` unset `SBATCH_QOS`. Verified 2026-09-27.
+
 ---
 
 ## 6. Diagnosing why a job died

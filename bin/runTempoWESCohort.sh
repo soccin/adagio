@@ -3,7 +3,8 @@
 #SBATCH -o SLM/adagioWES.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition bic_devs,cmobic_cpu
+#SBATCH --partition cmobic_cpu
+#SBATCH --qos=priority
 
 OPWD=$PWD
 
@@ -44,6 +45,12 @@ if [ "$CLUSTER" == "IRIS" ]; then
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
+
+    # QoS is set per task in conf/tempo-wes-iris.config (qosFor). An
+    # inherited SBATCH_QOS would override it and get every cpushort
+    # submission rejected, so drop it here. The driver job keeps
+    # whatever QoS it was submitted with.
+    unset SBATCH_QOS
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
