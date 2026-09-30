@@ -45,9 +45,13 @@ read_metrics <- function(files, n_max, select_cols, filter_fn = NULL) {
 }
 
 # Load sample type information (Normal vs Tumor)
+# A normal paired with several tumors appears once per pair in the
+# pairing table; keep one row per sample so the join below does not
+# replicate (and geom_col stack) that sample's stats.
 sample_type <- read_pairing() |>
   gather(type, sample) |>
-  mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor"))
+  mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor")) |>
+  distinct()
 
 # Extract WGS coverage statistics
 wgs_files <- find_metrics_files("wgs.txt")
