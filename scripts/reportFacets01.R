@@ -37,8 +37,8 @@ Options:
   -h, --help      Print this message and exit.
 
 Outputs:
-  post/reports/Proj_<no>[_NO_FILT]_facets_v3.xlsx
-      Multi-sheet workbook: runInfo, armLevel, geneLevel, facetsQC,
+  post/reports/Proj_<no>[_NO_FILT]_facets_v4.xlsx
+      Multi-sheet workbook: runInfo, armLevel, geneLevelFocal, facetsQC,
       facetsParams.
   post/plots/facets/Proj_<no>_{Filtered,NO_FILT}_facets_{purity,hisens}.seg
       Segmentation files for each FACETS mode.
@@ -240,7 +240,16 @@ cna_arm_level <- if (length(arm_level_files) > 0) {
     # Remove header row artifacts and ensure proper data types
     filter(sample != "sample") |>
     type_convert() |>
-    filter(!sample %in% failed_samples)
+    filter(!sample %in% failed_samples) |>
+    # Autosomes only: chrX (FACETS 23p/23q) cannot be called accurately
+    # without sex info
+    filter(!str_detect(arm, "^(23|24|X|Y)[pq]")) |>
+    # Numeric chromosome order (1p, 1q, 2p, ..., 22q) within each sample
+    arrange(
+      sample,
+      as.numeric(str_remove(arm, "[pq]$")),
+      str_extract(arm, "[pq]$")
+    )
 } else {
   message("Warning: No arm-level CNA files found")
   tibble()
@@ -259,22 +268,102 @@ cna_gene_level <- if (length(gene_level_files) > 0) {
   tibble()
 }
 
+# Focal gene-level summary
+# ========================
+# One row per gene that lies on a segment of max_focal_seg_length or smaller
+# in at least one sample, where the focal calls with tcn != 2 are all gains
+# or all losses (see filter below). Autosomes only: chrX (FACETS chrom 23)
+# cannot be called accurately without sex info.
+#
+# The gene-level files omit diploid calls, so every call counted below is a
+# non-diploid call; diploid samples are not counted.
+#   arm: chromosome arm of gene_start, from rsrc/centromeres_<genome>.tsv
+#   samples_focal, n_focal: samples with a call on a focal segment
+#   samples_all, n_all: samples with a call at the gene, any segment size
+#   pct_loss (tcn < 2), pct_cnloh (tcn == 2), pct_amp (tcn > 2): all calls,
+#     as a percentage of all samples in the cohort (after the sample
+#     filter), so the three can sum to less than 100
+#   cn_state_summary, tcn_summary: one entry per sample in samples_all
+#     order; "+" marks a focal call
+
+max_focal_seg_length <- 1e6
+
+gene_level_focal <- if (nrow(cna_gene_level) > 0) {
+  n_cohort <- qc_data |>
+    filter(!tumor_sample_id %in% failed_samples) |>
+    pull(tumor_sample_id) |>
+    n_distinct()
+
+  # p/q arm boundaries for the genome FACETS was run with
+  genome <- facets_parameters |>
+    filter(Param == "genome") |>
+    pull(Value)
+  centromeres <- read_tsv(
+    file.path(script_dir, "rsrc", str_glue("centromeres_{genome}.tsv")),
+    comment = "#",
+    show_col_types = FALSE
+  )
+
+  cna_gene_level |>
+    # Numeric chromosome order (1, 2, ..., 22); X and Y map to 23 and 24
+    mutate(
+      chrom_key = as.character(chrom) |>
+        str_remove("^chr") |>
+        str_replace_all(c("^X$" = "23", "^Y$" = "24")) |>
+        as.numeric()
+    ) |>
+    filter(chrom_key <= 22) |>
+    left_join(centromeres, by = c("chrom_key" = "chrom")) |>
+    mutate(
+      arm = str_c(chrom_key, if_else(gene_start < centromere, "p", "q")),
+      sample = str_remove(sample, "__.*"),
+      focal = seg_length <= max_focal_seg_length,
+      focal_tag = if_else(focal, "+", "")
+    ) |>
+    arrange(sample) |>
+    group_by(gene, arm, tsg, chrom, chrom_key, gene_start, gene_end) |>
+    # Keep a gene only if it has at least one focal call with tcn != 2, and
+    # all such calls agree in the sign of tcn - 2 (all gain or all loss).
+    # Focal tcn == 2 (CNLOH) calls are ignored in the sign check.
+    filter(n_distinct(sign(tcn - 2)[focal & tcn != 2]) == 1) |>
+    summarize(
+      samples_focal = str_c(sample[focal], collapse = ","),
+      samples_all = str_c(sample, collapse = ","),
+      n_focal = sum(focal),
+      n_all = n(),
+      pct_loss = round(100 * sum(tcn < 2) / n_cohort),
+      pct_cnloh = round(100 * sum(tcn == 2) / n_cohort),
+      pct_amp = round(100 * sum(tcn > 2) / n_cohort),
+      cn_state_summary = str_c(cn_state, focal_tag, collapse = ";"),
+      tcn_summary = str_c(tcn, focal_tag, collapse = ";"),
+      .groups = "drop"
+    ) |>
+    arrange(chrom_key, gene_start, gene) |>
+    select(
+      gene, arm, samples_focal, samples_all, n_focal, n_all,
+      pct_loss, pct_cnloh, pct_amp, cn_state_summary, tcn_summary,
+      chrom, gene_start, gene_end, tsg
+    )
+} else {
+  tibble()
+}
+
 # Generate Multi-Sheet Excel Report
 # ==================================
 # This consolidated report provides different views of the FACETS analysis:
 # - runInfo: Sample-level metrics and purity estimates
 # - armLevel: Chromosomal arm gains/losses across samples
-# - geneLevel: Gene-specific copy number changes
+# - geneLevelFocal: Genes on segments <= 1Mb, with cohort CN-state stats
 
 excel_filename <- str_c(
-  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v3.xlsx"
+  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v4.xlsx"
 )
 
 write.xlsx(
   list(
     runInfo = run_info,
     armLevel = cna_arm_level,
-    geneLevel = cna_gene_level,
+    geneLevelFocal = gene_level_focal,
     facetsQC = qc_data,
     facetsParams = facets_parameters
   ),
@@ -284,4 +373,4 @@ write.xlsx(
 message("Generated comprehensive Excel report: ", excel_filename)
 message("  - runInfo sheet: ", nrow(run_info), " entries")
 message("  - armLevel sheet: ", nrow(cna_arm_level), " entries")
-message("  - geneLevel sheet: ", nrow(cna_gene_level), " entries")
+message("  - geneLevelFocal sheet: ", nrow(gene_level_focal), " entries")
