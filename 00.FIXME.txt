@@ -1,2 +1,10 @@
 There is a bug in the pipeline. The details are in the devs/iris branch
 in the folder bugs
+
+2026-09-30: CohortRunMultiQC fails (exit 1, error ignored) on BAM-input
+WGS runs. <sample>.recal.bam naming doubles the Qualimap rows in the
+general stats table, no fastp files makes max_table_rows too low,
+MultiQC 1.9 then renders a beeswarm and never writes
+multiqc_general_stats.txt, and general_stats_parse.py crashes. Cohort
+MultiQC report is missing from out/. Details in
+bugs/BUG_REPORT_CohortRunMultiQC.md
