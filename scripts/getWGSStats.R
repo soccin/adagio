@@ -9,11 +9,16 @@ source(file.path(PROOT, "rsrc/read_pairing.R"))
 
 #' Find metrics files by pattern
 #'
+#' Skips anything under a tests/fixtures directory: tool checkouts in the
+#' project tree (e.g. Map/wgsTriage) ship synthetic metrics files that
+#' would otherwise be read as samples.
+#'
 #' @param pattern Regex pattern to match file names (e.g., "wgs.txt", "asm.txt")
 #' @return Character vector of named file paths
 find_metrics_files <- function(pattern) {
-  list.files(recur = TRUE) |>
-    grep(pattern, x = _, value = TRUE) |>
+  list.files(recursive = TRUE) |>
+    str_subset(pattern) |>
+    str_subset("(^|/)tests/fixtures/", negate = TRUE) |>
     set_names()
 }
 
