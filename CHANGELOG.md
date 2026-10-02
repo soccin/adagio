@@ -1,5 +1,99 @@
 # Changelog
 
+## v3.2.1 [2026-10-02] - Cordelia Minor: WGS IRIS Parity and SV Sizing
+
+Minor bump on the Cordelia line. Collects four months of work from `master`
+and `devs/iris`. Tempo submodule advanced from `8e6312e0` to `a7ecd35a`
+(branch `devs/iris`). Skips 3.2.0: the `v3.2.0-beta` tag (2026-09-07,
+`devs/iris`) was never released and is superseded by this version.
+
+### Added
+- IRIS WGS tiered queue/time picker: short-queue-first default,
+  `shortMediumLongLadder`, `tierFor`/`queueFor`/`timeFor`
+  (`conf/tempo-wgs-iris.config`) [`448660c`]
+- Two-rung, two-attempt Delly and SvABA ladders on IRIS WGS with `rungFor`,
+  sized from 811 and 162 completed tasks: Delly 32GB/11h then 320GB/7d at
+  2 cpus, SvABA 48GB/6h then 320GB/7d at 42 cpus [`3d2dc01`, `6951659`,
+  `3328bb0`, `1e207f2`, `9a86294`, `7d4d466`]
+- `qosFor` per-task QoS picker in both IRIS configs; drivers `unset
+  SBATCH_QOS` on IRIS and submit to `cmobic_cpu` with `--qos=priority`
+  [`0a3e020`]
+- `.*AnnotateSVBedpe` memory rule on IRIS WGS, `32.GB * attempt`
+  [`8b7056b`, `c000f27`]
+- `#SBATCH --mail-type=END,FAIL` on every SBATCH script [`3a7a77e`,
+  `f0bf595`]
+- `bin/makeTempoBams.sh`: alignment-only runner producing BQSR BAMs and a
+  `bamMapping.tsv` [`2260b32`]
+- `bin/clean.sh` [`dd3b237`]
+- `bin/readme2yaml.R`: README.txt to project.yaml for delivery [`c4230d1`]
+- `scripts/pair_samples.R` and `bin/make_pairing_draft.py` pairing builders
+  [`f40bb46`, `24c7eb8`]
+- `scripts/bamFilters/filter_sv_bam.{py,sh}` SV BAM filters [`f6b9afa`,
+  `b07141c`]
+- ENCODE b37 blacklists under `rsrc/genomic/hg19/` for SvABA and Delly
+  [`65537b0`, `03f8371`]
+- TERT promoter rescue in `report01.R` [`095c40a`, `be57ad1`, `d12d3e0`]
+- FACETS dipLogR column in `report01.R` [`251907a`]
+- `geneLevelFocal` sheet in the FACETS report, with
+  `docs/DESCRIPTION_FOCAL_GENES.md` and `docs/METHODS_CNV_GENES.md`
+  [`357f377`, `fb91f2b`]
+- `--keep-failed` and `--help` in `reportFacets01.R` [`ba7f7d9`, `e1aa3e9`]
+- `SVFreq` recurrent gene-pair sheet in the SV report (v7) [`555f6fb`]
+- `scripts/rsrc/read_pairing.R`: pairing resolved from run logs [`a70b55b`]
+- `docs/IRIS_SLURM.md` and `docs/JUNO_LSF.md` cluster references; HPC
+  rules section in `CLAUDE.md` [`87069a5`, `2e7ade3`]
+- `devs/wes-iris-parity-report.md`: WES work plan from WGS changes
+  [`0cb8afb`]
+- Bug reports under `bugs/`: ClusterSV, SvABA, CohortRunMultiQC
+  [`b83ebdb`, `4efba99`, `6be5ac6`]
+- `TODO.md` post-v3.1.0 list [`ba6fbc2`]
+
+### Changed
+- Tempo submodule `8e6312e0` to `a7ecd35a`, tracking `devs/iris`: SvABA
+  `-B` ENCODE blacklist, Delly exclude from adagio `rsrc/`, `svaba -p`
+  matched to `task.cpus`, `params.skipQualimap` (default false), bamqc
+  `-nt` halved. Tempo now needs the adagio checkout on every run
+  [`b7ed402`, `e7e8ac3`, `11fdaf2`]
+- IRIS WGS `QcQualimap`: `attempt <= 2 ? 4 : 8` cpus, flat 20GB, explicit
+  `--mem`; `DoFacets`: 2/4 cpus, 64/128GB [`bff362a`]
+- IRIS WES `GermlineRunHaplotypecaller`: `2 * attempt` cpus,
+  `8.GB * attempt`, on `shortMediumLongLadder` [`b827cd5`]
+- Driver partition `cmobic_cpu` only (was `cmobic_cpu,bic_devs`) [`0a3e020`]
+- `bin/deliver.sh` delivers locally on IRIS with automatic `r_NNN` and
+  mapping data; BIC toolchain steps skipped on IRIS [`9036246`, `d11584d`,
+  `8ab4ecc`, `bd2016f`]
+- FACETS report keeps samples that passed QC or have `|dipLogR| < 0.5`;
+  output `*_facets_v4.xlsx` [`c96af41`, `357f377`]
+- SV report workbooks styled through openxlsx2 [`b5fb3ca`]
+- `nfTraceReport.R` logs progress to stderr [`8a118d4`]
+- `00.SETUP.sh` prints a wgsTriage reminder [`ddef784`]
+- `fastq2tempo.R` usage documents each input file [`4c7c25a`]
+- JUNO frozen ahead of 2026-10-01 decommission; no further JUNO changes
+  [`4b3dd47`]
+
+### Fixed
+- Short-queue submissions rejected with "Invalid qos specification" when
+  `SBATCH_QOS=priority` was inherited; `cpushort` was never used [`0a3e020`]
+- `AnnotateSVBedpe` OOM at 8GB silently delivering unfiltered foldback
+  artifacts [`8b7056b`, `c000f27`]
+- `getWGSStats.R` multi-counted normals shared by several tumors in plots
+  [`1fbe681`]; fixture files under `tests/fixtures` read as samples
+  [`0cf00e8`]
+- `reportTERT.R` and `report01.R` TERT rescue failing on mixed per-file
+  column types or zero rescued rows [`1736723`, `be57ad1`]
+- `bin/deliver.sh` early `exit` made project.yaml and permissions
+  unreachable [`8ab4ecc`]
+
+### Removed
+- `SETENVRC` [`dd3b237`]
+- `meta.size`-based `maxWallTime`/`minWallTime` on the GATK4SPARK and
+  merge-BAM processes in the WGS IRIS config [`448660c`]
+- `skipQualimap = true` and the `cmobic_cpu` 30h pin for WGS `QcQualimap`
+  from `devs/iris` [`44e88f7`], reverted at release after Proj_18645_C
+  completed bamqc with the `master` settings
+
+See `docs/releases/CHANGE_REPORT_v3.2.1.md` for the full release narrative.
+
 ## v3.1.0 [2026-05-26] - Cordelia Minor: SLURM/IRIS Optimization
 
 Minor bump on the Cordelia line. Tempo submodule unchanged (`8e6312e0`,

@@ -2,6 +2,35 @@
 
 Items to address after v3.1.0. Ordered by impact, not effort.
 
+## Status at v3.2.1 (2026-10-02)
+
+| Item | Status |
+|---|---|
+| 1. WGS-iris tier-ladder parity | Done, `448660c`. Delly/SvABA use their own two-rung ladders (`7d4d466`), by design. |
+| 2. Shared tier-ladder helpers | Open. Helpers are duplicated in both IRIS configs. |
+| 3. Stale comments and version markers | Open. `conf/iris.config` still says `v2.3.7`; both tempo configs still say "hard coded with IRIS specific limits". |
+| 4. Hardcoded user paths | Open. |
+| 5. `SLM/` pre-creation | Open. |
+| 6. Fate of `rel/*` branches | Open. `rel/v3.1.0` still on origin; `rel/v3.2.1` added. |
+| 7. Tier-logic smoke test | Partly. QoS fix was tested live on IRIS (`0a3e020`); no scripted test. |
+| 8. `params.minWallTime` provenance | Done. `448660c` removed the `meta.size` time logic that used it. |
+| 9. `nfTraceReport.R` failure modes | Open. New: the WGS driver runs it from `$WORKDIR`, so `RUN_REPORT_*.md` lands under `work/`. WES uses `pushd`/`popd`. |
+| 10. Documentation drift | Partly. `CLAUDE.md` rewritten with HPC rules; README Resume section still JUNO-specific. |
+
+New since v3.1.0:
+
+- WES IRIS config right-sizing per `devs/wes-iris-parity-report.md`:
+  QcQualimap heap formula (OOM-killed 79 of 238 tasks in one run),
+  DoFacets, ten oversized blanket blocks.
+- CohortRunMultiQC fails on BAM-input WGS runs;
+  `bugs/BUG_REPORT_CohortRunMultiQC.md`.
+- `filter_regions_bedpe.py` bare `except` hides OOM as "zero overlaps";
+  needs a loud failure and an `iannotatesv` container rebuild.
+- Replacement for qualimap bamqc on deep WGS BAMs (19-25h per sample).
+- Remove JUNO code paths once the 2026-10-01 decommission is confirmed.
+- Tag the tempo pointer (`a7ecd35a`) so `VERSION.md` can cite a tag
+  instead of `cordelia-01-9-ga7ecd35a`.
+
 ## 1. WGS-iris SLURM tier-ladder parity
 
 `conf/tempo-wgs-iris.config` still uses the pre-v3.1 retry pattern
