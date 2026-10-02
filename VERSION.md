@@ -8,7 +8,7 @@
 
 ### tempo
 - **Path:** tempo/
-- **Version:** cordelia-01-2-g8e6312e0
-- **Branch:** ccs/update-250925
-- **Fork Commit:** 8e6312e0
-- **Fork Date:** 2025-10-06
+- **Version:** cordelia-01-9-ga7ecd35a
+- **Branch:** devs/iris
+- **Fork Commit:** a7ecd35a
+- **Fork Date:** 2026-09-05
