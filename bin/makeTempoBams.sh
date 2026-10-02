@@ -3,7 +3,10 @@
 #SBATCH -o SLM/adagioBams.%j.out
 #SBATCH -c 4
 #SBATCH -t 7-00:00:00
-#SBATCH --partition cmobic_cpu,bic_devs
+#SBATCH --partition cmobic_cpu
+#SBATCH --qos=priority
+#SBATCH --mail-user=soccin@mskcc.org
+#SBATCH --mail-type=END,FAIL
 
 #
 # Build recalibrated BAMs from FASTQs using only Tempo's alignment
@@ -60,6 +63,12 @@ if [ "$CLUSTER" == "IRIS" ]; then
     export NXF_SINGULARITY_CACHEDIR=/scratch/core001/bic/socci/opt/singularity/cachedir
     export TMPDIR=/scratch/core001/bic/socci/Adagio/$UUID
     export WORKDIR=/scratch/core001/bic/socci/Adagio/$UUID/run
+
+    # QoS is set per task in conf/tempo-{wgs,wes}-iris.config (qosFor).
+    # An inherited SBATCH_QOS would override it and get every cpushort
+    # submission rejected, so drop it here. The driver job keeps
+    # whatever QoS it was submitted with.
+    unset SBATCH_QOS
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 

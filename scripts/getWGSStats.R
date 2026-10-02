@@ -9,11 +9,16 @@ source(file.path(PROOT, "rsrc/read_pairing.R"))
 
 #' Find metrics files by pattern
 #'
+#' Skips anything under a tests/fixtures directory: tool checkouts in the
+#' project tree (e.g. Map/wgsTriage) ship synthetic metrics files that
+#' would otherwise be read as samples.
+#'
 #' @param pattern Regex pattern to match file names (e.g., "wgs.txt", "asm.txt")
 #' @return Character vector of named file paths
 find_metrics_files <- function(pattern) {
-  list.files(recur = TRUE) |>
-    grep(pattern, x = _, value = TRUE) |>
+  list.files(recursive = TRUE) |>
+    str_subset(pattern) |>
+    str_subset("(^|/)tests/fixtures/", negate = TRUE) |>
     set_names()
 }
 
@@ -45,9 +50,13 @@ read_metrics <- function(files, n_max, select_cols, filter_fn = NULL) {
 }
 
 # Load sample type information (Normal vs Tumor)
+# A normal paired with several tumors appears once per pair in the
+# pairing table; keep one row per sample so the join below does not
+# replicate (and geom_col stack) that sample's stats.
 sample_type <- read_pairing() |>
   gather(type, sample) |>
-  mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor"))
+  mutate(type = ifelse(type == "NORMAL_ID", "Normal", "Tumor")) |>
+  distinct()
 
 # Extract WGS coverage statistics
 wgs_files <- find_metrics_files("wgs.txt")

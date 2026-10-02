@@ -5,6 +5,8 @@
 #SBATCH --time=1-00:00:00
 #SBATCH --mem=36G
 #SBATCH --partition=cmobic_cpu
+#SBATCH --mail-user=soccin@mskcc.org
+#SBATCH --mail-type=END,FAIL
 
 # Downsample a BAM file using Picard DownsampleSam
 #
