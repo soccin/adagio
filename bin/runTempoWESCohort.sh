@@ -5,6 +5,8 @@
 #SBATCH -t 7-00:00:00
 #SBATCH --partition cmobic_cpu
 #SBATCH --qos=priority
+#SBATCH --mail-user=soccin@mskcc.org
+#SBATCH --mail-type=END,FAIL
 
 OPWD=$PWD
 
