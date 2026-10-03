@@ -22,8 +22,8 @@ is for seeing which samples and which genes carry the most events.
   report uses. Whole-arm and whole-chromosome changes are not counted
   here; they are in the FACETS report. Only autosomes are used. A sample
   contributes CNV events if it passed FACETS QC or its baseline
-  log-ratio, `dipLogR`, is within 1.5 of zero. Other samples are left out
-  of the CNV counts and show blank CNV cells.
+  log-ratio, `dipLogR`, is less than 0.5 from zero (`|dipLogR| < 0.5`).
+  Other samples are left out of the CNV counts and show blank CNV cells.
 
 ## The sheets
 
