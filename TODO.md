@@ -2,26 +2,31 @@
 
 Items to address after v3.1.0. Ordered by impact, not effort.
 
-## Status at v3.2.1 (2026-10-02)
+## Status at v3.2.2 (2026-10-03)
 
 | Item | Status |
 |---|---|
 | 1. WGS-iris tier-ladder parity | Done, `448660c`. Delly/SvABA use their own two-rung ladders (`7d4d466`), by design. |
 | 2. Shared tier-ladder helpers | Open. Helpers are duplicated in both IRIS configs. |
-| 3. Stale comments and version markers | Open. `conf/iris.config` still says `v2.3.7`; both tempo configs still say "hard coded with IRIS specific limits". |
+| 3. Stale comments and version markers | Open. `conf/iris.config` still says `v2.3.7`; `conf/tempo-wgs-iris.config` still says "hard coded with IRIS specific limits" (WES fixed in `6f7fdbe`). |
 | 4. Hardcoded user paths | Open. |
 | 5. `SLM/` pre-creation | Open. |
-| 6. Fate of `rel/*` branches | Open. `rel/v3.1.0` still on origin; `rel/v3.2.1` added. |
+| 6. Fate of `rel/*` branches | Open. `rel/v3.1.0` still on origin; `rel/v3.2.1` was not kept; `rel/v3.2.2` is the current release branch. |
 | 7. Tier-logic smoke test | Partly. QoS fix was tested live on IRIS (`0a3e020`); no scripted test. |
 | 8. `params.minWallTime` provenance | Done. `448660c` removed the `meta.size` time logic that used it. |
-| 9. `nfTraceReport.R` failure modes | Open. New: the WGS driver runs it from `$WORKDIR`, so `RUN_REPORT_*.md` lands under `work/`. WES uses `pushd`/`popd`. |
-| 10. Documentation drift | Partly. `CLAUDE.md` rewritten with HPC rules; README Resume section still uses JUNO paths, which no longer exist. |
+| 9. `nfTraceReport.R` failure modes | Open. New: the WGS driver runs it from the scratch `$WORKDIR`, where there is no `out/`, so the WGS report fails. WES and `makeTempoBams.sh` use `pushd`/`popd`. |
+| 10. Documentation drift | Mostly done in v3.2.2: README and `CLAUDE.md` resume and cleanup steps rewritten for IRIS, Nextflow pin in `docs/install.md`. `scripts/resume00.sh` still has JUNO paths. |
+
+Done in v3.2.2:
+
+- WES IRIS config right-sizing per `devs/wes-iris-work-plan.md`:
+  QcQualimap heap (OOM-killed 80 of 241 tasks), DoFacets, and the
+  oversized blanket blocks (`250ae33`, `23bd930`, `6f7fdbe`). Still to
+  do: watch the first WES run on v3.2.2 for exit 137 in QcQualimap,
+  DoFacets and CohortRunMultiQC.
 
 New since v3.1.0:
 
-- WES IRIS config right-sizing per `devs/wes-iris-parity-report.md`:
-  QcQualimap heap formula (OOM-killed 79 of 238 tasks in one run),
-  DoFacets, ten oversized blanket blocks.
 - CohortRunMultiQC fails on BAM-input WGS runs;
   `bugs/BUG_REPORT_CohortRunMultiQC.md`.
 - `filter_regions_bedpe.py` bare `except` hides OOM as "zero overlaps";
@@ -40,6 +45,13 @@ New since v3.1.0:
   `tempo/conf/resources_juno*.config`: tempo's `iris` profile loads them.
 - Tag the tempo pointer (`a7ecd35a`) so `VERSION.md` can cite a tag
   instead of `cordelia-01-9-ga7ecd35a`.
+
+Found in the v3.2.2 release review (details in item 11):
+
+- WGS `doPost.sh` aborts when there are no WGS metrics.
+- `reportFacets01.R` can write `Proj_Proj_...` file names.
+- `deliverGermline.sh` `readme2yaml.R` path and usage text.
+- `runTempoWGSBam.sh` usage typo.
 
 ## 1. WGS-iris SLURM tier-ladder parity
 
@@ -79,9 +91,16 @@ gets the same logic, copy-pasting them will create a drift hazard. Options:
 - `conf/iris.config` line 7 header still says `// v2.3.7 2025-09-13`.
   Remove the version-stamping convention from per-cluster configs (it's
   meaningless after the first edit) or update it on every release.
-- `conf/tempo-wes-iris.config` line 8 says
+- `conf/tempo-wgs-iris.config` line 8 says
   `// This one is hard coded with IRIS specific limits` — comment is
   stale; the file no longer hard-codes a single limit, it uses tiers.
+  (Fixed in the WES config in `6f7fdbe`.)
+- `conf/tempo-wgs-iris.config`: the SvABA comment block (around lines
+  285-347) describes a 3-attempt 28/42/50-cpu ramp; the block is 42 cpus,
+  48 then 320 GB, 2 attempts. Line 91 says "19 nodes x 56 cores";
+  `cmobic_cpu` has 14 x 56-core and 5 x 96-core nodes.
+- Both tempo configs' header (lines 1-4) says the options do not depend
+  on the cluster.
 
 ## 4. Hardcoded user paths in run scripts
 
@@ -101,9 +120,9 @@ The SBATCH header `-o SLM/adagio*.%j.out` assumes a `SLM/` subdirectory
 exists in the user's run directory. If absent, `sbatch` fails to start the
 job with no clear error. Fix at one of two layers:
 
-- Add `mkdir -p SLM` at the very top of the run scripts (before they
-  fail-fast), so even foreground `bash bin/runTempo...` invocations don't
-  hit this.
+- Add `mkdir -p SLM` at the very top of the run scripts. This does not
+  help `sbatch`: SLURM opens the `#SBATCH -o` file before the script
+  runs, and a foreground run ignores `#SBATCH` lines.
 - Document the requirement prominently in `README.md` / `docs/install.md`.
 
 ## 6. Decide fate of `rel/*` branches after release
@@ -161,12 +180,29 @@ quiet (the pipe still creates an empty file). Worth:
 
 ## 10. Documentation drift
 
-- `README.md` "Resume" section still references JUNO-specific paths
-  (`/rtsess01/...`, `/scratch/socci`). Add an IRIS variant or generalize.
-- `docs/install.md` does not mention the Nextflow version pin
-  (`NXF_VER=25.10.4` in `00.SETUP.sh`). Mention that bumping past 25.x
-  breaks the `task.previousTrace.realtime` retry logic.
-- `CLAUDE.md` lists v3.0.0 features as current; the post-processing
-  reports table is still accurate but the assertion "Current version:
-  v3.1.0" alongside the v3.0.0-era doc body could confuse future
-  readers/agents.
+Done in v3.2.2: README and `CLAUDE.md` resume steps (each run has its
+own scratch `WORKDIR`), `CLAUDE.md` entry points, reports and cleanup,
+the Nextflow pin in `docs/install.md`.
+
+- `scripts/resume00.sh` still uses JUNO paths (`/rtsess01/...`,
+  `/scratch/socci`).
+
+## 11. Code issues found in the v3.2.2 release review
+
+- **WGS `doPost.sh` aborts with no WGS metrics.** `bin/doPost.sh` runs
+  with `set -eu`, and `scripts/getWGSStats.R` calls `quit(status=1)`
+  when it finds no `wgs.txt` metrics files. The WGS block then stops
+  before `reportAll.R`, the `DESCRIPTION_ALL_REPORT.md` copy,
+  `output.html` and `version.txt`. Either make getWGSStats.R warn and
+  exit 0, or let doPost.sh continue past it.
+- **`reportFacets01.R` prepends `Proj_` unconditionally** (output file
+  names and the `.seg` files). The other reports skip the prefix when
+  the project ID already starts with `Proj_` (`report01.R`), so a
+  `Proj_`-prefixed ID gives `Proj_Proj_...`.
+- **`bin/deliverGermline.sh`** calls `$BIC_DELIVERY/readme2yaml.R`
+  (`$HOME/Code/BIC/Delivery/Version2j`), while `bin/deliver.sh` uses the
+  copy in adagio, `$SDIR/readme2yaml.R`. Its usage text also says
+  `deliver.sh`.
+- **`bin/runTempoWGSBam.sh`** usage text and log name say
+  `runTempoWGSBams.sh` (extra `s`).
+- The WGS driver `nfTraceReport.R` run directory is item 9.

@@ -8,3 +8,13 @@ MultiQC 1.9 then renders a beeswarm and never writes
 multiqc_general_stats.txt, and general_stats_parse.py crashes. Cohort
 MultiQC report is missing from out/. Details in
 bugs/BUG_REPORT_CohortRunMultiQC.md
+
+2026-10-03: found in the v3.2.2 release review, not fixed. Details in
+TODO.md items 9 and 11.
+- WGS doPost.sh (set -eu) stops when getWGSStats.R finds no wgs.txt
+  metrics and exits 1: no reportAll.R, output.html or version.txt.
+- WGS driver runs nfTraceReport.R in the scratch WORKDIR, where there
+  is no out/, so the WGS trace report fails.
+- reportFacets01.R adds Proj_ without checking for an existing prefix.
+- deliverGermline.sh uses a different readme2yaml.R than deliver.sh,
+  and its usage text says deliver.sh.

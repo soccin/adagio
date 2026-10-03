@@ -3,6 +3,12 @@
 Written 2026-10-02. Scope: `conf/tempo-wes-iris.config` and
 `bin/runTempoWESCohort.sh` against what was done to the WGS equivalents.
 
+**Superseded by `devs/wes-iris-work-plan.md`.** v3.2.2 implemented
+sections 2 and 4 with the work plan's values, which differ from the
+values suggested here (QcQualimap is 3 cpus x 4 GB, not the WGS 20 GB
+block). Section 3 was rejected by the work plan. The section 5 JUNO
+`NXF_OPTS` item is void: JUNO was shut down on 2026-10-01.
+
 Basis for the numbers below: every COMPLETED task in the three exome
 runs on IRIS that have execution traces (27,014 completed, 3,623 failed):
 

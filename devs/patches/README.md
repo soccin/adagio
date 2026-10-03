@@ -3,7 +3,7 @@
 
 ## SV Caller updates
 
-All of these patches can be applied by merging in the `update/sv-callers-01` branch in the soccin fork. 
+These patches came from the `update/sv-callers-01` branch in the soccin fork. They are already in the pinned tempo commit `a7ecd35a` (branch `devs-iris`).
 
 ### feature-upgrade_delly_v126
 
