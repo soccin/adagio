@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Adagio** is a somatic/germline variant calling pipeline wrapper around [Tempo](https://github.com/mskcc/tempo), a Nextflow DSL2 pipeline for tumor-normal WGS/WES analysis. It wraps Tempo with cluster-aware run scripts, custom R post-processing reports, and delivery tooling for MSK BIC.
 
 - Current version: **v3.2.1** (Cordelia)
-- Tempo submodule at `tempo/` (branch `devs/iris`)
+- Tempo submodule at `tempo/` (branch `devs-iris`)
 - Runs on **IRIS** (SLURM) only — see [HPC clusters](#hpc-clusters) for the
   scheduling rules
 - **JUNO (LSF) was shut down for good on 2026-10-01.** Its code and config are

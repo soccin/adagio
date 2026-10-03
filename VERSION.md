@@ -9,6 +9,6 @@
 ### tempo
 - **Path:** tempo/
 - **Version:** cordelia-01-9-ga7ecd35a
-- **Branch:** devs/iris
+- **Branch:** devs-iris
 - **Fork Commit:** a7ecd35a
 - **Fork Date:** 2026-09-05
