@@ -23,6 +23,7 @@ source(file.path(RDIR, "trace_parser.R"))
 source(file.path(RDIR, "nextflow_analysis.R"))
 source(file.path(RDIR, "status_reports.R"))
 source(file.path(RDIR, "slurm_utils.R"))
+source(file.path(SDIR, "rsrc/xlsx_legacy.R"))
 
 # Load trace file list and process all traces
 log_progress("Searching for trace files under out/")
@@ -64,7 +65,7 @@ if (nrow(failed_rpt) != 0) {
 }
 
 log_progress("Writing nfTraceReport_v1.xlsx")
-write_xlsx(
+write_xlsx_report(
   list(
     Summary = qc0,
     FAILED  = failed_rpt

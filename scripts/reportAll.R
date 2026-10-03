@@ -31,6 +31,7 @@ PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 source(file.path(PROOT, "rsrc/add_sv_scores.R"))
 source(file.path(PROOT, "rsrc/read_pairing.R"))
+source(file.path(PROOT, "rsrc/xlsx_report.R"))
 
 suppressPackageStartupMessages(require(tidyverse))
 
@@ -40,7 +41,8 @@ suppressPackageStartupMessages(require(tidyverse))
 min_intra_chr_mb <- 1      # drop same-chromosome SVs shorter than this
 max_focal_genes <- 10      # a CNV segment with fewer genes than this is focal
 max_abs_diplogr <- 1.5     # FACETS sample gate when facets_qc is FALSE
-min_tumors <- 2            # GeneRanking and SVFreq_HV show rows with at least this many tumors
+min_tumors <- 2            # GeneRanking shows genes with at least this many tumors
+min_sv_pct <- 0.05         # SVFreq_HV shows pairs in at least this fraction of tumors
 genome <- "hg19"
 
 lof_classes <- c(
@@ -368,10 +370,12 @@ gene_ranking <- gene_events |>
     Samples
   )
 
-# Sheet 3: recurrent SV gene pairs
-# ================================
-# Dist_Mb is the median breakpoint distance of the pair's calls and is blank
-# for pairs joining two chromosomes. Bands lists each distinct band pair seen.
+# Sheet 3: SV gene pairs
+# ======================
+# Pairs in at least min_sv_pct of the tumors; in a small cohort that reaches
+# pairs seen in one tumor. Dist_Mb is the median breakpoint distance of the
+# pair's calls and is blank for pairs joining two chromosomes. Bands lists
+# each distinct band pair seen.
 
 sv_freq <- sv_events |>
   filter(!is.na(genePair)) |>
@@ -382,8 +386,10 @@ sv_freq <- sv_events |>
     Samples = collapse_samples(TUMOR_ID),
     .by = genePair
   ) |>
-  filter(N >= min_tumors) |>
-  arrange(desc(N), genePair)
+  mutate(Pct = N / n_tumors) |>
+  filter(Pct >= min_sv_pct) |>
+  arrange(desc(N), genePair) |>
+  select(genePair, N, Dist_Mb, Bands, Pct, Samples)
 
 # Column descriptions
 # ===================
@@ -418,117 +424,13 @@ col_desc <- tribble(
   "GeneRanking", "cnLOH", "Tumors whose focal CNV call in the gene is copy-neutral LOH",
   "GeneRanking", "Samples", "Tumors counted in Tumors",
   "SVFreq_HV", "genePair", "Genes at the two breakpoints, sorted; a dot is an unannotated breakpoint",
-  "SVFreq_HV", "N", "Tumors with a call joining the two genes",
+  "SVFreq_HV", "N", str_glue("Tumors with a call joining the two genes; pairs in at least {100 * min_sv_pct}% of tumors are shown"),
   "SVFreq_HV", "Dist_Mb", str_glue("Median distance between the breakpoints in Mb for same-chromosome pairs; blank for translocations. Pairs under {min_intra_chr_mb} Mb are removed"),
   "SVFreq_HV", "Bands", str_glue("Chromosome bands of the two breakpoints (UCSC {genome} cytoBand), one entry per distinct band pair among the calls"),
+  "SVFreq_HV", "Pct", str_glue("N as a fraction of the {n_tumors} tumors in the pairing file"),
   "SVFreq_HV", "Samples", "Tumors counted in N"
 ) |>
   mutate(DESCRIPTION = as.character(DESCRIPTION))
-
-#
-# Excel formatting (openxlsx2; called with :: so nothing is attached or masked)
-#
-
-#' Excel number format for one column
-#'
-#' Pct and VAF columns are fractions shown as percentages; Dist_Mb gets two
-#' decimals; other whole-number columns get a thousands separator; other
-#' numerics get two decimals. Non-numeric columns get no format.
-#'
-#' @param col_name Column name
-#' @param values Column values
-#' @return Excel format code, or NA if the column needs none
-excel_num_fmt <- function(col_name, values) {
-  if (!is.numeric(values)) {
-    return(NA_character_)
-  }
-  if (str_detect(col_name, "VAF|^Pct$")) {
-    return("0%")
-  }
-  if (all(values == round(values), na.rm = TRUE)) {
-    return("#,##0")
-  }
-  "0.00"
-}
-
-#' Column widths that fit their content, capped
-#'
-#' @param tbl Table being written
-#' @param max_width Widest column allowed, in characters
-#' @return Numeric width per column
-fit_col_widths <- function(tbl, max_width = 60) {
-  header_width <- nchar(names(tbl)) * 1.2  # fudge for the bold header font
-  # na.rm matters: nchar(NA_character_) is NA, not 2
-  value_width <- map_dbl(tbl, \(x) max(nchar(as.character(x)), 0, na.rm = TRUE))
-  pmin(pmax(header_width, value_width) + 2, max_width)
-}
-
-#' Add one table to the workbook as a reader-friendly sheet
-#'
-#' Bold wrapped header, frozen header row, fitted column widths, per-column
-#' number formats. NaN/Inf become empty cells; NA cells are left absent.
-#'
-#' @param wb openxlsx2 workbook
-#' @param sheet_name Name for the new worksheet
-#' @param tbl Table to write
-#' @return The workbook with the sheet added
-add_report_sheet <- function(wb, sheet_name, tbl) {
-  tbl <- tbl |>
-    mutate(across(where(is.numeric), \(x) replace(x, !is.finite(x), NA)))
-
-  header <- openxlsx2::wb_dims(rows = 1, cols = seq_along(tbl))
-
-  wb <- wb |>
-    openxlsx2::wb_add_worksheet(sheet_name) |>
-    openxlsx2::wb_add_data(x = tbl, na.strings = NULL) |>
-    openxlsx2::wb_add_font(dims = header, bold = "1") |>
-    openxlsx2::wb_add_cell_style(
-      dims = header,
-      wrap_text = TRUE,
-      horizontal = "left"
-    ) |>
-    openxlsx2::wb_freeze_pane(first_active_row = 2) |>
-    openxlsx2::wb_set_col_widths(
-      cols = seq_along(tbl),
-      widths = fit_col_widths(tbl)
-    )
-
-  # One call per distinct format, covering all its columns at once: openxlsx2
-  # registers a new format entry on every call and Excel only tolerates ~200
-  if (nrow(tbl) > 0) {
-    data_rows <- 1 + seq_len(nrow(tbl))
-    col_fmts <- map2_chr(names(tbl), tbl, excel_num_fmt)
-
-    for (fmt in unique(na.omit(col_fmts))) {
-      dims <- which(col_fmts == fmt) |>
-        map_chr(\(j) openxlsx2::wb_dims(rows = data_rows, cols = j)) |>
-        str_c(collapse = ",")
-      wb <- openxlsx2::wb_add_numfmt(wb, dims = dims, numfmt = fmt)
-    }
-  }
-
-  wb
-}
-
-#' Write the report sheets to a formatted xlsx file
-#'
-#' @param sheets Named list of tables, one worksheet each
-#' @param path Output .xlsx path
-#' @return Invisibly, path
-write_report_workbook <- function(sheets, path) {
-  wb <- openxlsx2::wb_workbook()
-  for (sheet_name in names(sheets)) {
-    wb <- add_report_sheet(wb, sheet_name, sheets[[sheet_name]])
-  }
-  # Explicit window size (twips): without it Excel for Mac opens full screen
-  wb <- openxlsx2::wb_set_bookview(
-    wb,
-    x_window = 4000, y_window = 3000,
-    window_width = 32000, window_height = 20000
-  )
-  openxlsx2::wb_save(wb, path, overwrite = TRUE)
-  invisible(path)
-}
 
 # Write
 # =====

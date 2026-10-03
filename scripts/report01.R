@@ -157,8 +157,7 @@ nonSymCount=tbl1 %>% count(Sample) %>% rename(SampleID=Sample,`NonSyn Mutation C
 sampleData=sampleData %>% left_join(nonSymCount,by = join_by(SampleID))
 
 library(openxlsx)
-# set zoom
-set_zoom <- function(sV,x) gsub('(?<=zoomScale=")[0-9]+', x, sV, perl = TRUE)
+source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
 
 wb=createWorkbook()
 
@@ -183,8 +182,6 @@ setColWidths(wb,sheet=1,cols=1:ncol(sampleData),widths="auto")
 setColWidths(wb,sheet=1,cols=1,widths=14)
 setColWidths(wb,sheet=1,cols=3:7,widths=8)
 
-wb$worksheets[[1]]$sheetViews=set_zoom(wb$worksheets[[1]]$sheetViews,120)
-
 if (nSamples > 1) {
     #
     # Sheet 2 - Gene Stats
@@ -195,7 +192,6 @@ if (nSamples > 1) {
 
     addStyle(wb,sheet="Gene Stats",cols=1:ncol(mutatedGenes),row=1,style=styleHeader,gridExpand=T)
 
-    wb$worksheets[[which(wb$sheet_names=="Gene Stats")]]$sheetViews=set_zoom(wb$worksheets[[which(wb$sheet_names=="Gene Stats")]]$sheetViews,120)
     setColWidths(wb,sheet="Gene Stats",cols=1:ncol(mutatedGenes),widths="auto")
     setColWidths(wb,sheet="Gene Stats",cols=3,widths=6.5)
 }
@@ -207,7 +203,6 @@ if (nSamples > 1) {
 addWorksheet(wb,sheetName="Mutations")
 writeDataTable(wb,sheet="Mutations",tblMutations,tableStyle="none",withFilter=F)
 addStyle(wb,sheet="Mutations",cols=1:ncol(tblMutations),row=1,style=styleHeader,gridExpand=T)
-wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews=set_zoom(wb$worksheets[[which(wb$sheet_names=="Mutations")]]$sheetViews,120)
 setColWidths(wb,sheet="Mutations",cols=1:ncol(tblMutations),widths="auto")
 setColWidths(wb,sheet="Mutations",cols=1,widths=12)
 setColWidths(wb,sheet="Mutations",cols=5:6,widths=14)
@@ -220,6 +215,7 @@ rFile=cc(projNo,"SNV_Report01","v3.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 
+finalize_xlsx(wb)
 saveWorkbook(wb,file.path(rDir,rFile),overwrite=T)
 
 

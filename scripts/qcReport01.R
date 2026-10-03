@@ -175,5 +175,6 @@ dg %>%
     write("facetsFailedSamples")
 
 rFile=cc(projNo,"facetsQCRpt_v1.xlsx")
-openxlsx::write.xlsx(dg,file.path(rDir,rFile))
+source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
+write_xlsx_report(dg,file.path(rDir,rFile))
 

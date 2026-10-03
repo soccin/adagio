@@ -6,6 +6,7 @@ suppressPackageStartupMessages({
 
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_pairing.R"))
+source(file.path(PROOT, "rsrc/xlsx_legacy.R"))
 
 #' Find metrics files by pattern
 #'
@@ -134,7 +135,7 @@ output_dir <- "post/reports"
 fs::dir_create(output_dir)
 
 # Write outputs
-write_xlsx(stats, file.path(output_dir, output_file))
+write_xlsx_report(stats, file.path(output_dir, output_file))
 pdf(
   file = file.path(output_dir, gsub(".xlsx", ".pdf", output_file)),
   width = 11,

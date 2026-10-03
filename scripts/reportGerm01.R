@@ -3,6 +3,8 @@ suppressPackageStartupMessages({
   require(openxlsx)
 })
 
+SDIR=get_script_dir()
+source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
 
 maffile=fs::dir_ls("out",recur=3,regex="mut_germline.maf")
 
@@ -89,9 +91,6 @@ if(assayType=="genome") {
 
 }
 
-# set zoom
-set_zoom <- function(sV,x) gsub('(?<=zoomScale=")[0-9]+', x, sV, perl = TRUE)
-
 wb=createWorkbook()
 styleHeader=createStyle(wrapText = TRUE, halign="left", textDecoration = c("bold"))
 sheet=1
@@ -99,7 +98,6 @@ sheet=1
 addWorksheet(wb,sheetName="Samples")
 writeDataTable(wb,sheet=sheet,tbl0,tableStyle="none",withFilter=F)
 addStyle(wb,sheet=sheet,cols=1:ncol(tbl0),row=1,style=styleHeader,gridExpand=T)
-wb$worksheets[[sheet]]$sheetViews=set_zoom(wb$worksheets[[sheet]]$sheetViews,120)
 setColWidths(wb,sheet=sheet,cols=1:ncol(tbl0),widths="auto")
 
 #
@@ -109,7 +107,6 @@ sheet=sheet+1
 addWorksheet(wb,sheetName="NonSilent")
 writeDataTable(wb,sheet=sheet,tbl1,tableStyle="none",withFilter=F)
 addStyle(wb,sheet=sheet,cols=1:ncol(tbl1),row=1,style=styleHeader,gridExpand=T)
-wb$worksheets[[sheet]]$sheetViews=set_zoom(wb$worksheets[[sheet]]$sheetViews,120)
 setColWidths(wb,sheet=sheet,cols=1:ncol(tbl1),widths="auto")
 setColWidths(wb,sheet=sheet,cols=5,widths=20) # Alteration Column
 setColWidths(wb,sheet=sheet,cols=10:11,widths=20) # Alteration Column
@@ -124,6 +121,7 @@ rFile=cc(projNo,"ReportGermline","v3.xlsx")
 rDir="germline/reports"
 fs::dir_create(rDir)
 
+finalize_xlsx(wb)
 saveWorkbook(wb,file.path(rDir,rFile),overwrite=T)
 
 

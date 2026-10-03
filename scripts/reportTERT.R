@@ -27,6 +27,9 @@ reportCols00 <- c(
 
 require(tidyverse)
 
+PROOT <- get_script_dir()
+source(file.path(PROOT, "rsrc/xlsx_legacy.R"))
+
 # Read all somatic MAF files, combine them, and filter for TERT mutations
 maf0 <- fs::dir_ls("out", recur = TRUE, regex = ".somatic.unfiltered.maf$") |>
   map(\(f) read_tsv(f, col_types = cols(.default = "c"))) |>
@@ -41,5 +44,5 @@ projNo <- basename(fs::dir_ls("out"))
 rFile=cc("Proj",projNo,"TERT_Muts","v1.xlsx")
 
 # Write TERT mutations to Excel file
-write_xlsx(maf0,rFile)
+write_xlsx_report(maf0,rFile)
 
