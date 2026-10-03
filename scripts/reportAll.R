@@ -21,8 +21,9 @@
 #   SNV  a non-synonymous mutation in the cohort MAF, as in report01.R,
 #        including the TERT promoter rescue from the unfiltered MAFs
 #   CNV  a FACETS gene-level call with filter PASS or RESCUE on a segment of
-#        fewer than max_focal_genes genes, on an autosome, from a sample with
-#        facets_qc TRUE or |dipLogR| below max_abs_diplogr
+#        max_focal_seg_length or shorter, on an autosome, from a sample with
+#        facets_qc TRUE or |dipLogR| below max_abs_diplogr. The focal and
+#        sample rules are the ones reportFacets01.R uses; keep them equal.
 #
 # Output: post/reports/Proj_<no>_All_Report01_<VERSION>.xlsx
 
@@ -39,7 +40,7 @@ suppressPackageStartupMessages(require(tidyverse))
 # ==========
 
 min_intra_chr_mb <- 1      # drop same-chromosome SVs shorter than this
-max_focal_genes <- 10      # a CNV segment with fewer genes than this is focal
+max_focal_seg_length <- 1e6  # a CNV segment this long (bp) or shorter is focal
 max_abs_diplogr <- 1.5     # FACETS sample gate when facets_qc is FALSE
 min_tumors <- 2            # GeneRanking shows genes with at least this many tumors
 min_sv_pct <- 0.05         # SVFreq_HV shows pairs in at least this fraction of tumors
@@ -289,7 +290,7 @@ cnv_events <- fs::dir_ls(cohort_dir, regexp = "cna_genelevel\\.txt$") |>
       str_detect(cn_state, "CNLOH") ~ "cnloh",
       TRUE ~ NA_character_
     ),
-    focal = filter %in% c("PASS", "RESCUE") & coalesce(genes_on_seg < max_focal_genes, FALSE)
+    focal = filter %in% c("PASS", "RESCUE") & coalesce(seg_length <= max_focal_seg_length, FALSE)
   ) |>
   filter(
     TUMOR_ID %in% cnv_samples,
@@ -407,7 +408,7 @@ col_desc <- tribble(
   "SampleSummary", "NumSV", str_glue("Somatic SV calls, excluding same-chromosome calls with breakpoints closer than {min_intra_chr_mb} Mb"),
   "SampleSummary", "NumSNV", "Non-synonymous somatic mutations (the Mutations sheet of the SNV report, TERT promoter rescue included)",
   "SampleSummary", "NumSNV_LoF", str_glue("Of NumSNV, loss-of-function classes: {str_c(lof_classes, collapse = ', ')}"),
-  "SampleSummary", "NumCNV", str_glue("Focal copy number segments: FACETS filter PASS or RESCUE, fewer than {max_focal_genes} genes, autosomes, with a gain, loss or cnLOH state. Blank when the sample fails the FACETS gate"),
+  "SampleSummary", "NumCNV", str_glue("Focal copy number segments: FACETS filter PASS or RESCUE, segment of {max_focal_seg_length / 1e6} Mb or shorter, autosomes, with a gain, loss or cnLOH state. Blank when the sample fails the FACETS gate"),
   "SampleSummary", "NumCNVGenes", "Genes on the NumCNV segments",
   "SampleSummary", "TotalMutations", "All somatic mutations in the Tempo sample_data file, silent and non-coding included",
   "SampleSummary", "WGD", "Whole genome doubling status from FACETS",

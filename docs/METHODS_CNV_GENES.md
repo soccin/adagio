@@ -103,7 +103,7 @@ The cohort is all tumor samples that pass the report's sample filter.
 The filter is read from each sample's `*.facets_qc.txt`, written by
 Tempo's `DoFacetsPreviewQC` process (facets-preview
 `generate_genomic_annotations()`): a sample passes if `facets_qc` is
-TRUE, or if `|dipLogR| < 0.5`. A missing `dipLogR` does not rescue a
+TRUE, or if `|dipLogR| < 1.5`. A missing `dipLogR` does not rescue a
 sample with `facets_qc` FALSE. Samples that fail are removed from the
 gene-level data before any step below. `--keep-failed` disables the
 filter (output files are then tagged `NO_FILT`).

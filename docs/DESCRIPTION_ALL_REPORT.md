@@ -18,10 +18,12 @@ is for seeing which samples and which genes carry the most events.
   mutations are not counted. TERT promoter mutations are the one
   exception and are counted.
 - **CNV**: a focal copy number change from FACETS. A call is focal when it
-  sits on a segment of fewer than 10 genes. Whole-arm and
-  whole-chromosome changes are not counted here; they are in the FACETS
-  report. Only autosomes are used. Samples whose FACETS fit is unreliable
-  are left out of the CNV counts and show blank CNV cells.
+  sits on a segment 1 Mb or shorter, the same definition the FACETS
+  report uses. Whole-arm and whole-chromosome changes are not counted
+  here; they are in the FACETS report. Only autosomes are used. A sample
+  contributes CNV events if it passed FACETS QC or its baseline
+  log-ratio, `dipLogR`, is within 1.5 of zero. Other samples are left out
+  of the CNV counts and show blank CNV cells.
 
 ## The sheets
 

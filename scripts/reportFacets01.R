@@ -31,7 +31,7 @@ consolidated segmentation and Excel reports. Run from the project directory
 Options:
   --keep-failed   Include samples that failed the sample filter. By default a
                   sample is kept if it passed FACETS QC or has
-                  |dipLogR| < 0.5; other samples are dropped from the
+                  |dipLogR| < 1.5; other samples are dropped from the
                   segmentation and CNA tables. Output filenames are tagged
                   NO_FILT when this is set.
   -h, --help      Print this message and exit.
@@ -92,10 +92,11 @@ script_dir <- get_script_dir()
 # =========================================
 # Read individual FACETS QC files from each sample directory to identify
 # samples that fail the sample filter. A sample passes if it passed FACETS QC,
-# or if it failed QC but its dipLogR is close to 0. Failing samples are
-# excluded from final outputs.
+# or if it failed QC but |dipLogR| is below max_abs_diplogr. Failing samples
+# are excluded from final outputs. reportAll.R uses the same rule and the
+# same focal segment length; keep them equal.
 
-max_abs_diplogr <- 0.5
+max_abs_diplogr <- 1.5
 
 # Find all QC files across sample directories
 facets_qc_files <- dir_ls(sample_dir, "\\.facets_qc\\.txt")

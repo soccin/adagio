@@ -80,7 +80,7 @@ variant positions inside it is never evaluated and cannot appear.
 
 Tumors that failed FACETS quality control are removed before the sheet is
 built (a tumor is kept if it passed QC, or if its baseline log-ratio,
-`dipLogR`, is within 0.5 of zero). The `runInfo` sheet lists the tumors
+`dipLogR`, is within 1.5 of zero). The `runInfo` sheet lists the tumors
 that were kept, with their `facets_qc` flag. A report run with the
 `--keep-failed` option is named `..._NO_FILT_...` and keeps every tumor.
 
