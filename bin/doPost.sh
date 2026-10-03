@@ -42,6 +42,13 @@ if [ "$ASSAY" == "genome" ]; then
   echo Rscript $RDIR/scripts/getWGSStats.R
   echo
   Rscript $RDIR/scripts/getWGSStats.R
+
+  # Combined SV/SNV/CNV report, needs the SV calls so WGS only
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  echo Rscript $RDIR/scripts/reportAll.R
+  echo
+  Rscript $RDIR/scripts/reportAll.R
+  cp $RDIR/docs/DESCRIPTION_ALL_REPORT.md post/reports
 fi
 
 CMD_LOG=post/pipeline_info/version.txt
