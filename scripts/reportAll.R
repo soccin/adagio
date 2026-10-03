@@ -146,8 +146,9 @@ sv_empty <- tibble(
   TUMOR_ID = character(), TYPE = character(), gene1 = character(),
   gene2 = character(), CHROM_A = character(), START_A = numeric(),
   CHROM_B = character(), START_B = numeric(), NumCallersPass = numeric(),
-  SCORE = numeric(), genePair = character(), same_chr = logical(),
-  dist_mb = numeric(), bands = character()
+  SCORE = numeric(), fusion = character(), in_frame = logical(),
+  genePair = character(), same_chr = logical(), dist_mb = numeric(),
+  bands = character()
 )
 
 sv_all <- if (nrow(sv_raw) == 0) {
@@ -161,6 +162,9 @@ sv_all <- if (nrow(sv_raw) == 0) {
       CHROM_A = as.character(CHROM_A),
       CHROM_B = as.character(CHROM_B),
       genePair = make_gene_pair(gene1, gene2),
+      # iAnnotateSV writes "Protein Fusion: in frame {A:B}"; "mid-exon" and
+      # "Transcript Fusion" are not in frame
+      in_frame = str_detect(coalesce(fusion, ""), regex("in.?frame", ignore_case = TRUE)),
       same_chr = CHROM_A == CHROM_B,
       dist_mb = if_else(same_chr, abs(START_B - START_A) / 1e6, NA_real_),
       bands = str_c(band_at(CHROM_A, START_A), band_at(CHROM_B, START_B), sep = "-")
@@ -373,23 +377,25 @@ gene_ranking <- gene_events |>
 # Sheet 3: SV gene pairs
 # ======================
 # Pairs in at least min_sv_pct of the tumors; in a small cohort that reaches
-# pairs seen in one tumor. Dist_Mb is the median breakpoint distance of the
-# pair's calls and is blank for pairs joining two chromosomes. Bands lists
-# each distinct band pair seen.
+# pairs seen in one tumor, and those are kept only when at least one call is
+# an in-frame protein fusion. InFrame counts the pair's in-frame calls.
+# Dist_Mb is the median breakpoint distance of the pair's calls and is blank
+# for pairs joining two chromosomes. Bands lists each distinct band pair seen.
 
 sv_freq <- sv_events |>
   filter(!is.na(genePair)) |>
   summarize(
     N = n_distinct(TUMOR_ID),
+    InFrame = sum(in_frame),
     Dist_Mb = median(dist_mb),
     Bands = str_c(unique(na.omit(bands)), collapse = "; "),
     Samples = collapse_samples(TUMOR_ID),
     .by = genePair
   ) |>
   mutate(Pct = N / n_tumors) |>
-  filter(Pct >= min_sv_pct) |>
-  arrange(desc(N), genePair) |>
-  select(genePair, N, Dist_Mb, Bands, Pct, Samples)
+  filter(Pct >= min_sv_pct, N > 1 | InFrame > 0) |>
+  arrange(desc(N), desc(InFrame), genePair) |>
+  select(genePair, N, InFrame, Dist_Mb, Bands, Pct, Samples)
 
 # Column descriptions
 # ===================
@@ -424,7 +430,8 @@ col_desc <- tribble(
   "GeneRanking", "cnLOH", "Tumors whose focal CNV call in the gene is copy-neutral LOH",
   "GeneRanking", "Samples", "Tumors counted in Tumors",
   "SVFreq_HV", "genePair", "Genes at the two breakpoints, sorted; a dot is an unannotated breakpoint",
-  "SVFreq_HV", "N", str_glue("Tumors with a call joining the two genes; pairs in at least {100 * min_sv_pct}% of tumors are shown"),
+  "SVFreq_HV", "N", str_glue("Tumors with a call joining the two genes; pairs in at least {100 * min_sv_pct}% of tumors are shown, and single-tumor pairs only when InFrame is above zero"),
+  "SVFreq_HV", "InFrame", "Calls of the pair annotated as an in-frame protein fusion",
   "SVFreq_HV", "Dist_Mb", str_glue("Median distance between the breakpoints in Mb for same-chromosome pairs; blank for translocations. Pairs under {min_intra_chr_mb} Mb are removed"),
   "SVFreq_HV", "Bands", str_glue("Chromosome bands of the two breakpoints (UCSC {genome} cytoBand), one entry per distinct band pair among the calls"),
   "SVFreq_HV", "Pct", str_glue("N as a fraction of the {n_tumors} tumors in the pairing file"),
