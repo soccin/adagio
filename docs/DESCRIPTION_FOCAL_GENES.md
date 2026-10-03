@@ -173,10 +173,10 @@ How to read it:
   cases where FACETS could not tell (`DIPLOID or CNLOH`,
   `LOSS BEFORE or DOUBLE LOSS AFTER`).
 - **Large high-level amplifications and deletions are left out
-  upstream.** Before this sheet is built, FACETS removes calls it
-  considers unlikely to target a single gene: `AMP` calls (5 or more
-  copies) and `HOMDEL` calls (0 copies) on segments longer than 10 Mb or
-  covering many genes. A tumor with, say, a whole-arm amplification at 6
+  upstream.** Before this sheet is built, facets-suite flags calls it
+  considers unlikely to target a single gene, and Tempo removes them:
+  `AMP` calls (5 or more copies) and `HOMDEL` calls (0 copies) on
+  segments longer than 10 Mb or covering many genes. A tumor with, say, a whole-arm amplification at 6
   copies therefore does not appear in `samples_all` for genes on that arm
   and is not counted in `pct_amp`. Smaller gains (3 or 4 copies) and
   single-copy losses on large segments are kept. So `pct_amp` and
