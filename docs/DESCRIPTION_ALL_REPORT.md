@@ -18,23 +18,29 @@ is for seeing which samples and which genes carry the most events.
   mutations are not counted. TERT promoter mutations are the one
   exception and are counted.
 - **CNV**: a focal copy number change from FACETS. A call is focal when it
-  sits on a segment of fewer than 10 genes. Whole-arm and
-  whole-chromosome changes are not counted here; they are in the FACETS
-  report. Only autosomes are used. Samples whose FACETS fit is unreliable
-  are left out of the CNV counts and show blank CNV cells.
+  sits on a segment 1 Mb or shorter, the same definition the FACETS
+  report uses. Only calls with a FACETS filter of PASS or RESCUE are
+  used. Whole-arm and whole-chromosome changes are not counted
+  here; they are in the FACETS report. Only autosomes are used. A sample
+  contributes CNV events if it passed FACETS QC or its baseline
+  log-ratio, `dipLogR`, is less than 0.5 from zero (`|dipLogR| < 0.5`).
+  Other samples are left out of the CNV counts and show blank CNV cells.
 
 ## The sheets
 
 **SampleSummary.** One row per tumor. The number of SV, SNV and CNV events,
-how many of the SNVs are loss-of-function, the total mutation count
-before filtering, and the FACETS estimates of purity, ploidy, fraction of
-the genome altered, whole genome doubling and fit quality.
+how many of the SNVs are loss-of-function, the number of genes on the CNV
+segments, and the total mutation count. The total is every mutation that
+passed Tempo's filters, silent and non-coding ones included. Then come
+the FACETS values: purity, ploidy, fraction of the genome altered, whole
+genome doubling, `facets_qc`, `dipLogR`, and `cnv_included`, which says
+whether the tumor contributes CNV events.
 
 **GeneRanking.** One row per gene, ranked by how many tumors have any event
 in it. A tumor counts once per gene even if it has several events there.
 The next columns split that count by type: how many tumors have an SV,
-an SNV, a loss-of-function SNV, a CNV, and whether the CNV is a gain, a
-loss or copy-neutral LOH. The last column lists the tumors. Genes seen in
+an SNV, a loss-of-function SNV, a CNV, a CNV gain, a CNV loss, and a
+copy-neutral LOH. A tumor can count in more than one of these columns. The last column lists the tumors. Genes seen in
 only one tumor are not shown.
 
 A high rank is a reason to look, not a conclusion. Long genes collect
@@ -47,15 +53,20 @@ Columns:
 - N: how many tumors have the pair.
 - InFrame: how many of the calls are predicted to make an in-frame
   protein fusion.
-- Dist_Mb: for pairs on the same chromosome, the distance between the
-  two breakpoints in megabases. Blank for translocations.
+- Dist_Mb: for pairs on the same chromosome, the median distance between
+  the two breakpoints over the pair's calls, in megabases. Blank for
+  translocations.
 - Bands: the chromosome bands of the two breakpoints, for example
-  11q12.3-11q24.2.
+  11q12.3-11q24.2. When the calls fall in different bands, each distinct
+  band pair is listed, separated by semicolons.
 - Pct: N as a fraction of the cohort.
 - Samples: the tumors.
 
-Pairs in two or more tumors are all shown. Pairs in a single tumor are
-shown only when at least one call is an in-frame fusion.
+A pair is shown if it is in at least 5% of the tumors and either is in
+two or more tumors or has at least one in-frame fusion call. In a cohort
+of 20 or fewer tumors, one tumor is already 5% or more, so this reduces
+to: pairs in two or more tumors, plus single-tumor pairs with an
+in-frame fusion.
 
 **ColDescriptions.** The exact rule behind every column.
 

@@ -3,10 +3,12 @@
 This document describes how the `geneLevelFocal` sheet of the FACETS copy
 number report is built, in enough detail to reproduce it.
 
-- Report: `post/reports/Proj_<project>[_NO_FILT]_facets_v4.xlsx`, sheet
+- Report: `post/reports/Proj_<project>[_NO_FILT]_facets_v5.xlsx`, sheet
   `geneLevelFocal`
 - Script: `scripts/reportFacets01.R`
 - Resource file: `scripts/rsrc/centromeres_<genome>.tsv`
+- Thresholds: `scripts/rsrc/facets_rules.R` (`max_abs_diplogr`,
+  `max_focal_seg_length`), shared by all reports that use FACETS results
 
 The sheet has one row per gene. A gene is included if, in at least one
 sample, it lies on a small (focal) copy number segment and that segment's
@@ -47,8 +49,10 @@ whose SNPs fall in more than one segment.
 `cn_state` is looked up from (WGD status, `tcn`, `lcn`) in facets-suite's
 `copy_number_states` table. WGD (whole-genome doubling) is TRUE when
 segments with major copy number >= 2 cover more than half of the
-autosomal genome; the same flag is the `wgd` column of the `facetsQC`
-sheet. Combinations not in the table are `INDETERMINATE`, except
+autosomal genome. `cn_state` uses the WGD status of the hisens fit. The
+`wgd` column of the `facetsQC` sheet uses the same rule but on the purity
+fit, so the two usually agree but can differ when the two fits differ.
+Combinations not in the table are `INDETERMINATE`, except
 `tcn > 9`, which is `AMP`.
 
 facets-suite `filter` column. Every row gets `PASS` unless one of these
