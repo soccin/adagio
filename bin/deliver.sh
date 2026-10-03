@@ -3,6 +3,12 @@
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 RDIR=$(realpath $SDIR/..)
 
+# All writes to the delivery area run as the service account
+BOT_USER=svc_core001_bot01
+asbot() {
+    dzdo -u "$BOT_USER" "$@"
+}
+
 # Default delivery path from .../Users/Aa/BBB/Proj_nnnnn/...
 # -> aaa/bbb/Proj_nnnnn (first two folders lowercased; project as-is)
 CWD=$(pwd)
@@ -75,21 +81,21 @@ fi
 echo "ODIR=$ODIR"
 echo "CURRDIR=$CURRDIR"
 
-mkdir -p "$ODIR/$CURRDIR/tempo"
+asbot mkdir -p "$ODIR/$CURRDIR/tempo"
 
-rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ "$ODIR/$CURRDIR/tempo"
-rsync -aP post "$ODIR/$CURRDIR"
+asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ "$ODIR/$CURRDIR/tempo"
+asbot rsync -aP post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 
 if [ -e "Map/sbam" ]; then
-  mkdir -p "$ODIR/$CURRDIR/mapping"
-  rsync -aP --exclude="*.ba[mi]" Map/sbam/ "$ODIR/$CURRDIR/mapping"
+  asbot mkdir -p "$ODIR/$CURRDIR/mapping"
+  asbot rsync -aP --exclude="*.ba[mi]" Map/sbam/ "$ODIR/$CURRDIR/mapping"
 fi
 
 if [ -e "Map/out/metrics" ]; then
-  mkdir -p "$ODIR/$CURRDIR/mapping"
-  rsync -aP Map/out/metrics "$ODIR/$CURRDIR/mapping"
+  asbot mkdir -p "$ODIR/$CURRDIR/mapping"
+  asbot rsync -aP Map/out/metrics "$ODIR/$CURRDIR/mapping"
 fi
 
 echo
