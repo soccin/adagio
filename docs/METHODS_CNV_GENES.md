@@ -3,10 +3,12 @@
 This document describes how the `geneLevelFocal` sheet of the FACETS copy
 number report is built, in enough detail to reproduce it.
 
-- Report: `post/reports/Proj_<project>[_NO_FILT]_facets_v4.xlsx`, sheet
+- Report: `post/reports/Proj_<project>[_NO_FILT]_facets_v5.xlsx`, sheet
   `geneLevelFocal`
 - Script: `scripts/reportFacets01.R`
 - Resource file: `scripts/rsrc/centromeres_<genome>.tsv`
+- Thresholds: `scripts/rsrc/facets_rules.R` (`max_abs_diplogr`,
+  `max_focal_seg_length`), shared by all reports that use FACETS results
 
 The sheet has one row per gene. A gene is included if, in at least one
 sample, it lies on a small (focal) copy number segment and that segment's

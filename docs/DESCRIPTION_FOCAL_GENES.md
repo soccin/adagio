@@ -14,7 +14,7 @@ gain. Copy number is not adjusted for whole-genome doubling, so check the
 FACETS state of each gain before interpreting it.
 
 This guide explains the `geneLevelFocal` sheet in the FACETS copy number
-report (`Proj_<project>_facets_v4.xlsx`). It is written for readers who
+report (`Proj_<project>_facets_v5.xlsx`). It is written for readers who
 use the results, not for those who compute them. The technical method is in
 `METHODS_CNV_GENES.md`.
 
