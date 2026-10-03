@@ -49,8 +49,10 @@ whose SNPs fall in more than one segment.
 `cn_state` is looked up from (WGD status, `tcn`, `lcn`) in facets-suite's
 `copy_number_states` table. WGD (whole-genome doubling) is TRUE when
 segments with major copy number >= 2 cover more than half of the
-autosomal genome; the same flag is the `wgd` column of the `facetsQC`
-sheet. Combinations not in the table are `INDETERMINATE`, except
+autosomal genome. `cn_state` uses the WGD status of the hisens fit. The
+`wgd` column of the `facetsQC` sheet uses the same rule but on the purity
+fit, so the two usually agree but can differ when the two fits differ.
+Combinations not in the table are `INDETERMINATE`, except
 `tcn > 9`, which is `AMP`.
 
 facets-suite `filter` column. Every row gets `PASS` unless one of these
