@@ -169,8 +169,13 @@ dg=df %>%
 dg=dg %>%
     arrange(facets_qc,desc(purity))
 
+#
+# Samples that fail the FACETS sample rule (facets_qc or small |dipLogR|,
+# see rsrc/facets_rules.R), the same rule the other reports use
+#
+source(file.path(SDIR,"rsrc/facets_rules.R"))
 dg %>%
-    filter(!facets_qc) %>%
+    filter(!facets_sample_pass(facets_qc,dipLogR)) %>%
     pull(tumor_sample_id) %>%
     write("facetsFailedSamples")
 
