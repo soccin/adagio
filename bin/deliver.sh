@@ -87,6 +87,15 @@ asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*ger
 asbot rsync -aP post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
+eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
+
+# Doc link points at the release tag the run was built from
+if [[ "$GTAG" =~ ^(.+)-[0-9]+-g[0-9a-f]+(-UNCOMMITED)?$ ]]; then
+    VERSION="${BASH_REMATCH[1]}"
+else
+    VERSION="UNKNOWN"
+    echo "WARNING: cannot get version from GTAG=$GTAG; fix doc link in email"
+fi
 
 if [ -e "Map/sbam" ]; then
   asbot mkdir -p "$ODIR/$CURRDIR/mapping"
@@ -101,7 +110,9 @@ fi
 echo
 echo "========================================================================="
 echo
-sed "s/{PROJNO}/$PROJECT_ID/g" \
+sed -e "s/{PROJNO}/$PROJECT_ID/g" \
+  -e "s/{RUNDIR}/$CURRDIR/g" \
+  -e "s/{VERSION}/$VERSION/g" \
   $RDIR/assets/delivery_email_template.txt \
   | tee deliveryEmail_${PROJECT_ID}_$(date +%y%m%d).txt
 
