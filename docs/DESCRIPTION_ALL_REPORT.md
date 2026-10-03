@@ -20,7 +20,9 @@ is for seeing which samples and which genes carry the most events.
 - **CNV**: a focal copy number change from FACETS. A call is focal when it
   sits on a segment 1 Mb or shorter, the same definition the FACETS
   report uses. Only calls with a FACETS filter of PASS or RESCUE are
-  used. Whole-arm and whole-chromosome changes are not counted
+  used, and only calls that are a gain, a loss or copy-neutral LOH
+  (calls FACETS labels INDETERMINATE are not counted). Whole-arm and
+  whole-chromosome changes are not counted
   here; they are in the FACETS report. Only autosomes are used. A sample
   contributes CNV events if it passed FACETS QC or its baseline
   log-ratio, `dipLogR`, is less than 0.5 from zero (`|dipLogR| < 0.5`).
@@ -28,17 +30,19 @@ is for seeing which samples and which genes carry the most events.
 
 ## The sheets
 
-**SampleSummary.** One row per tumor. The number of SV, SNV and CNV events,
-how many of the SNVs are loss-of-function, the number of genes on the CNV
-segments, and the total mutation count. The total is every mutation that
-passed Tempo's filters, silent and non-coding ones included. Then come
-the FACETS values: purity, ploidy, fraction of the genome altered, whole
-genome doubling, `facets_qc`, `dipLogR`, and `cnv_included`, which says
-whether the tumor contributes CNV events.
+**SampleSummary.** One row per tumor, with its matched normal. The number
+of SV and SNV events, how many of the SNVs are loss-of-function, the
+number of CNV events, the number of genes on the CNV segments, and the
+total mutation count. The total is every mutation that passed Tempo's
+filters, silent and non-coding ones included. Then come whole genome
+doubling and the FACETS values: `facets_qc`, purity, ploidy, fraction of
+the genome altered, `dipLogR`, and `cnv_included`, which says whether
+the tumor contributes CNV events.
 
 **GeneRanking.** One row per gene, ranked by how many tumors have any event
 in it. A tumor counts once per gene even if it has several events there.
-The next columns split that count by type: how many tumors have an SV,
+`Pct` is that count as a fraction of the cohort. The next columns split
+the count by type: how many tumors have an SV,
 an SNV, a loss-of-function SNV, a CNV, a CNV gain, a CNV loss, and a
 copy-neutral LOH. A tumor can count in more than one of these columns. The last column lists the tumors. Genes seen in
 only one tumor are not shown.
@@ -50,6 +54,9 @@ copy number calling. The counts have not been checked by eye.
 **SVFreq_HV.** One row per pair of genes joined by a structural variant.
 Columns:
 
+- genePair: the genes at the two breakpoints, in alphabetical order, for
+  example GENEA::GENEB. A dot stands for a breakpoint that is not in a
+  gene.
 - N: how many tumors have the pair.
 - InFrame: how many of the calls are predicted to make an in-frame
   protein fusion.

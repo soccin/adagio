@@ -136,8 +136,8 @@ tumors, TUMOR_01 to TUMOR_10.
 | `n_focal` | 1 |
 | `n_all` | 5 |
 | `pct_loss` / `pct_cnloh` / `pct_amp` | 10 / 10 / 30 |
-| `cn_state_summary` | CNLOH;AMP (LOH);GAIN;AMP+;HETLOSS |
-| `tcn_summary` | 2;5;3;7+;1 |
+| `cn_state_summary` | CNLOH;AMP (LOH);AMP+;GAIN;HETLOSS |
+| `tcn_summary` | 2;5;7+;3;1 |
 
 How to read it:
 

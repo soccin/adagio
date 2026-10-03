@@ -80,18 +80,19 @@ these files: <a
 href="https://github.com/mskcc/tempo/blob/develop/README.md">Tempo
 README</a>.</p>
 <ul>
-<li><code>bams</code>: per-sample QC (fastp, Alfred, Qualimap,
-CollectHsMetrics for exomes, MultiQC). The BAM files are not
-delivered.</li>
+<li><code>bams</code>: per-sample QC (fastp for exomes, Alfred,
+Qualimap, Conpair pileups, CollectHsMetrics for exomes, MultiQC). The
+BAM files are not delivered.</li>
 <li><code>somatic</code>: per tumor/normal pair results: mutation calls
 (VCF and MAF), FACETS copy number, Conpair concordance and
-contamination, and for WGS structural variants and mutational
-signatures.</li>
-<li><code>cohort_level</code>: the same results merged across all pairs,
-for example <code>mut_somatic.maf</code> and
-<code>sample_data.txt</code>.</li>
-<li><code>pipeline_info</code>, <code>runlog</code>: Nextflow run
-reports and the run command.</li>
+contamination, and for WGS structural variants.</li>
+<li><code>cohort_level/default_cohort</code>: the same results merged
+across all pairs, for example <code>mut_somatic.maf</code> and
+<code>sample_data.txt</code>. For WGS, <code>sample_data.txt</code> also
+holds the mutational signature results.</li>
+<li><code>pipeline_info</code>: Nextflow run reports.</li>
+<li><code>runlog</code>: the run command and copies of the input mapping
+and pairing files.</li>
 </ul>
 <p>To save space, the BAM and snp-pileup files are not delivered. If you
 need them, please contact us.</p>
@@ -113,8 +114,8 @@ Mb). Exome projects only.</li>
 <li><code>facets_qc</code>, <code>dipLogR</code>: FACETS QC flag and
 baseline log ratio.</li>
 <li><code>NonSyn Mutation Count</code>: mutations in the Mutations
-sheet, not counting the TERT promoter mutations added back (see
-below).</li>
+sheet, not counting the TERT promoter mutations added back (see below).
+Blank for a tumor with none.</li>
 </ul>
 <p>A sample passes the FACETS check if <code>facets_qc</code> is TRUE or
 <code>|dipLogR| &lt; 0.5</code>. For samples that do not pass,
@@ -162,9 +163,10 @@ check (above) are left out of the <code>armLevel</code> and
 for every tumor.</li>
 <li><code>armLevel</code>: copy number state of each autosomal
 chromosome arm.</li>
-<li><code>geneLevelFocal</code>: genes on a focal copy number change
-(segment 1 Mb or shorter) in at least one tumor, with the percentage of
-tumors with a loss, gain or copy-neutral LOH at the gene.</li>
+<li><code>geneLevelFocal</code>: genes on a focal gain or loss (segment
+1 Mb or shorter) in at least one tumor, where all focal gains and losses
+at the gene go the same direction, with the percentage of tumors with a
+loss, gain or copy-neutral LOH at the gene.</li>
 <li><code>facetsQC</code>: the FACETS QC metrics and flags for every
 tumor.</li>
 <li><code>facetsParams</code>: the FACETS version and parameters.</li>
@@ -173,8 +175,9 @@ tumor.</li>
 (<code>Proj_&lt;no&gt;_facetsQCRpt_v1.xlsx</code>)</h3>
 <p>One row per tumor: purity, ploidy, dipLogR, whole genome doubling,
 fraction of the genome altered, counts of amplifications and homozygous
-deletions, number of segments, the overall <code>facets_qc</code> flag,
-and <code>FailedFilters</code>, the names of the QC checks the sample
+deletions, fraction of the genome homozygously deleted, number of
+segments, the overall <code>facets_qc</code> flag, and
+<code>FailedFilters</code>, the names of the QC checks the sample
 failed.</p>
 <h3 id="qc-report-proj_no_qcrpt01.pdf">QC Report
 (<code>Proj_&lt;no&gt;_qcRpt01.pdf</code>)</h3>
@@ -187,7 +190,8 @@ of target bases at 20x and 100x), with caution and fail lines.</p>
 <li><code>Proj_&lt;no&gt;_SV_Report01_v8.xlsx</code>: somatic structural
 variants, with per-sample counts (<code>SampleData</code>), recurrent
 gene pairs (<code>SVFreq</code>), all calls (<code>SVEvents</code>), and
-a description of every column (<code>ColDescriptions</code>).</li>
+a description of every column (<code>ColDescriptions</code>). If no SVs
+were called, <code>README_NoSVs.txt</code> is written instead.</li>
 <li><code>Proj_&lt;no&gt;_All_Report01_v2.xlsx</code>: SVs, mutations
 and focal copy number changes combined by sample and by gene.
 <code>DESCRIPTION_ALL_REPORT.md</code> explains it.</li>

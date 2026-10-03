@@ -55,14 +55,18 @@ folder holds its output as it was produced. The Tempo documentation
 describes these files:
 [Tempo README](https://github.com/mskcc/tempo/blob/develop/README.md).
 
-- `bams`: per-sample QC (fastp, Alfred, Qualimap, CollectHsMetrics for
-  exomes, MultiQC). The BAM files are not delivered.
+- `bams`: per-sample QC (fastp for exomes, Alfred, Qualimap, Conpair
+  pileups, CollectHsMetrics for exomes, MultiQC). The BAM files are not
+  delivered.
 - `somatic`: per tumor/normal pair results: mutation calls (VCF and MAF),
   FACETS copy number, Conpair concordance and contamination, and for WGS
-  structural variants and mutational signatures.
-- `cohort_level`: the same results merged across all pairs, for example
-  `mut_somatic.maf` and `sample_data.txt`.
-- `pipeline_info`, `runlog`: Nextflow run reports and the run command.
+  structural variants.
+- `cohort_level/default_cohort`: the same results merged across all
+  pairs, for example `mut_somatic.maf` and `sample_data.txt`. For WGS,
+  `sample_data.txt` also holds the mutational signature results.
+- `pipeline_info`: Nextflow run reports.
+- `runlog`: the run command and copies of the input mapping and pairing
+  files.
 
 To save space, the BAM and snp-pileup files are not delivered. If you
 need them, please contact us.
@@ -84,7 +88,8 @@ Somatic mutations from Tempo's filtered cohort MAF (`mut_somatic.maf`).
   estimates.
 - `facets_qc`, `dipLogR`: FACETS QC flag and baseline log ratio.
 - `NonSyn Mutation Count`: mutations in the Mutations sheet, not counting
-  the TERT promoter mutations added back (see below).
+  the TERT promoter mutations added back (see below). Blank for a tumor
+  with none.
 
 A sample passes the FACETS check if `facets_qc` is TRUE or
 `|dipLogR| < 0.5`. For samples that do not pass, `Facets Ploidy` and
@@ -127,9 +132,10 @@ and the `.seg` files.
 - `runInfo`: purity, ploidy, dipLogR and other fit results for every
   tumor.
 - `armLevel`: copy number state of each autosomal chromosome arm.
-- `geneLevelFocal`: genes on a focal copy number change (segment 1 Mb or
-  shorter) in at least one tumor, with the percentage of tumors with a
-  loss, gain or copy-neutral LOH at the gene.
+- `geneLevelFocal`: genes on a focal gain or loss (segment 1 Mb or
+  shorter) in at least one tumor, where all focal gains and losses at the
+  gene go the same direction, with the percentage of tumors with a loss,
+  gain or copy-neutral LOH at the gene.
 - `facetsQC`: the FACETS QC metrics and flags for every tumor.
 - `facetsParams`: the FACETS version and parameters.
 
@@ -137,7 +143,8 @@ and the `.seg` files.
 
 One row per tumor: purity, ploidy, dipLogR, whole genome doubling,
 fraction of the genome altered, counts of amplifications and homozygous
-deletions, number of segments, the overall `facets_qc` flag, and
+deletions, fraction of the genome homozygously deleted, number of
+segments, the overall `facets_qc` flag, and
 `FailedFilters`, the names of the QC checks the sample failed.
 
 ### QC Report (`Proj_<no>_qcRpt01.pdf`)
@@ -152,7 +159,8 @@ target bases at 20x and 100x), with caution and fail lines.
 - `Proj_<no>_SV_Report01_v8.xlsx`: somatic structural variants, with
   per-sample counts (`SampleData`), recurrent gene pairs (`SVFreq`), all
   calls (`SVEvents`), and a description of every column
-  (`ColDescriptions`).
+  (`ColDescriptions`). If no SVs were called, `README_NoSVs.txt` is
+  written instead.
 - `Proj_<no>_All_Report01_v2.xlsx`: SVs, mutations and focal copy number
   changes combined by sample and by gene. `DESCRIPTION_ALL_REPORT.md`
   explains it.

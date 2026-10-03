@@ -17,7 +17,10 @@ Reads were aligned to the GRCh37 reference with decoy sequences
 
 ## Methods
 
-**Alignment.** Reads were aligned with BWA-MEM 0.7.17 (Li 2009) and
+**Alignment.** Genome (WGS) BAMs were made with SMap; see
+[https://github.com/soccin/SMap](https://github.com/soccin/SMap) for
+details. Exome (WES) BAMs were made by Tempo, as follows.
+Reads were aligned with BWA-MEM 0.7.17 (Li 2009) and
 converted to BAM with samtools 1.9; fastp 0.19.7 was used for read QC
 only, without trimming. With GATK 4.6.1.0 (McKenna 2010), lanes were
 merged, sorted and duplicate-marked (MarkDuplicatesSpark), and base
@@ -27,17 +30,20 @@ dbSNP 138, 1000 Genomes phase 1 indels and Mills indels as known sites.
 **Somatic mutations.** SNVs and indels were called with GATK Mutect2
 4.1.0.0 (Benjamin 2019) and with Strelka2 2.9.10 (Kim 2018) given
 candidate indels from Manta 1.5.0 (Chen 2016); exome runs used the
-`--exome` setting for Strelka2 and Manta. The union of the two call sets
-was annotated with RepeatMasker, the ENCODE blacklist, gnomAD r2.1.1
+`--exome` setting for Strelka2 and Manta. The union of the calls that
+passed each caller's filters was annotated with RepeatMasker, the ENCODE blacklist, gnomAD r2.1.1
 (non-cancer exomes for WES, genomes for WGS) and a panel of normals
 (PoN), and converted to MAF with vcf2maf 1.6.17 and VEP 88 (McLaren 2016)
 using MSK canonical isoforms. Mutations were annotated with OncoKB
 (Chakravarty 2017) and cancer hotspots. A call was kept if it had tumor
 depth >= 20, >= 3 alt reads and VAF >= 5% (2% at known hotspots), normal
-depth >= 10 and <= 3 alt reads, gnomAD allele frequency <= 1%, was seen in
-fewer than 10 PoN samples, and was not in a repeat or blacklisted region.
-Tumor mutational burden (TMB) is the number of these mutations per Mb of
-target.
+depth >= 10 and <= 3 alt reads, gnomAD population maximum allele
+frequency <= 1%, was seen in fewer than 10 PoN samples, and was not in a
+repeat or blacklisted region. Tumor mutational burden (TMB, exomes only)
+is the number of these mutations that are protein-changing (missense,
+nonsense, nonstop, frameshift, in-frame indel, translation start, splice
+site or splice region) and fall in the coding regions of the capture
+target, divided by the size of those coding regions in Mb.
 
 **Copy number.** Allele-specific copy number, purity and ploidy were
 estimated with FACETS 0.5.14 (Shen 2016) through facets-suite 2.0.8, using
