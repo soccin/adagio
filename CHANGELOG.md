@@ -7,6 +7,10 @@ and `devs/iris`. Tempo submodule advanced from `8e6312e0` to `a7ecd35a`
 (branch `devs/iris`). Skips 3.2.0: the `v3.2.0-beta` tag (2026-09-07,
 `devs/iris`) was never released and is superseded by this version.
 
+First release after JUNO was shut down (2026-10-01). IRIS is the only
+supported cluster. The JUNO configs and driver branches are still in the
+repo but are dead code, unmaintained and untested.
+
 ### Added
 - IRIS WGS tiered queue/time picker: short-queue-first default,
   `shortMediumLongLadder`, `tierFor`/`queueFor`/`timeFor`
@@ -38,7 +42,7 @@ and `devs/iris`. Tempo submodule advanced from `8e6312e0` to `a7ecd35a`
   `docs/DESCRIPTION_FOCAL_GENES.md` and `docs/METHODS_CNV_GENES.md`
   [`357f377`, `fb91f2b`]
 - `--keep-failed` and `--help` in `reportFacets01.R` [`ba7f7d9`, `e1aa3e9`]
-- `SVFreq` recurrent gene-pair sheet in the SV report (v7) [`555f6fb`]
+- `SVFreq` recurrent gene-pair sheet in the SV report [`555f6fb`]
 - `scripts/rsrc/read_pairing.R`: pairing resolved from run logs [`a70b55b`]
 - `docs/IRIS_SLURM.md` and `docs/JUNO_LSF.md` cluster references; HPC
   rules section in `CLAUDE.md` [`87069a5`, `2e7ade3`]
@@ -64,12 +68,14 @@ and `devs/iris`. Tempo submodule advanced from `8e6312e0` to `a7ecd35a`
   `8ab4ecc`, `bd2016f`]
 - FACETS report keeps samples that passed QC or have `|dipLogR| < 0.5`;
   output `*_facets_v4.xlsx` [`c96af41`, `357f377`]
-- SV report workbooks styled through openxlsx2 [`b5fb3ca`]
+- SV report workbooks styled through openxlsx2; report version v6 to v8,
+  output `*_SV_Report01_v8.xlsx` [`555f6fb`, `b5fb3ca`]
 - `nfTraceReport.R` logs progress to stderr [`8a118d4`]
 - `00.SETUP.sh` prints a wgsTriage reminder [`ddef784`]
 - `fastq2tempo.R` usage documents each input file [`4c7c25a`]
-- JUNO frozen ahead of 2026-10-01 decommission; no further JUNO changes
-  [`4b3dd47`]
+- JUNO frozen ahead of its 2026-10-01 shutdown; no further JUNO changes
+  [`4b3dd47`]. JUNO is now shut down; `CLAUDE.md` marks its code paths
+  as dead
 
 ### Fixed
 - Short-queue submissions rejected with "Invalid qos specification" when

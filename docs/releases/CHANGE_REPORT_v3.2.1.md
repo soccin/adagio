@@ -8,9 +8,12 @@ Changes from v3.1.0 (2026-05-26) to v3.2.1 (2026-10-02).
 
 v3.2.1 is a minor bump on the **Cordelia** line. It collects four months of
 work that accumulated on `master` and `devs/iris` without a release: 60
-non-merge commits touching 44 files, plus a tempo submodule move from
-`8e6312e0` to `a7ecd35a` (branch `ccs/update-250925` to `devs/iris`,
-6 commits).
+non-merge commits touching 44 files, not counting the release
+documentation commits, plus a tempo submodule move from `8e6312e0` to
+`a7ecd35a` (branch `ccs/update-250925` to `devs/iris`, 7 commits).
+
+It is the first release after JUNO was shut down for good on 2026-10-01.
+IRIS is the only supported cluster.
 
 The number skips 3.2.0. A `v3.2.0-beta` tag was placed on `devs/iris` at
 `3a7a77e` on 2026-09-07 and never released; everything under it is in this
@@ -31,14 +34,16 @@ Headline items:
 4. **Tempo: ENCODE blacklists for SvABA and Delly**, `svaba -p` matched to
    `task.cpus`, and an opt-in `skipQualimap` parameter.
 5. **Reporting:** TERT promoter rescue and FACETS dipLogR in the main report,
-   a focal-gene copy-number sheet in the FACETS report, SV report v7 with a
+   a focal-gene copy-number sheet in the FACETS report, SV report v8 with a
    recurrent gene-pair sheet and styled workbooks, and a shared-normal fix in
    the WGS stats plots.
 6. **Delivery and tooling on IRIS:** `deliver.sh` delivers locally on IRIS
    with automatic `r_NNN`, a `makeTempoBams.sh` alignment-only runner, pairing
    file builders, SV BAM filters, and mail on driver END or FAIL.
-7. **Policy:** JUNO is frozen ahead of its 2026-10-01 decommission. Cluster
-   references `docs/IRIS_SLURM.md` and `docs/JUNO_LSF.md` added.
+7. **Policy:** JUNO was frozen ahead of its shutdown and was shut down on
+   2026-10-01. Its code paths are dead and left in place for a later
+   release to remove. Cluster references `docs/IRIS_SLURM.md` and
+   `docs/JUNO_LSF.md` added.
 
 Not in this release: the WES config right-sizing identified in
 `devs/wes-iris-parity-report.md` (see section 8), and a fix for the
@@ -48,7 +53,7 @@ CohortRunMultiQC failure on BAM-input WGS runs (section 7).
 
 ## 1. IRIS WGS SLURM configuration (`conf/tempo-wgs-iris.config`)
 
-This file received 425 lines of change. The end state is described here;
+This file received 382 lines of change. The end state is described here;
 the intermediate commits are listed where the history matters.
 
 ### 1a. Tier-ladder parity with WES (`448660c`, 2026-06-09)
@@ -214,7 +219,7 @@ section 8 for what is pending there.
 `cordelia-01-9-ga7ecd35a`; the `cordelia-02` tag mentioned in `e7e8ac3` was
 local to another checkout and is not present here.
 
-Six tempo commits, all by this project (full detail in `CHANGELOG_TEMPO.md`):
+Seven tempo commits, all by this project (full detail in `CHANGELOG_TEMPO.md`):
 
 | Tempo commit | Change |
 |---|---|
@@ -222,8 +227,9 @@ Six tempo commits, all by this project (full detail in `CHANGELOG_TEMPO.md`):
 | `e591a3e8` | SvABA `-B` ENCODE blacklist |
 | `356fa8db` | Delly uses the adagio ENCODE exclude file |
 | `2ff7e96a` | Docs for the above |
+| `ed83b1b0` | Merge of the SV commits into `ccs/update-250925` |
 | `d83b4150` | `params.skipQualimap` (default `false`); bamqc `-nt` from `cpus * 2` to `cpus` |
-| `a7ecd35a` | Merge of the above into `devs/iris` |
+| `a7ecd35a` | Merge of `d83b4150` into `devs/iris` |
 
 **New runtime dependency.** Both SV region files resolve through
 `${projectDir}/../rsrc/` and `defineReferenceMap` validates them at startup
@@ -325,14 +331,14 @@ Nextflow (`ddef784`). Nothing is cloned automatically.
   `docs/DESCRIPTION_FOCAL_GENES.md` (reader guide) and
   `docs/METHODS_CNV_GENES.md` (selection rules and checks) (`fb91f2b`).
 
-### SV report (`reportSV01.R`, now v7)
+### SV report (`reportSV01.R`, now v8)
 
 - `SVFreq` sheet of gene pairs hit in more than one sample, with an
-  orientation-independent pair label (`555f6fb`). `NumSVs` zero-filled for
-  tumors with no BEDPE.
+  orientation-independent pair label (`555f6fb`, v6 to v7). `NumSVs`
+  zero-filled for tumors with no BEDPE.
 - Workbooks written through openxlsx2 with bold frozen headers, fitted
   widths and per-column number formats; non-finite values become empty
-  cells (`b5fb3ca`).
+  cells (`b5fb3ca`, v7 to v8).
 
 ### Pairing from run logs (`scripts/rsrc/read_pairing.R`, `a70b55b`)
 
@@ -368,8 +374,11 @@ piped Markdown (`8a118d4`).
   JUNO and the three traps when porting settings to IRIS (time, memory
   semantics, retry count).
 - **`CLAUDE.md`**: HPC clusters section with the rules above; JUNO freeze
-  (`4b3dd47`): JUNO is decommissioned 2026-10-01, IRIS is the only target
-  for new work, JUNO configs and code paths are left untouched.
+  (`4b3dd47`), updated at release: JUNO was shut down on 2026-10-01, IRIS
+  is the only supported cluster, and the JUNO configs and code paths are
+  dead but left in place. It also records that tempo's `iris` profile
+  loads `tempo/conf/juno.config` and the `resources_juno*.config` files,
+  so those must survive the JUNO removal.
 - **`devs/wes-iris-parity-report.md`** (`0cb8afb`): every WGS IRIS config
   change since 2026-05-25 mapped onto the WES equivalents, backed by
   27,014 completed WES tasks. This is the work plan for the next release.
@@ -436,6 +445,11 @@ report (`devs/wes-iris-parity-report.md`) lists, with measurements:
 - Do not port the Delly/SvABA ladders; WES does not run the SV workflow by
   default.
 
+Remove the dead JUNO code paths: `conf/*juno*.config`, the `JUNO`
+branches in the `bin/` drivers and cluster detection, and the `JUNO` case
+in `scripts/report01.R`. Keep the tempo-side `juno` config files that the
+`iris` profile loads (section 5).
+
 Also open: a replacement for bamqc on deep WGS BAMs, the stale version stamp
 in `conf/iris.config`, hardcoded `/scratch/core001/bic/socci` paths in the
 drivers, and the `SLM/` pre-creation requirement. See `TODO.md`.
@@ -444,6 +458,8 @@ drivers, and the `SLM/` pre-creation requirement. See `TODO.md`.
 
 ## 9. Upgrade notes
 
+- IRIS only. JUNO was shut down on 2026-10-01; the JUNO configs and
+  driver branches are still present but unmaintained and untested.
 - Clone or update with submodules: `git submodule update --init`. The
   pinned tempo commit is on `origin/devs/iris`.
 - Tempo now reads `rsrc/genomic/hg19/` from the adagio checkout on every
@@ -454,5 +470,5 @@ drivers, and the `SLM/` pre-creation requirement. See `TODO.md`.
   anyway (section 1d).
 - `SETENVRC` is gone. Nothing needs to be sourced before running the
   drivers.
-- SV report output is now `*_SV_Report01_v7.xlsx`; FACETS report output is
+- SV report output is now `*_SV_Report01_v8.xlsx`; FACETS report output is
   `*_facets_v4.xlsx`.
