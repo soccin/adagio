@@ -30,14 +30,14 @@ consolidated segmentation and Excel reports. Run from the project directory
 
 Options:
   --keep-failed   Include samples that failed the sample filter. By default a
-                  sample is kept if it passed FACETS QC or has
-                  |dipLogR| < 1.5; other samples are dropped from the
-                  segmentation and CNA tables. Output filenames are tagged
-                  NO_FILT when this is set.
+                  sample is kept if it passed FACETS QC or has |dipLogR|
+                  below max_abs_diplogr (set in rsrc/facets_rules.R); other
+                  samples are dropped from the segmentation and CNA tables.
+                  Output filenames are tagged NO_FILT when this is set.
   -h, --help      Print this message and exit.
 
 Outputs:
-  post/reports/Proj_<no>[_NO_FILT]_facets_v4.xlsx
+  post/reports/Proj_<no>[_NO_FILT]_facets_v5.xlsx
       Multi-sheet workbook: runInfo, armLevel, geneLevelFocal, facetsQC,
       facetsParams.
   post/plots/facets/Proj_<no>_{Filtered,NO_FILT}_facets_{purity,hisens}.seg
@@ -88,15 +88,16 @@ fs::dir_create(facets_dir)
 
 script_dir <- get_script_dir()
 
+# Sample and focal-segment rules shared with the other reports
+source(file.path(script_dir, "rsrc", "facets_rules.R"))
+
 # Quality Control: Identify Failed Samples
 # =========================================
 # Read individual FACETS QC files from each sample directory to identify
 # samples that fail the sample filter. A sample passes if it passed FACETS QC,
-# or if it failed QC but |dipLogR| is below max_abs_diplogr. Failing samples
-# are excluded from final outputs. reportAll.R uses the same rule and the
-# same focal segment length; keep them equal.
-
-max_abs_diplogr <- 1.5
+# or if it failed QC but |dipLogR| is below max_abs_diplogr
+# (facets_sample_pass in rsrc/facets_rules.R). Failing samples are excluded
+# from final outputs.
 
 # Find all QC files across sample directories
 facets_qc_files <- dir_ls(sample_dir, "\\.facets_qc\\.txt")
@@ -122,7 +123,7 @@ qc_data <- qc_data |>
 # Extract samples that fail the filter: facets_qc || |dipLogR| < max_abs_diplogr
 # A missing dipLogR does not rescue a sample that failed QC
 failed_samples <- qc_data |>
-  filter(!(facets_qc | coalesce(abs(dipLogR) < max_abs_diplogr, FALSE))) |>
+  filter(!facets_sample_pass(facets_qc, dipLogR)) |>
   pull(tumor_sample_id)
 
 message(
@@ -271,8 +272,8 @@ cna_gene_level <- if (length(gene_level_files) > 0) {
 
 # Focal gene-level summary
 # ========================
-# One row per gene that lies on a segment of max_focal_seg_length or smaller
-# in at least one sample, where the focal calls with tcn != 2 are all gains
+# One row per gene that lies on a focal segment (max_focal_seg_length or
+# smaller, see is_focal_seg in rsrc/facets_rules.R) in at least one sample, where the focal calls with tcn != 2 are all gains
 # or all losses (see filter below). Autosomes only: chrX (FACETS chrom 23)
 # cannot be called accurately without sex info.
 #
@@ -286,8 +287,6 @@ cna_gene_level <- if (length(gene_level_files) > 0) {
 #     filter), so the three can sum to less than 100
 #   cn_state_summary, tcn_summary: one entry per sample in samples_all
 #     order; "+" marks a focal call
-
-max_focal_seg_length <- 1e6
 
 gene_level_focal <- if (nrow(cna_gene_level) > 0) {
   n_cohort <- qc_data |>
@@ -318,7 +317,7 @@ gene_level_focal <- if (nrow(cna_gene_level) > 0) {
     mutate(
       arm = str_c(chrom_key, if_else(gene_start < centromere, "p", "q")),
       sample = str_remove(sample, "__.*"),
-      focal = seg_length <= max_focal_seg_length,
+      focal = is_focal_seg(seg_length),
       focal_tag = if_else(focal, "+", "")
     ) |>
     arrange(sample) |>
@@ -354,10 +353,10 @@ gene_level_focal <- if (nrow(cna_gene_level) > 0) {
 # This consolidated report provides different views of the FACETS analysis:
 # - runInfo: Sample-level metrics and purity estimates
 # - armLevel: Chromosomal arm gains/losses across samples
-# - geneLevelFocal: Genes on segments <= 1Mb, with cohort CN-state stats
+# - geneLevelFocal: Genes on focal segments, with cohort CN-state stats
 
 excel_filename <- str_c(
-  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v4.xlsx"
+  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v5.xlsx"
 )
 
 source(file.path(script_dir, "rsrc", "xlsx_legacy.R"))
