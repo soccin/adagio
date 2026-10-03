@@ -1,6 +1,6 @@
 # CHANGELOG - Tempo Submodule
 
-This changelog documents all changes to the tempo submodule from commit `00eb724` to `a7ecd35a` (25 commits total).
+This changelog documents all changes to the tempo submodule from commit `00eb724` to `a7ecd35a` (26 commits total).
 
 ## Changes: ed83b1b0..a7ecd35a (2026-09-05)
 
@@ -16,10 +16,12 @@ Branch moved from `ccs/update-250925` to `devs/iris`.
   - `qualimap bamqc -nt` changed from `task.cpus * 2` to `task.cpus`. This is
     shared code and also applies to JUNO, where the worker pool is idle ~97%
     of the run; it is a thread-count reduction, not a behaviour change.
-  - Consumed by adagio via `skipQualimap = true` in
-    `conf/tempo-wgs-iris.config` (adagio `44e88f7`). WES and JUNO keep the
-    `false` default, so bamqc still runs there.
-  - Trade-off: `SampleRunMultiQC`/`SomaticRunMultiQC` lose the Coverage,
+  - adagio set `skipQualimap = true` in `conf/tempo-wgs-iris.config`
+    (`44e88f7`) and reverted that for v3.2.1: Proj_18645_C (2026-09-29)
+    completed bamqc under the 4/8-cpu, 20GB settings on master. No adagio
+    config sets the parameter now, so bamqc runs on every path. The option
+    stays in tempo for a future opt-in.
+  - Trade-off when set: `SampleRunMultiQC`/`SomaticRunMultiQC` lose the Coverage,
     % Aligned, Error rate and Ins. size columns and the qualimap plots. The
     % Aligned criterion drops out of QC_Status silently rather than failing.
     Conpair, alfred and facets QC are unaffected.
