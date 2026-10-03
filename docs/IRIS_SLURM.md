@@ -16,8 +16,8 @@ Written for the Adagio/Tempo pipeline but applicable to any batch work on IRIS.
 
 ## 1. Basics
 
-- **Scheduler: SLURM.** (The older JUNO cluster is LSF — assumptions do not
-  transfer between them.)
+- **Scheduler: SLURM.** (The older JUNO cluster was LSF and was shut down on
+  2026-10-01. Its settings do not transfer to IRIS.)
 - **Default account: `core001`.** Available QoS: `normal`, `priority`.
 - Access is **not** determined by `AllowGroups`. `AllowGroups=ALL` appears on
   partitions you cannot use. What actually governs access is
