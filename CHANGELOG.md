@@ -1,5 +1,69 @@
 # Changelog
 
+## v3.2.2 [2026-10-03] - Cordelia Patch: Combined Report, FACETS Rules, WES Sizing
+
+Patch release on the Cordelia line. 24 commits since v3.2.1. Tempo
+submodule unchanged (`a7ecd35a`); its tracking branch is renamed
+`devs/iris` to `devs-iris`. IRIS only; the JUNO code paths are still
+dead and untouched.
+
+### Added
+- `scripts/reportAll.R`: combined SV/SNV/CNV workbook
+  (`Proj_<no>_All_Report01_v2.xlsx`, sheets SampleSummary, GeneRanking,
+  SVFreq_HV, ColDescriptions), run by `bin/doPost.sh` for WGS, with
+  `docs/DESCRIPTION_ALL_REPORT.md` copied into `post/reports`
+  [`93e317e`, `9c1afe5`]
+- In-frame fusion flag and count (`InFrame`) in SVFreq_HV; single-tumor
+  pairs kept only with an in-frame call [`b119c44`]
+- `scripts/rsrc/facets_rules.R`: the only definition of the FACETS
+  sample rule (`facets_qc` or `|dipLogR| < 0.5`) and the focal rule
+  (segment <= 1 Mb), with locked thresholds and
+  `scripts/rsrc/test_facets_rules.R` [`5da458c`, `5403f36`]
+- `scripts/rsrc/xlsx_report.R`, `xlsx_legacy.R`, `xlsx_defaults.R`:
+  shared Excel writers; every workbook opens at 150% zoom with an
+  explicit window size [`bbac46b`]
+- `scripts/rsrc/cytoBand_hg19.txt.gz` for chromosome bands [`93e317e`]
+- `devs/wes-iris-work-plan.md` [`c0cfd2b`]
+
+### Changed
+- IRIS WES resources right-sized from traces of 9 WES runs: QcQualimap
+  3 cpus x `4.GB * attempt` with explicit `--mem` (Tempo's JVM heap is
+  cpus x memory); DoFacets 2 cpus, `16.GB * attempt`; MultiQC label,
+  SomaticAnnotateMaf, SomaticFacetsAnnotation, Manta, Strelka2,
+  CombineChannel, MetaDataParser and CohortRunMultiQC sized down from
+  16 cpus and 34-246 GB (`conf/tempo-wes-iris.config`) [`250ae33`,
+  `23bd930`, `6f7fdbe`]
+- SNV report and FACETS QC report use the shared FACETS sample rule:
+  ploidy and FGA are blanked, and `facetsFailedSamples` is written, only
+  for samples that fail QC and have `|dipLogR| >= 0.5`. Output
+  `*_SNV_Report01_v4.xlsx` [`f47b97d`]
+- FACETS report reads both rules from `facets_rules.R`; a missing
+  `facets_qc` now counts as a QC failure. Output `*_facets_v5.xlsx`
+  [`5da458c`, `2c26e73`]
+- `bin/deliver.sh` and `bin/deliverGermline.sh` write to the delivery
+  area as `svc_core001_bot01` via `dzdo` [`2ab1ebd`]
+- Delivery email: subject line, the real `r_NNN` folder, and a docs link
+  at the release tag parsed from `GTAG` [`3981355`]
+- Tempo tracking branch renamed to `devs-iris` in `.gitmodules`
+  [`e05c0b5`]
+- Docs: `docs/output.md` (and its html/pdf) and `docs/methods.md`
+  rewritten for v3.2.2; FACETS doc fixes; dead Tempo docs link replaced
+  [`ca4a15f`, `4eb0599`, `584498d`, `06b17de`, `7654bd7`, `293ab40`,
+  `bdc2e9d`]. Release review: README and `CLAUDE.md` resume and cleanup
+  steps rewritten for IRIS, Nextflow pin in `docs/install.md`, IRIS node
+  counts re-checked, `TODO.md` status for v3.2.2
+
+### Fixed
+- WES QcQualimap OOM: 80 of 241 tasks were killed (exit 137) because
+  Tempo sets the JVM heap to cpus x memory, more than the SLURM memory
+  request on IRIS (`mem_per_core = false`) [`250ae33`]
+- A sample could be kept in the FACETS report and still have blank
+  ploidy and FGA in the SNV report [`f47b97d`]
+- Delivery email linked a fixed `r_001` folder and the v3.0.0 docs
+  [`3981355`]
+
+See `docs/releases/CHANGE_REPORT_v3.2.2.md` for the full release narrative.
+
 ## v3.2.1 [2026-10-02] - Cordelia Minor: WGS IRIS Parity and SV Sizing
 
 Minor bump on the Cordelia line. Collects four months of work from `master`

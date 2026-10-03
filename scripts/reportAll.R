@@ -20,27 +20,29 @@
 #        breakpoints closer than min_intra_chr_mb are dropped everywhere
 #   SNV  a non-synonymous mutation in the cohort MAF, as in report01.R,
 #        including the TERT promoter rescue from the unfiltered MAFs
-#   CNV  a FACETS gene-level call with filter PASS or RESCUE on a segment of
-#        fewer than max_focal_genes genes, on an autosome, from a sample with
-#        facets_qc TRUE or |dipLogR| below max_abs_diplogr
+#   CNV  a FACETS gene-level call with filter PASS or RESCUE on a focal
+#        segment, on an autosome, from a sample that passes the FACETS
+#        sample rule. Both rules are defined in rsrc/facets_rules.R and
+#        shared with the other reports.
 #
 # Output: post/reports/Proj_<no>_All_Report01_<VERSION>.xlsx
 
-VERSION <- "v1"
+VERSION <- "v2"
 PROOT <- get_script_dir()
 source(file.path(PROOT, "rsrc/read_tempo_sv.R"))
 source(file.path(PROOT, "rsrc/add_sv_scores.R"))
 source(file.path(PROOT, "rsrc/read_pairing.R"))
 source(file.path(PROOT, "rsrc/xlsx_report.R"))
+source(file.path(PROOT, "rsrc/facets_rules.R"))
 
 suppressPackageStartupMessages(require(tidyverse))
 
 # Parameters
 # ==========
 
+# The FACETS sample and focal-segment thresholds are in rsrc/facets_rules.R
+
 min_intra_chr_mb <- 1      # drop same-chromosome SVs shorter than this
-max_focal_genes <- 10      # a CNV segment with fewer genes than this is focal
-max_abs_diplogr <- 1.5     # FACETS sample gate when facets_qc is FALSE
 min_tumors <- 2            # GeneRanking shows genes with at least this many tumors
 min_sv_pct <- 0.05         # SVFreq_HV shows pairs in at least this fraction of tumors
 genome <- "hg19"
@@ -256,14 +258,16 @@ facets_qc <- fs::dir_ls("out", recurse = TRUE, regexp = "\\.facets_qc\\.txt$") |
   map(\(f) read_tsv(f, col_types = cols(.default = "c"), show_col_types = FALSE, progress = FALSE)) |>
   bind_rows() |>
   quiet_type_convert() |>
+  mutate(cnv_included = facets_sample_pass(facets_qc, dipLogR)) |>
   transmute(
     TUMOR_ID = str_remove(tumor_sample_id, "__.*"),
     facets_qc,
     Purity = purity_run_Purity,
-    Ploidy = ploidy,
-    FGA = fga,
+    # Blank for a sample that fails the sample rule, as in report01.R
+    Ploidy = if_else(cnv_included, ploidy, NA),
+    FGA = if_else(cnv_included, fga, NA),
     dipLogR,
-    cnv_included = facets_qc | coalesce(abs(dipLogR) < max_abs_diplogr, FALSE)
+    cnv_included
   )
 
 cnv_samples <- facets_qc |>
@@ -289,7 +293,7 @@ cnv_events <- fs::dir_ls(cohort_dir, regexp = "cna_genelevel\\.txt$") |>
       str_detect(cn_state, "CNLOH") ~ "cnloh",
       TRUE ~ NA_character_
     ),
-    focal = filter %in% c("PASS", "RESCUE") & coalesce(genes_on_seg < max_focal_genes, FALSE)
+    focal = filter %in% c("PASS", "RESCUE") & is_focal_seg(seg_length)
   ) |>
   filter(
     TUMOR_ID %in% cnv_samples,
@@ -407,16 +411,16 @@ col_desc <- tribble(
   "SampleSummary", "NumSV", str_glue("Somatic SV calls, excluding same-chromosome calls with breakpoints closer than {min_intra_chr_mb} Mb"),
   "SampleSummary", "NumSNV", "Non-synonymous somatic mutations (the Mutations sheet of the SNV report, TERT promoter rescue included)",
   "SampleSummary", "NumSNV_LoF", str_glue("Of NumSNV, loss-of-function classes: {str_c(lof_classes, collapse = ', ')}"),
-  "SampleSummary", "NumCNV", str_glue("Focal copy number segments: FACETS filter PASS or RESCUE, fewer than {max_focal_genes} genes, autosomes, with a gain, loss or cnLOH state. Blank when the sample fails the FACETS gate"),
+  "SampleSummary", "NumCNV", str_glue("Focal copy number segments: FACETS filter PASS or RESCUE, segment of {max_focal_seg_length / 1e6} Mb or shorter, autosomes, with a gain, loss or cnLOH state. Blank when the sample fails the FACETS gate"),
   "SampleSummary", "NumCNVGenes", "Genes on the NumCNV segments",
   "SampleSummary", "TotalMutations", "All somatic mutations in the Tempo sample_data file, silent and non-coding included",
   "SampleSummary", "WGD", "Whole genome doubling status from FACETS",
   "SampleSummary", "facets_qc", "FACETS QC flag",
   "SampleSummary", "Purity", "FACETS purity (purity run)",
-  "SampleSummary", "Ploidy", "FACETS ploidy",
-  "SampleSummary", "FGA", "Fraction of the genome altered (FACETS)",
+  "SampleSummary", "Ploidy", "FACETS ploidy. Blank when the sample fails the FACETS gate",
+  "SampleSummary", "FGA", "Fraction of the genome altered (FACETS). Blank when the sample fails the FACETS gate",
   "SampleSummary", "dipLogR", "FACETS diploid log ratio",
-  "SampleSummary", "cnv_included", str_glue("TRUE when the sample contributes CNV events: facets_qc TRUE or |dipLogR| < {max_abs_diplogr}"),
+  "SampleSummary", "cnv_included", str_glue("TRUE when the sample passes the FACETS gate and contributes CNV events: facets_qc TRUE or |dipLogR| < {max_abs_diplogr}"),
   "GeneRanking", "Rank", "Rank by Tumors; ties share a rank",
   "GeneRanking", "Gene", "Gene symbol",
   "GeneRanking", "Tumors", "Tumors with an SV, SNV or CNV event in the gene, each tumor counted once",

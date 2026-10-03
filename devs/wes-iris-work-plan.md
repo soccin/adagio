@@ -2,6 +2,12 @@
 
 Written 2026-10-02, on `devs/iris` at `fdb922a`.
 
+**Status at v3.2.2 (2026-10-03):** steps 2-4 of section 7 are done
+(`250ae33`, `23bd930`, `6f7fdbe`) with the values in sections 1 and 2.
+The "Current" values below are the settings before v3.2.2. Step 5 (test
+run) and step 6 (replace the parity report) are open; the
+`runTempoWGSBam.sh` `pushd`/`popd` fix in section 6 is open (TODO item 9).
+
 ## Goal
 
 Apply the rules the WGS IRIS work followed to `conf/tempo-wes-iris.config`:

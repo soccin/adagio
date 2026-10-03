@@ -14,7 +14,7 @@ gain. Copy number is not adjusted for whole-genome doubling, so check the
 FACETS state of each gain before interpreting it.
 
 This guide explains the `geneLevelFocal` sheet in the FACETS copy number
-report (`Proj_<project>_facets_v4.xlsx`). It is written for readers who
+report (`Proj_<project>_facets_v5.xlsx`). It is written for readers who
 use the results, not for those who compute them. The technical method is in
 `METHODS_CNV_GENES.md`.
 
@@ -80,9 +80,12 @@ variant positions inside it is never evaluated and cannot appear.
 
 Tumors that failed FACETS quality control are removed before the sheet is
 built (a tumor is kept if it passed QC, or if its baseline log-ratio,
-`dipLogR`, is within 0.5 of zero). The `runInfo` sheet lists the tumors
-that were kept, with their `facets_qc` flag. A report run with the
-`--keep-failed` option is named `..._NO_FILT_...` and keeps every tumor.
+`dipLogR`, is less than 0.5 from zero, `|dipLogR| < 0.5`). The `runInfo`
+and `facetsQC` sheets are not filtered: they list every tumor, including
+the ones that were removed. To see whether a tumor was kept, check its
+`facets_qc` flag and `dipLogR` value in the `facetsQC` sheet. A report run
+with the `--keep-failed` option is named `..._NO_FILT_...` and keeps every
+tumor.
 
 ## Column guide
 
@@ -133,8 +136,8 @@ tumors, TUMOR_01 to TUMOR_10.
 | `n_focal` | 1 |
 | `n_all` | 5 |
 | `pct_loss` / `pct_cnloh` / `pct_amp` | 10 / 10 / 30 |
-| `cn_state_summary` | CNLOH;AMP (LOH);GAIN;AMP+;HETLOSS |
-| `tcn_summary` | 2;5;3;7+;1 |
+| `cn_state_summary` | CNLOH;AMP (LOH);AMP+;GAIN;HETLOSS |
+| `tcn_summary` | 2;5;7+;3;1 |
 
 How to read it:
 
@@ -170,10 +173,10 @@ How to read it:
   cases where FACETS could not tell (`DIPLOID or CNLOH`,
   `LOSS BEFORE or DOUBLE LOSS AFTER`).
 - **Large high-level amplifications and deletions are left out
-  upstream.** Before this sheet is built, FACETS removes calls it
-  considers unlikely to target a single gene: `AMP` calls (5 or more
-  copies) and `HOMDEL` calls (0 copies) on segments longer than 10 Mb or
-  covering many genes. A tumor with, say, a whole-arm amplification at 6
+  upstream.** Before this sheet is built, facets-suite flags calls it
+  considers unlikely to target a single gene, and Tempo removes them:
+  `AMP` calls (5 or more copies) and `HOMDEL` calls (0 copies) on
+  segments longer than 10 Mb or covering many genes. A tumor with, say, a whole-arm amplification at 6
   copies therefore does not appear in `samples_all` for genes on that arm
   and is not counted in `pct_amp`. Smaller gains (3 or 4 copies) and
   single-copy losses on large segments are kept. So `pct_amp` and

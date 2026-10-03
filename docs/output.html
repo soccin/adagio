@@ -11,8 +11,11 @@
     div.columns{display: flex; gap: min(4vw, 1.5em);}
     div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    ul.task-list{list-style: none;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
     ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
       width: 0.8em;
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
@@ -20,94 +23,200 @@
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="https://sindresorhus.com/github-markdown-css/github-markdown.css" />
-  <!--[if lt IE 9]>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
-  <![endif]-->
 </head>
 <body>
 <header id="title-block-header">
 <h1 class="title">Variant Output</h1>
 </header>
-<h1 id="bic-variant-pipeline-v3.0.0">BIC Variant Pipeline (v3.0.0)</h1>
+<h1 id="bic-variant-pipeline-v3.2.2">BIC Variant Pipeline (v3.2.2)</h1>
 <h2 id="introduction">Introduction</h2>
-<p>The output consists of the raw output files from the TEMPO pipeline
-along with some simple post-processing of the mutation tables to filter
-for non-silent events.</p>
+<p>The results have two parts. The <code>tempo</code> folder holds the
+output of the Tempo pipeline as it was produced. The <code>post</code>
+folder holds reports we build from the Tempo output: a mutation table
+filtered to protein-changing mutations, copy number summaries, and QC
+reports.</p>
+<p>In the names below, <code>&lt;no&gt;</code> is the project number
+(for example <code>16083_I</code>) and <code>&lt;sample&gt;</code> is a
+sample ID. Reports marked WGS are made only for whole-genome projects;
+the others are made for exome and genome projects.</p>
 <h2 id="directory-structure">Directory Structure</h2>
-<pre><code>{outdir}
+<pre><code>&lt;delivery folder&gt;
 ├── post
 │   ├── reports
-│   │   ├── {projectNum}_SNV_Report01_v2.xlsx
-│   │   ├── Proj_{projectNum}_facets_v3.xlsx
-│   │   ├── Proj_{projectNum}_Filtered_facets_hisens.seg
-│   │   └── Proj_{projectNum}_Filtered_facets_purity.seg
-│   ├── pipeline_info
-│   │   ├── version.txt
-│   │   └── output.html
-│   └── plots
-│       └── facets
-│           └── {sample}_purity.CNCF.png
+│   │   ├── Proj_&lt;no&gt;_SNV_Report01_v4.xlsx
+│   │   ├── Proj_&lt;no&gt;_facets_v5.xlsx
+│   │   ├── Proj_&lt;no&gt;_facetsQCRpt_v1.xlsx
+│   │   ├── Proj_&lt;no&gt;_qcRpt01.pdf
+│   │   ├── Proj_&lt;no&gt;_SV_Report01_v8.xlsx         (WGS)
+│   │   ├── Proj_&lt;no&gt;_All_Report01_v2.xlsx        (WGS)
+│   │   ├── DESCRIPTION_ALL_REPORT.md             (WGS)
+│   │   ├── Proj_&lt;no&gt;_WGSStats_v1.xlsx            (WGS)
+│   │   └── Proj_&lt;no&gt;_WGSStats_v1.pdf             (WGS)
+│   ├── plots
+│   │   └── facets
+│   │       ├── &lt;sample&gt;__&lt;normal&gt;_purity.CNCF.png
+│   │       ├── Proj_&lt;no&gt;_Filtered_facets_hisens.seg
+│   │       └── Proj_&lt;no&gt;_Filtered_facets_purity.seg
+│   └── pipeline_info
+│       ├── version.txt
+│       ├── cmd.sh.log
+│       ├── output.html
+│       ├── execution_report_&lt;date&gt;.html
+│       ├── execution_timeline_&lt;date&gt;.html
+│       └── execution_trace_&lt;date&gt;.txt
 └── tempo
-    └── {projectNum}
+    └── &lt;no&gt;
         ├── bams
         ├── cohort_level
+        ├── pipeline_info
         ├── runlog
         └── somatic</code></pre>
 <h2 id="tempo-output">Tempo Output</h2>
-<p>The core output is from the <a
-href="https://github.com/mskcc/tempo">Tempo</a> research pipeline from
-MSKCC CMO Computational Science group. The raw output from Tempo is in
-the <code>tempo</code> subfolder, and a detailed description of these
-files can be found here: <a
-href="https://deploy-preview-983--cmotempo.netlify.app/outputs.html">Tempo-Outputs</a>.
-<em>N.B.</em>, to save space, the <code>bam</code> and
-<code>snp-pileup</code> files are not delivered by default. If you
-require them, please contact us.</p>
-<h2 id="post-folder">Post folder</h2>
-<p>The post folder contains a number of useful files that give an
-overall summary of the pipeline and results.</p>
-<h3 id="reports">Reports</h3>
-<p>The reports folder contains multiple files providing comprehensive
-analysis results:</p>
-<h4 id="snv-report-projectnum_snv_report01_v2.xlsx">SNV Report
-(<code>{projectNum}_SNV_Report01_v2.xlsx</code>)</h4>
-<p>The SNV (Single Nucleotide Variant) mutation summary report in Excel
-format with the following three sheets:</p>
-<ol type="1">
-<li><em>Sample Data</em>: Provides summary information on samples
-including TMB and sample purity.</li>
-<li><em>Gene Stats</em>: Lists genes mutated in more than two samples,
-with mutation count, frequency, and affected samples.</li>
-<li><em>Mutations</em>: Displays a table of all non-silent mutations
-detected.</li>
-</ol>
-<h4 id="facets-report-proj_projectnum_facets_v3.xlsx">FACETS Report
-(<code>Proj_{projectNum}_facets_v3.xlsx</code>)</h4>
-<p>A comprehensive Excel report focused on copy number analysis results
-from FACETS, including sample purity estimates, ploidy information, and
-copy number profiles.</p>
-<h4 id="segmentation-files">Segmentation Files</h4>
+<p>The core analysis is done by <a
+href="https://github.com/mskcc/tempo">Tempo</a>, a pipeline from the
+MSKCC CMO Computational Sciences group. The <code>tempo</code> folder
+holds its output as it was produced. The Tempo documentation describes
+these files: <a
+href="https://github.com/mskcc/tempo/blob/develop/README.md">Tempo
+README</a>.</p>
 <ul>
-<li><code>Proj_{projectNum}_Filtered_facets_hisens.seg</code>: High
-sensitivity segmentation data from FACETS analysis</li>
-<li><code>Proj_{projectNum}_Filtered_facets_purity.seg</code>:
-Purity-based filtered segmentation data from FACETS analysis</li>
+<li><code>bams</code>: per-sample QC (fastp for exomes, Alfred,
+Qualimap, Conpair pileups, CollectHsMetrics for exomes, MultiQC). The
+BAM files are not delivered.</li>
+<li><code>somatic</code>: per tumor/normal pair results: mutation calls
+(VCF and MAF), FACETS copy number, Conpair concordance and
+contamination, and for WGS structural variants.</li>
+<li><code>cohort_level/default_cohort</code>: the same results merged
+across all pairs, for example <code>mut_somatic.maf</code> and
+<code>sample_data.txt</code>. For WGS, <code>sample_data.txt</code> also
+holds the mutational signature results.</li>
+<li><code>pipeline_info</code>: Nextflow run reports.</li>
+<li><code>runlog</code>: the run command and copies of the input mapping
+and pairing files.</li>
 </ul>
-<p>These tab-delimited files contain genomic coordinates and copy number
-segment information for downstream analysis.</p>
+<p>To save space, the BAM and snp-pileup files are not delivered. If you
+need them, please contact us.</p>
+<h2 id="post-folder">Post Folder</h2>
+<h3 id="snv-report-proj_no_snv_report01_v4.xlsx">SNV Report
+(<code>Proj_&lt;no&gt;_SNV_Report01_v4.xlsx</code>)</h3>
+<p>Somatic mutations from Tempo’s filtered cohort MAF
+(<code>mut_somatic.maf</code>).</p>
+<p><strong>Sample Data.</strong> One row per tumor:</p>
+<ul>
+<li><code>SampleID</code>, <code>NormalID</code>: tumor and matched
+normal.</li>
+<li><code>Mutation Count</code>: all somatic mutations that passed
+Tempo’s filters, silent and non-coding included.</li>
+<li><code>TMB</code>: tumor mutational burden from Tempo (mutations per
+Mb). Exome projects only.</li>
+<li><code>Facets Purity</code>, <code>Facets Ploidy</code>,
+<code>Fraction Genome Altered</code>: FACETS estimates.</li>
+<li><code>facets_qc</code>, <code>dipLogR</code>: FACETS QC flag and
+baseline log ratio.</li>
+<li><code>NonSyn Mutation Count</code>: mutations in the Mutations
+sheet, not counting the TERT promoter mutations added back (see below).
+Blank for a tumor with none.</li>
+</ul>
+<p>A sample passes the FACETS check if <code>facets_qc</code> is TRUE or
+<code>|dipLogR| &lt; 0.5</code>. For samples that do not pass,
+<code>Facets Ploidy</code> and <code>Fraction Genome Altered</code> are
+left blank because the fit is not reliable. Purity is always shown.</p>
+<p><strong>Gene Stats.</strong> Genes mutated in 2 or more samples.
+<code>Count</code> is the number of samples with a mutation in the gene,
+<code>Freq</code> is <code>Count</code> divided by the number of samples
+with at least one mutation in the Mutations sheet, and
+<code>Samples</code> lists them. This sheet is present only when more
+than one sample has mutations.</p>
+<p><strong>Mutations.</strong> One row per mutation that changes the
+protein: those with a protein change (<code>HGVSp_Short</code>) that is
+not synonymous. This keeps missense, nonsense, frameshift, in-frame
+indel and splice site mutations and drops silent, intronic, UTR and
+intergenic ones. TERT promoter mutations are the exception: they are
+always kept. Tempo’s filters (for example the repeat filter) often
+remove them, so the report adds back TERT promoter calls that Tempo
+filtered out. Columns:</p>
+<ul>
+<li><code>Sample</code>, <code>Gene</code>, <code>Type</code> (variant
+class), <code>dbSNP_RS</code>, <code>Alteration</code> (protein
+change).</li>
+<li><code>oncogenic</code>: OncoKB annotation.</li>
+<li><code>VAF</code>, <code>t_depth</code>, <code>t_alt_count</code>:
+tumor allele frequency, depth and alt read count.</li>
+<li><code>n_depth</code>, <code>n_alt_count</code>,
+<code>Normal_Sample</code>: the same for the normal.</li>
+<li><code>GPos</code>, <code>REF</code>, <code>ALT</code>: genomic
+position (GRCh37) and alleles.</li>
+<li><code>non_cancer_AF_popmax</code>: gnomAD non-cancer population
+maximum allele frequency.</li>
+<li><code>SIFT</code>, <code>PolyPhen</code>, <code>VEP_IMPACT</code>:
+VEP predictions.</li>
+<li><code>MSKWES_GENE_Frac</code>: fraction of samples in the MSK WES
+cohort on cBioPortal (2024-08-09) with a mutation in the gene.</li>
+</ul>
+<h3 id="facets-report-proj_no_facets_v5.xlsx">FACETS Report
+(<code>Proj_&lt;no&gt;_facets_v5.xlsx</code>)</h3>
+<p>Copy number results from FACETS. Samples that do not pass the FACETS
+check (above) are left out of the <code>armLevel</code> and
+<code>geneLevelFocal</code> sheets and the <code>.seg</code> files.</p>
+<ul>
+<li><code>runInfo</code>: purity, ploidy, dipLogR and other fit results
+for every tumor.</li>
+<li><code>armLevel</code>: copy number state of each autosomal
+chromosome arm.</li>
+<li><code>geneLevelFocal</code>: genes on a focal gain or loss (segment
+1 Mb or shorter) in at least one tumor, where all focal gains and losses
+at the gene go the same direction, with the percentage of tumors with a
+loss, gain or copy-neutral LOH at the gene.</li>
+<li><code>facetsQC</code>: the FACETS QC metrics and flags for every
+tumor.</li>
+<li><code>facetsParams</code>: the FACETS version and parameters.</li>
+</ul>
+<h3 id="facets-qc-report-proj_no_facetsqcrpt_v1.xlsx">FACETS QC Report
+(<code>Proj_&lt;no&gt;_facetsQCRpt_v1.xlsx</code>)</h3>
+<p>One row per tumor: purity, ploidy, dipLogR, whole genome doubling,
+fraction of the genome altered, counts of amplifications and homozygous
+deletions, fraction of the genome homozygously deleted, number of
+segments, the overall <code>facets_qc</code> flag, and
+<code>FailedFilters</code>, the names of the QC checks the sample
+failed.</p>
+<h3 id="qc-report-proj_no_qcrpt01.pdf">QC Report
+(<code>Proj_&lt;no&gt;_qcRpt01.pdf</code>)</h3>
+<p>Plots of Conpair tumor/normal concordance and contamination for each
+pair. For exomes, it also plots target coverage from CollectHsMetrics
+(mean target coverage, fraction of targets with zero coverage, fraction
+of target bases at 20x and 100x), with caution and fail lines.</p>
+<h3 id="wgs-reports">WGS Reports</h3>
+<ul>
+<li><code>Proj_&lt;no&gt;_SV_Report01_v8.xlsx</code>: somatic structural
+variants, with per-sample counts (<code>SampleData</code>), recurrent
+gene pairs (<code>SVFreq</code>), all calls (<code>SVEvents</code>), and
+a description of every column (<code>ColDescriptions</code>). If no SVs
+were called, <code>README_NoSVs.txt</code> is written instead.</li>
+<li><code>Proj_&lt;no&gt;_All_Report01_v2.xlsx</code>: SVs, mutations
+and focal copy number changes combined by sample and by gene.
+<code>DESCRIPTION_ALL_REPORT.md</code> explains it.</li>
+<li><code>Proj_&lt;no&gt;_WGSStats_v1.xlsx</code> and <code>.pdf</code>:
+whole-genome coverage and alignment statistics for each sample.</li>
+</ul>
+<h3 id="plots-and-segmentation-files-plotsfacets">Plots and Segmentation
+Files (<code>plots/facets</code>)</h3>
+<ul>
+<li><code>&lt;sample&gt;__&lt;normal&gt;_purity.CNCF.png</code>: FACETS
+copy number profile for each tumor.</li>
+<li><code>Proj_&lt;no&gt;_Filtered_facets_hisens.seg</code>,
+<code>Proj_&lt;no&gt;_Filtered_facets_purity.seg</code>: FACETS segments
+from the high-sensitivity and purity fits, for samples that pass the
+FACETS check. These are tab-delimited and can be loaded into IGV.</li>
+</ul>
 <h3 id="pipeline-info">Pipeline Info</h3>
-<p>The pipeline_info folder contains comprehensive information about the
-pipeline execution:</p>
 <ul>
-<li><code>version.txt</code>: Details about the software version,
-timestamp, git repository information, and assay type used for
-analysis</li>
-<li><code>output.html</code>: HTML version of this output
-documentation</li>
+<li><code>version.txt</code>: date, pipeline code location and version,
+and assay type.</li>
+<li><code>cmd.sh.log</code>: the command and settings used to run
+Tempo.</li>
+<li><code>output.html</code>: this document.</li>
+<li><code>execution_report</code>, <code>execution_timeline</code>,
+<code>execution_trace</code>: Nextflow reports on the run’s jobs.</li>
 </ul>
-<h3 id="plots-folder">Plots Folder</h3>
-<p>The plots folder contains copy number profile plots generated by
-FACET for each sample, providing convenient access to visual
-representations of copy number alterations.</p>
 </body>
 </html>

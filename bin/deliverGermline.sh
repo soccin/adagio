@@ -7,8 +7,14 @@ fi
 
 ODIR=$1
 
-rsync -avP  out/*/germline $ODIR/tempo-germline
-rsync -avP germline/* $ODIR/tempo-germline/post
+# All writes to the delivery area run as the service account
+BOT_USER=svc_core001_bot01
+asbot() {
+    dzdo -u "$BOT_USER" "$@"
+}
+
+asbot rsync -avP  out/*/germline $ODIR/tempo-germline
+asbot rsync -avP germline/* $ODIR/tempo-germline/post
 
 BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
 Rscript $BIC_DELIVERY/readme2yaml.R adagio

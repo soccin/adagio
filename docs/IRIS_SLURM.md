@@ -1,6 +1,7 @@
 # IRIS cluster — SLURM reference
 
 **Verified: 2026-07-18. Account: `core001`. User: `soccin`.**
+**Partition sizes and node hardware re-checked 2026-10-03 (`sinfo`, `scontrol`).**
 
 > **This information is a snapshot and WILL go stale.** Partition membership,
 > time limits, node counts, and account permissions are changed by the HPC
@@ -28,21 +29,23 @@ Written for the Adagio/Tempo pipeline but applicable to any batch work on IRIS.
 
 ## 2. Partitions you can use
 
-Verified 2026-07-18 by `sbatch --test-only` as account `core001`.
+Access verified 2026-07-18 by `sbatch --test-only` as account `core001`; sizes
+re-checked 2026-10-03.
 
 | Partition | Max time | Nodes | CPUs/node | Mem/node | Notes |
 |---|---|---|---|---|---|
-| `cpushort` | **2 h** | **233** | **52 max** | **~975 GB max** | general pool, QoS `cpushort_qos` |
-| `cmobic_short` | **3 h** | **37** | 56 | ~1007 GB | group hardware |
-| `cmobic_cpu` | **7 d** | **19** | 56 | ~1007 GB | group hardware, long jobs |
+| `cpushort` | **2 h** | **232** | **52 max** | **~975 GB max** | general pool, QoS `cpushort_qos` |
+| `cmobic_short` | **3 h** | **37** | 56 or 96 | ~1007 or ~1511 GB | group hardware: 27 x 56-core, 10 x 96-core |
+| `cmobic_cpu` | **7 d** | **19** | 56 or 96 | ~1007 or ~1511 GB | group hardware, long jobs: 14 x 56-core, 5 x 96-core |
 | `bic_devs` | 30 d | 1 | 56 | ~1007 GB | dev box only, not for batch |
 
 `cpushort` and `cmobic_short` node sets are **disjoint** (verified by expanding
-both to hostnames: 233 + 37, overlap 0). A job that can run in <= 2 h and names
-both partitions can therefore land on **270 distinct nodes**.
+both to hostnames: 232 + 37, overlap 0). A job that can run in <= 2 h and names
+both partitions can therefore land on **269 distinct nodes**.
 
-`cmobic_cpu`'s 19 nodes (`isca[227-240]`, `isco[001-004,006]`) are group-owned
-hardware, a subset of the same physical pool as `cmobic_short`.
+`cmobic_cpu`'s 19 nodes (`isca[227-240]` with 56 cores, `isco[001-004,006]` with
+96 cores) are group-owned hardware, a subset of the same physical pool as
+`cmobic_short`.
 
 ### Partitions that exist but are not usable for CPU batch work
 
@@ -60,8 +63,8 @@ per-PI partitions. These return
 
 ## 3. The central constraint: the 2-hour door
 
-`cpu` (238 nodes, 7 days) and `cpushort` (233 nodes, 2 hours) are **the same
-physical machines**. Account `core001` is named explicitly in `DenyAccounts` on
+`cpu` (237 nodes, 7 days) and `cpushort` (232 nodes, 2 hours) are **the same
+physical machines** (`cpushort` lacks 5 of the `cpu` nodes). Account `core001` is named explicitly in `DenyAccounts` on
 `cpu` — and the denial is on the *partition*, not the duration. A 2-hour request
 to `cpu` is rejected just as a 4-hour one is.
 
@@ -72,7 +75,7 @@ This produces three capacity cliffs:
 
 | Job needs | Partition(s) | Reachable nodes | vs. 2 h |
 |---|---|---|---|
-| <= 2 h | `cpushort,cmobic_short` | **270** | — |
+| <= 2 h | `cpushort,cmobic_short` | **269** | — |
 | 2–3 h | `cmobic_short` only | **37** | 7.3x drop |
 | > 3 h | `cmobic_cpu` | **19** | 14x drop |
 
@@ -91,11 +94,11 @@ These fail at submit time with errors that do **not** explain the real cause.
 |---|---|---|
 | `cpushort` CPUs per node | **52** (nodes have 56) | `Requested node configuration is not available` |
 | `cpushort` memory per node | **~975 GB** (998557 MB) | `Memory required by task is not available` |
-| `cmobic_short` / `cmobic_cpu` | 56 CPUs, ~1007 GB | — |
+| `cmobic_short` / `cmobic_cpu` | 56 CPUs, ~1007 GB (96 CPUs, ~1511 GB on `isco` nodes) | — |
 
 **The 52-CPU cap on `cpushort` is a trap.** Nodes have 56 cores but the
 partition only allows 52. A request for 53–56 CPUs is not an error you will
-easily diagnose — it just becomes unschedulable on 233 of your 270 nodes.
+easily diagnose — it just becomes unschedulable on 232 of your 269 nodes.
 
 Keep per-task CPU requests **<= 52** for anything intended to run on `cpushort`.
 
@@ -225,3 +228,4 @@ partition" — reading `AllowGroups` will mislead you.
 | Date | Change |
 |---|---|
 | 2026-07-18 | Initial version. All facts verified this date via `sinfo`, `scontrol`, `sacctmgr`, and `sbatch --test-only`. |
+| 2026-10-03 | Re-checked sizes: `cpushort` 232 nodes (was 233), `cpu` 237 (was 238), 269 reachable under 2 h (was 270). `cmobic_short` and `cmobic_cpu` include 96-core, ~1511 GB `isco` nodes. Limits, `DenyAccounts` and overlap unchanged. |
