@@ -1,5 +1,5 @@
-There is a bug in the pipeline. The details are in the devs/iris branch
-in the folder bugs
+There is a bug in the pipeline. The details are
+in the folder bugs/
 
 2026-09-30: CohortRunMultiQC fails (exit 1, error ignored) on BAM-input
 WGS runs. <sample>.recal.bam naming doubles the Qualimap rows in the

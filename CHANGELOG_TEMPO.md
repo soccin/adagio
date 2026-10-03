@@ -1,6 +1,48 @@
 # CHANGELOG - Tempo Submodule
 
-This changelog documents all changes to the tempo submodule from commit `00eb724` to `8e6312e0` (19 commits total).
+This changelog documents all changes to the tempo submodule from commit `00eb724` to `a7ecd35a` (26 commits total).
+
+## Changes: ed83b1b0..a7ecd35a (2026-09-05)
+
+Branch moved from `ccs/update-250925` to `devs/iris`.
+
+### QC
+- **a7ecd35a**: Merge branch 'fix/qcqualmap' into devs/iris (Nicholas D. Socci, 2026-09-05)
+- **d83b4150**: feat(qc): add skipQualimap option to bypass bamqc (Nicholas D. Socci, 2026-09-05)
+  - New `params.skipQualimap` (default `false`) in `nextflow.config`. When set,
+    `QcQualimap` emits its declared outputs without running `qualimap bamqc`.
+    The rawdata stub is a valid empty tar (`--files-from /dev/null`) because
+    all three MultiQC processes untar it; a zero-byte file would kill them.
+  - `qualimap bamqc -nt` changed from `task.cpus * 2` to `task.cpus`. This is
+    shared code and also applies to JUNO, where the worker pool is idle ~97%
+    of the run; it is a thread-count reduction, not a behaviour change.
+  - adagio set `skipQualimap = true` in `conf/tempo-wgs-iris.config`
+    (`44e88f7`) and reverted that for v3.2.1: Proj_18645_C (2026-09-29)
+    completed bamqc under the 4/8-cpu, 20GB settings on master. No adagio
+    config sets the parameter now, so bamqc runs on every path. The option
+    stays in tempo for a future opt-in.
+  - Trade-off when set: `SampleRunMultiQC`/`SomaticRunMultiQC` lose the Coverage,
+    % Aligned, Error rate and Ins. size columns and the qualimap plots. The
+    % Aligned criterion drops out of QC_Status silently rather than failing.
+    Conpair, alfred and facets QC are unaffected.
+
+---
+
+## Changes: 8e6312e0..ed83b1b0 (2026-08-16)
+
+### SV Callers
+- **ed83b1b0**: Merge branch 'feat/ffpe-sv' into ccs/update-250925 (Nicholas D. Socci, 2026-08-16)
+- **2ff7e96a**: docs(adagio): document SvABA ENCODE blacklist (Nicholas D. Socci, 2026-08-16)
+- **356fa8db**: fix(sv): use adagio ENCODE exclude for Delly (Nicholas D. Socci, 2026-08-16)
+- **e591a3e8**: feat(svaba): add ENCODE blacklist via -B (Nicholas D. Socci, 2026-08-16)
+- **49773e01**: fix(svaba): match -p threads to task.cpus (Nicholas D. Socci, 2026-08-16)
+
+Both SV region files resolve through `${projectDir}/../rsrc/` and
+`defineReferenceMap` validates them at startup with `checkIfExists`, so tempo
+now depends on its parent adagio checkout for every run, not only for SV
+workflows.
+
+---
 
 ## Changes: 957a2949..8e6312e0 (2025-10-06)
 
