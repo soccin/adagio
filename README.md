@@ -10,7 +10,7 @@ Cordelia: current tempo submodule at `a7ecd35a` (branch `devs-iris`).
 
 ## Docs
 
-Online docs at DEVELOP: (https://deploy-preview-983--cmotempo.netlify.app) or 
+Online docs at DEVELOP: (https://github.com/mskcc/tempo/blob/develop/README.md) or
 MASTER: (https://cmotempo.netlify.app/).
 
 ## Install
