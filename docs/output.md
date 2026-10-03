@@ -11,8 +11,8 @@ The output consists of the raw output files from the TEMPO pipeline along with s
 {outdir}
 ├── post
 │   ├── reports
-│   │   ├── {projectNum}_SNV_Report01_v2.xlsx
-│   │   ├── Proj_{projectNum}_facets_v3.xlsx
+│   │   ├── {projectNum}_SNV_Report01_v4.xlsx
+│   │   ├── Proj_{projectNum}_facets_v5.xlsx
 │   │   ├── Proj_{projectNum}_Filtered_facets_hisens.seg
 │   │   └── Proj_{projectNum}_Filtered_facets_purity.seg
 │   ├── pipeline_info
@@ -43,14 +43,14 @@ The post folder contains a number of useful files that give an overall summary o
 
 The reports folder contains multiple files providing comprehensive analysis results:
 
-#### SNV Report (`{projectNum}_SNV_Report01_v2.xlsx`)
+#### SNV Report (`{projectNum}_SNV_Report01_v4.xlsx`)
 The SNV (Single Nucleotide Variant) mutation summary report in Excel format with the following three sheets:
 
 1. *Sample Data*: Provides summary information on samples including TMB and sample purity.
 2. *Gene Stats*: Lists genes mutated in more than two samples, with mutation count, frequency, and affected samples.
 3. *Mutations*: Displays a table of all non-silent mutations detected.
 
-#### FACETS Report (`Proj_{projectNum}_facets_v3.xlsx`)
+#### FACETS Report (`Proj_{projectNum}_facets_v5.xlsx`)
 A comprehensive Excel report focused on copy number analysis results from FACETS, including sample purity estimates, ploidy information, and copy number profiles.
 
 #### Segmentation Files
