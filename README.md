@@ -6,7 +6,7 @@ Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=
 
 ## Version: v3.2.1
 
-Cordelia: current tempo submodule at `a7ecd35a` (branch `devs/iris`).
+Cordelia: current tempo submodule at `a7ecd35a` (branch `devs-iris`).
 
 ## Docs
 
