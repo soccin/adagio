@@ -89,7 +89,9 @@ geneFreq=tbl1 %>%
     arrange(desc(N)) %>%
     filter(N>1)
 
-openxlsx::write.xlsx(
+source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
+
+write_xlsx_report(
     list(
         Fusions=fusionFreq,
         Genes=geneFreq,

@@ -359,7 +359,9 @@ excel_filename <- str_c(
   "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v4.xlsx"
 )
 
-write.xlsx(
+source(file.path(script_dir, "rsrc", "xlsx_legacy.R"))
+
+write_xlsx_report(
   list(
     runInfo = run_info,
     armLevel = cna_arm_level,
