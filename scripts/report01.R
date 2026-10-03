@@ -6,6 +6,7 @@ if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
 
 SDIR=get_script_dir()
 source(file.path(SDIR,"get_cluster_name.R"))
+source(file.path(SDIR,"rsrc/facets_rules.R"))
 CLUSTER=get_cluster_name()
 cat("CLUSTER =",CLUSTER,"\n\n")
 
@@ -25,7 +26,6 @@ facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types
 # If the sample fails the FACETS sample rule (facets_qc or small |dipLogR|,
 # see rsrc/facets_rules.R) then set values to NA
 #
-source(file.path(SDIR,"rsrc/facets_rules.R"))
 facetsFailed=!facets_sample_pass(facetsDat$facets_qc,facetsDat$dipLogR)
 # facetsDat$purity[facetsFailed]=NA
 facetsDat$ploidy[facetsFailed]=NA

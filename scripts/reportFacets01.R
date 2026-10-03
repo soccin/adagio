@@ -14,11 +14,17 @@ suppressPackageStartupMessages({
   library(openxlsx)
 })
 
+script_dir <- get_script_dir()
+
+# Sample and focal-segment rules shared with the other reports
+source(file.path(script_dir, "rsrc", "facets_rules.R"))
+
 # Command-line options
 # ====================
-# Handle --help before any file access so it works outside a project directory
+# Handle --help before any project file access so it works outside a project
+# directory. The text is a glue template: literal braces are doubled.
 
-usage <- "
+usage <- str_glue("
 reportFacets01.R -- FACETS copy number report
 
 Usage:
@@ -30,19 +36,21 @@ consolidated segmentation and Excel reports. Run from the project directory
 
 Options:
   --keep-failed   Include samples that failed the sample filter. By default a
-                  sample is kept if it passed FACETS QC or has |dipLogR|
-                  below max_abs_diplogr (set in rsrc/facets_rules.R); other
-                  samples are dropped from the segmentation and CNA tables.
-                  Output filenames are tagged NO_FILT when this is set.
+                  sample is kept if it passed FACETS QC or has
+                  |dipLogR| < {max_abs_diplogr} (set in rsrc/facets_rules.R);
+                  other samples are dropped from the segmentation and CNA
+                  tables. Output filenames are tagged NO_FILT when this is
+                  set.
   -h, --help      Print this message and exit.
 
 Outputs:
   post/reports/Proj_<no>[_NO_FILT]_facets_v5.xlsx
       Multi-sheet workbook: runInfo, armLevel, geneLevelFocal, facetsQC,
       facetsParams.
-  post/plots/facets/Proj_<no>_{Filtered,NO_FILT}_facets_{purity,hisens}.seg
+  post/plots/facets/Proj_<no>_{{Filtered,NO_FILT}}_facets_{{purity,hisens}}.seg
       Segmentation files for each FACETS mode.
-"
+
+")
 
 argv <- commandArgs(trailing = TRUE)
 
@@ -85,11 +93,6 @@ fs::dir_create(reports_dir)
 
 facets_dir <- "post/plots/facets"
 fs::dir_create(facets_dir)
-
-script_dir <- get_script_dir()
-
-# Sample and focal-segment rules shared with the other reports
-source(file.path(script_dir, "rsrc", "facets_rules.R"))
 
 # Quality Control: Identify Failed Samples
 # =========================================
