@@ -18,6 +18,7 @@ if(len(cohortDir)!=1) {
 x11 = function (...) grDevices::x11(...,type='cairo')
 
 SDIR=get_script_dir()
+source(file.path(SDIR,"rsrc/facets_rules.R"))
 
 dir_ls<-function(dir,re) {
     fs::dir_ls(dir,recur=T,regex=re)
@@ -169,8 +170,12 @@ dg=df %>%
 dg=dg %>%
     arrange(facets_qc,desc(purity))
 
+#
+# Samples that fail the FACETS sample rule (facets_qc or small |dipLogR|,
+# see rsrc/facets_rules.R), the same rule the other reports use
+#
 dg %>%
-    filter(!facets_qc) %>%
+    filter(!facets_sample_pass(facets_qc,dipLogR)) %>%
     pull(tumor_sample_id) %>%
     write("facetsFailedSamples")
 

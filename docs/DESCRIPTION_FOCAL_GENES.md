@@ -14,7 +14,7 @@ gain. Copy number is not adjusted for whole-genome doubling, so check the
 FACETS state of each gain before interpreting it.
 
 This guide explains the `geneLevelFocal` sheet in the FACETS copy number
-report (`Proj_<project>_facets_v4.xlsx`). It is written for readers who
+report (`Proj_<project>_facets_v5.xlsx`). It is written for readers who
 use the results, not for those who compute them. The technical method is in
 `METHODS_CNV_GENES.md`.
 
@@ -80,9 +80,12 @@ variant positions inside it is never evaluated and cannot appear.
 
 Tumors that failed FACETS quality control are removed before the sheet is
 built (a tumor is kept if it passed QC, or if its baseline log-ratio,
-`dipLogR`, is within 0.5 of zero). The `runInfo` sheet lists the tumors
-that were kept, with their `facets_qc` flag. A report run with the
-`--keep-failed` option is named `..._NO_FILT_...` and keeps every tumor.
+`dipLogR`, is less than 0.5 from zero, `|dipLogR| < 0.5`). The `runInfo`
+and `facetsQC` sheets are not filtered: they list every tumor, including
+the ones that were removed. To see whether a tumor was kept, check its
+`facets_qc` flag and `dipLogR` value in the `facetsQC` sheet. A report run
+with the `--keep-failed` option is named `..._NO_FILT_...` and keeps every
+tumor.
 
 ## Column guide
 

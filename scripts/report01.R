@@ -6,6 +6,7 @@ if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
 
 SDIR=get_script_dir()
 source(file.path(SDIR,"get_cluster_name.R"))
+source(file.path(SDIR,"rsrc/facets_rules.R"))
 CLUSTER=get_cluster_name()
 cat("CLUSTER =",CLUSTER,"\n\n")
 
@@ -22,12 +23,14 @@ facetsDat=map(facetsQCFiles,read_tsv,show_col_types = FALSE,progress=F,col_types
     separate(tumor_sample_id,c("SampleID","NormalID"),sep="__")
 
 #
-# If facets failed then set values to NA
+# If the sample fails the FACETS sample rule (facets_qc or small |dipLogR|,
+# see rsrc/facets_rules.R) then set values to NA
 #
-# facetsDat$purity[!facetsDat$facets_qc]=NA
-facetsDat$ploidy[!facetsDat$facets_qc]=NA
-facetsDat$fga[!facetsDat$facets_qc]=NA
-#facetsDat$wgd[!facetsDat$facets_qc]=NA
+facetsFailed=!facets_sample_pass(facetsDat$facets_qc,facetsDat$dipLogR)
+# facetsDat$purity[facetsFailed]=NA
+facetsDat$ploidy[facetsFailed]=NA
+facetsDat$fga[facetsFailed]=NA
+#facetsDat$wgd[facetsFailed]=NA
 
 #
 # Get Sample level info
@@ -211,7 +214,7 @@ projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) {
   projNo=cc("Proj",projNo)
 }
-rFile=cc(projNo,"SNV_Report01","v3.xlsx")
+rFile=cc(projNo,"SNV_Report01","v4.xlsx")
 rDir="post/reports"
 fs::dir_create(rDir)
 
