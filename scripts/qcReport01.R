@@ -119,7 +119,8 @@ if(len(hsmFiles)>0) {
       left_join(typeMap)
 
   caution=tibble(METRIC=colnames(hsm) %>% grep("_",.,value=T),CAUTION=c(100,0.02,.95,.50),FAIL=c(25,0.05,.80,.10))
-  dh=hsm %>% gather(METRIC,VALUE,-SAMPLE,-TYPE) %>% left_join(typeMap) %>% group_split(.$R)
+  # R is the page index from typeMap, not a metric; keep it out of METRIC
+  dh=hsm %>% gather(METRIC,VALUE,-SAMPLE,-TYPE,-R) %>% group_split(.$R)
 
   plot_hsm<-function(dhi) {
       ggplot(dhi,aes(SAMPLE,VALUE,fill=TYPE)) + theme_light(10) + geom_col(alpha=.85) + facet_wrap(~METRIC,scale="free_y") + scale_x_discrete(guide = guide_axis(angle = 30)) + theme(plot.margin=unit(c(5,5,5,20),"mm")) + guides() + geom_hline(aes(yintercept=CAUTION),data=caution,color="gold4",linewidth=1) + geom_hline(aes(yintercept=FAIL),data=caution,color="darkred",linewidth=1.4) + scale_fill_jama()

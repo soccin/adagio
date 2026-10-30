@@ -23,8 +23,11 @@ adagio/
 ├── scripts/         # R post-processing reports
 │   └── rsrc/        # Shared R source files and reference data (see below)
 ├── docs/            # Pipeline documentation
-└── devs/            # Development branches / patches / roadmap
+└── devs/            # Dev notes and bug reproducers referenced by issues
 ```
+
+Bugs and planned work are GitHub issues (`soccin/adagio`). `00.FIXME.txt`
+lists only the critical open bugs, with their issue numbers.
 
 ### Pipeline entry points
 
