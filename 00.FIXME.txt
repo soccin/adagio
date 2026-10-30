@@ -18,3 +18,23 @@ TODO.md items 9 and 11.
 - reportFacets01.R adds Proj_ without checking for an existing prefix.
 - deliverGermline.sh uses a different readme2yaml.R than deliver.sh,
   and its usage text says deliver.sh.
+
+2026-10-30: found in the WES review, not fixed.
+- A sample or pair can drop out of a run with no error.
+  scripts/bic2tempo.R gives a sample no mapping rows when its FASTQ
+  folder has no file matching _R1_NNN.fastq.gz, and reuses the one R2
+  path for every lane when R1 has several files and R2 has one.
+  Tempo's CrossValidateSamples then drops pairs whose samples are not
+  in the mapping, with no message, and the IRIS errorStrategy ends in
+  'ignore', so a pair whose task fails 3 times also drops out. The WES
+  reports (report01.R, qcReport01.R, reportFacets01.R) do not check
+  their samples against the pairing file (rsrc/read_pairing.R) as the
+  WGS reports do.
+- runTempoWESCohort.sh, runTempoWGSBam.sh and makeTempoBams.sh log
+  "Script: $0 $*" after the option loop has shifted the options off,
+  so that line is missing --workflows, --add-workflows, --anonymize
+  (--assay and --qc in makeTempoBams.sh). The logged nextflow command
+  still has them, so resume is not affected.
+- The CohortRunMultiQC coverage_split.txt join that drops Tumor/Normal
+  coverage for some pairs is not tied to BAM input, so WES runs have
+  it too (bugs/BUG_REPORT_CohortRunMultiQC.md, secondary issues).
