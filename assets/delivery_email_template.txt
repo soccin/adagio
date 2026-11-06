@@ -1,35 +1,25 @@
 Subject: Project {PROJNO}: variant calling results ready
 
-The variant calling results for Project {PROJNO} are ready on the BIC
-delivery server:
+The variant calling results for Project {PROJNO} are ready on the BIC delivery server:
 
     https://bicdelivery.mskcc.org/project/{PROJNO}/adagio/{RUNDIR}
 
 Start with the reports in post/reports:
 
-- Proj_{PROJNO}_SNV_Report01_v4.xlsx: somatic mutations that change
-  the protein, with OncoKB annotation, mutation counts per sample, and
-  genes mutated in more than one sample.
-{FACETS}- Proj_{PROJNO}_facets_v5.xlsx: copy number from FACETS: purity,
-{FACETS}  ploidy, arm-level changes, and genes in focal gains and losses.
-- Proj_{PROJNO}_qcRpt01.pdf: tumor/normal concordance, contamination
-  and coverage.
+- Proj_{PROJNO}_SNV_Report01_v4.xlsx: somatic mutations that change the protein, with OncoKB annotation, mutation counts per sample, and genes mutated in more than one sample.
+{FACETS}- Proj_{PROJNO}_facets_v5.xlsx: copy number from FACETS: purity, ploidy, arm-level changes, and genes in focal gains and losses.
+- Proj_{PROJNO}_qcRpt01.pdf: tumor/normal concordance, contamination and coverage.
 {WGS}- Proj_{PROJNO}_SV_Report01_v8.xlsx: structural variants.
-{WGS}- Proj_{PROJNO}_All_Report01_v2.xlsx: structural variants, mutations
-{WGS}  and copy number changes combined by sample and by gene.
+{WGS}- Proj_{PROJNO}_All_Report01_v2.xlsx: structural variants, mutations and copy number changes combined by sample and by gene.
 
-The tempo folder has the full pipeline output, including the VCF and
-MAF files and per-sample QC. BAM files are not included to save space;
-let us know if you need them.
+The tempo folder has the full pipeline output, including the VCF and MAF files and per-sample QC. BAM files are not included to save space; let us know if you need them.
 
-The attached output.pdf describes every file and column. It and the
-methods are also online:
+The attached output.pdf describes every file and column. It and the methods are also online:
 
     https://github.com/soccin/adagio/blob/{VERSION}/docs/output.md
     https://github.com/soccin/adagio/blob/{VERSION}/docs/methods.md
 
-If you have questions, or would like other tables or plots, please let
-us know.
+If you have questions, or would like other tables or plots, please let us know.
 
 Nicholas Socci
 Bioinformatics Core
