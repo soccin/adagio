@@ -133,6 +133,7 @@ asbot "${RSYNC[@]}" "${FACETS_EXCLUDES[@]}" post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
+eval $(cat out/*/runlog/cmd.sh.log  | fgrep ASSAY_TYPE: | sed 's/: /=/')
 
 # Doc link points at the release tag the run was built from
 if [[ "$GTAG" =~ ^(.+)-[0-9]+-g[0-9a-f]+(-UNCOMMITED)?$ ]]; then
@@ -152,10 +153,29 @@ if [ -e "Map/out/metrics" ]; then
   asbot "${RSYNC[@]}" Map/out/metrics "$ODIR/$CURRDIR/mapping"
 fi
 
+# Tagged email lines, so the email lists only what was delivered:
+# {FACETS} lines are dropped with -r, {WGS} lines are kept only for
+# genome runs. The tag is removed from the lines that are kept.
+if [[ "$REDACT_FACETS" -eq 1 ]]; then
+    FACETS_SED='/^{FACETS}/d'
+else
+    FACETS_SED='s/^{FACETS}//'
+fi
+if [[ "$ASSAY_TYPE" == "genome" ]]; then
+    WGS_SED='s/^{WGS}//'
+else
+    WGS_SED='/^{WGS}/d'
+    if [[ "$ASSAY_TYPE" != "exome" ]]; then
+        echo "WARNING: ASSAY_TYPE=$ASSAY_TYPE in cmd.sh.log; whole-genome reports left out of email"
+    fi
+fi
+
 echo
 echo "========================================================================="
 echo
-sed -e "s/{PROJNO}/$PROJECT_ID/g" \
+sed -e "$FACETS_SED" \
+  -e "$WGS_SED" \
+  -e "s/{PROJNO}/$PROJECT_ID/g" \
   -e "s/{RUNDIR}/$CURRDIR/g" \
   -e "s/{VERSION}/$VERSION/g" \
   $RDIR/assets/delivery_email_template.txt \

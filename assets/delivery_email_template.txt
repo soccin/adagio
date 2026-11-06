@@ -1,18 +1,36 @@
-Subject: Project {PROJNO} results available
+Subject: Project {PROJNO}: variant calling results ready
 
-The results for Project {PROJNO} are ready on the BIC delivery server:
+The variant calling results for Project {PROJNO} are ready on the BIC
+delivery server:
 
-https://bicdelivery.mskcc.org/project/{PROJNO}/adagio/{RUNDIR}
+    https://bicdelivery.mskcc.org/project/{PROJNO}/adagio/{RUNDIR}
 
-The documentation for the outputs is online, and a PDF copy is attached:
+Start with the reports in post/reports:
 
-https://github.com/soccin/adagio/blob/{VERSION}/docs/output.md
+- Proj_{PROJNO}_SNV_Report01_v4.xlsx: somatic mutations that change
+  the protein, with OncoKB annotation, mutation counts per sample, and
+  genes mutated in more than one sample.
+{FACETS}- Proj_{PROJNO}_facets_v5.xlsx: copy number from FACETS: purity,
+{FACETS}  ploidy, arm-level changes, and genes in focal gains and losses.
+- Proj_{PROJNO}_qcRpt01.pdf: tumor/normal concordance, contamination
+  and coverage.
+{WGS}- Proj_{PROJNO}_SV_Report01_v8.xlsx: structural variants.
+{WGS}- Proj_{PROJNO}_All_Report01_v2.xlsx: structural variants, mutations
+{WGS}  and copy number changes combined by sample and by gene.
 
-If you have any questions, please let us know. We also welcome feedback on how to improve the outputs. If there are graphs, tables, or reports that would be useful to you, please send us your suggestions.
+The tempo folder has the full pipeline output, including the VCF and
+MAF files and per-sample QC. BAM files are not included to save space;
+let us know if you need them.
 
-Note: this pipeline is not compatible with versions before 2024. If you need to combine these results with older projects, contact us and we will plan how to build a unified dataset.
+The attached output.pdf describes every file and column. It and the
+methods are also online:
+
+    https://github.com/soccin/adagio/blob/{VERSION}/docs/output.md
+    https://github.com/soccin/adagio/blob/{VERSION}/docs/methods.md
+
+If you have questions, or would like other tables or plots, please let
+us know.
 
 Nicholas Socci
 Bioinformatics Core
 soccin@mskcc.org
-
