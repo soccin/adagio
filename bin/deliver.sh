@@ -6,6 +6,19 @@ RDIR=$(realpath $SDIR/..)
 # All writes to the delivery area run as the service account;
 # with -n they are printed instead
 BOT_USER=svc_core001_bot01
+
+# Every delivered file and folder gets this group (rsync --chown).
+# rsync -a copies the source group, but the service account cannot set
+# a group it is not in, such as a user's own group (the files in
+# post/reports are made in a folder without setgid), so those files
+# got svc_core001_bot01 as their group.
+DGROUP=grp_hpc_core001
+
+# Options of every rsync to the delivery area: the group above, and no
+# macOS metadata files ("._<name>", written next to a file opened from
+# a Mac)
+RSYNC=(rsync -aP --chown=:"$DGROUP" --exclude="._*")
+
 asbot() {
     if [[ "$DRYRUN" -eq 1 ]]; then
         echo "DRYRUN: dzdo -u $BOT_USER ${*@Q}"
@@ -115,8 +128,8 @@ fi
 
 asbot mkdir -p "$ODIR/$CURRDIR/tempo"
 
-asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" "${FACETS_EXCLUDES[@]}" out/ "$ODIR/$CURRDIR/tempo"
-asbot rsync -aP "${FACETS_EXCLUDES[@]}" post "$ODIR/$CURRDIR"
+asbot "${RSYNC[@]}" --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" "${FACETS_EXCLUDES[@]}" out/ "$ODIR/$CURRDIR/tempo"
+asbot "${RSYNC[@]}" "${FACETS_EXCLUDES[@]}" post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
@@ -131,12 +144,12 @@ fi
 
 if [ -e "Map/sbam" ]; then
   asbot mkdir -p "$ODIR/$CURRDIR/mapping"
-  asbot rsync -aP --exclude="*.ba[mi]" Map/sbam/ "$ODIR/$CURRDIR/mapping"
+  asbot "${RSYNC[@]}" --exclude="*.ba[mi]" Map/sbam/ "$ODIR/$CURRDIR/mapping"
 fi
 
 if [ -e "Map/out/metrics" ]; then
   asbot mkdir -p "$ODIR/$CURRDIR/mapping"
-  asbot rsync -aP Map/out/metrics "$ODIR/$CURRDIR/mapping"
+  asbot "${RSYNC[@]}" Map/out/metrics "$ODIR/$CURRDIR/mapping"
 fi
 
 echo
