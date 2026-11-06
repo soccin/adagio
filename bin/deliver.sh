@@ -3,10 +3,15 @@
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 RDIR=$(realpath $SDIR/..)
 
-# All writes to the delivery area run as the service account
+# All writes to the delivery area run as the service account;
+# with -n they are printed instead
 BOT_USER=svc_core001_bot01
 asbot() {
-    dzdo -u "$BOT_USER" "$@"
+    if [[ "$DRYRUN" -eq 1 ]]; then
+        echo "DRYRUN: dzdo -u $BOT_USER ${*@Q}"
+    else
+        dzdo -u "$BOT_USER" "$@"
+    fi
 }
 
 # Default delivery path from .../Users/Aa/BBB/Proj_nnnnn/...
@@ -25,17 +30,25 @@ else
 fi
 
 usage() {
-    echo -e "\n   usage: deliver.sh /path/to/delivery/folder/r_00x"
-    echo -e "          deliver.sh -d|--default"
+    echo -e "\n   usage: deliver.sh [-n] /path/to/delivery/folder/r_00x"
+    echo -e "          deliver.sh [-n] -d|--default"
+    echo -e "\n   -n, --dry-run   print the delivery and database commands, do not"
+    echo -e "                   run them; the email and project.yaml are still"
+    echo -e "                   written here"
     echo -e "\n   default: ${DPATH:-"(none)"}\n"
 }
 
 ODIR=""
 USE_DEFAULT=0
+DRYRUN=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d|--default)
             USE_DEFAULT=1
+            shift
+            ;;
+        -n|--dry-run)
+            DRYRUN=1
             shift
             ;;
         -*)
@@ -114,13 +127,22 @@ sed -e "s/{PROJNO}/$PROJECT_ID/g" \
   -e "s/{RUNDIR}/$CURRDIR/g" \
   -e "s/{VERSION}/$VERSION/g" \
   $RDIR/assets/delivery_email_template.txt \
-  | tee deliveryEmail_${PROJECT_ID}_$(date +%y%m%d).txt
+  | tee deliveryEmail_${PROJECT_ID}_${CURRDIR}_$(date +%y%m%d).txt
 
 BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
 Rscript $SDIR/readme2yaml.R adagio $CURRDIR
 
-module purge
-module load python/3.8.0
-PYTHON38=$(which python3.8)
-module load py-python-ldap/3.4.2
-$PYTHON38 $BIC_DELIVERY/authorization_db/init_impact_project_permissions.py -p project.yaml
+PERMS=$BIC_DELIVERY/authorization_db/init_impact_project_permissions.py
+if [[ "$DRYRUN" -eq 1 ]]; then
+    echo "DRYRUN: module load python/3.8.0 py-python-ldap/3.4.2"
+    echo "DRYRUN: python3.8 $PERMS -p project.yaml"
+    echo
+    echo "DRY RUN: would deliver to $ODIR/$CURRDIR; nothing was written there or to the database"
+    echo
+else
+    module purge
+    module load python/3.8.0
+    PYTHON38=$(which python3.8)
+    module load py-python-ldap/3.4.2
+    $PYTHON38 "$PERMS" -p project.yaml
+fi
