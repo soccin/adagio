@@ -3,10 +3,15 @@
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 RDIR=$(realpath $SDIR/..)
 
-# All writes to the delivery area run as the service account
+# All writes to the delivery area run as the service account;
+# with -n they are printed instead
 BOT_USER=svc_core001_bot01
 asbot() {
-    dzdo -u "$BOT_USER" "$@"
+    if [[ "$DRYRUN" -eq 1 ]]; then
+        echo "DRYRUN: dzdo -u $BOT_USER ${*@Q}"
+    else
+        dzdo -u "$BOT_USER" "$@"
+    fi
 }
 
 # Default delivery path from .../Users/Aa/BBB/Proj_nnnnn/...
@@ -25,17 +30,33 @@ else
 fi
 
 usage() {
-    echo -e "\n   usage: deliver.sh /path/to/delivery/folder/r_00x"
-    echo -e "          deliver.sh -d|--default"
+    echo -e "\n   usage: deliver.sh [-n] [-r] /path/to/delivery/folder/r_00x"
+    echo -e "          deliver.sh [-n] [-r] -d|--default"
+    echo -e "\n   -n, --dry-run         print the delivery and database commands, do"
+    echo -e "                         not run them; the email and project.yaml are"
+    echo -e "                         still written here"
+    echo -e "   -r, --redact-facets   do not deliver the FACETS files; the MAFs,"
+    echo -e "                         sample_data.txt, MultiQC and reports keep"
+    echo -e "                         their FACETS columns"
     echo -e "\n   default: ${DPATH:-"(none)"}\n"
 }
 
 ODIR=""
 USE_DEFAULT=0
+DRYRUN=0
+REDACT_FACETS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d|--default)
             USE_DEFAULT=1
+            shift
+            ;;
+        -n|--dry-run)
+            DRYRUN=1
+            shift
+            ;;
+        -r|--redact-facets)
+            REDACT_FACETS=1
             shift
             ;;
         -*)
@@ -80,11 +101,22 @@ fi
 
 echo "ODIR=$ODIR"
 echo "CURRDIR=$CURRDIR"
+echo "REDACT_FACETS=$REDACT_FACETS"
+
+# -r: skip the FACETS files: the per-pair facets/ folders, Tempo's
+# cohort cna_* files (SomaticAggregateFacets), post/plots/facets and
+# the *_facets_v5 and *_facetsQCRpt_v1 reports. Files that only carry
+# FACETS columns (MAFs, sample_data.txt, MultiQC, SNV and All reports)
+# are still delivered.
+FACETS_EXCLUDES=()
+if [[ "$REDACT_FACETS" -eq 1 ]]; then
+    FACETS_EXCLUDES=(--exclude="*facets*" --exclude="cna_*")
+fi
 
 asbot mkdir -p "$ODIR/$CURRDIR/tempo"
 
-asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ "$ODIR/$CURRDIR/tempo"
-asbot rsync -aP post "$ODIR/$CURRDIR"
+asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" "${FACETS_EXCLUDES[@]}" out/ "$ODIR/$CURRDIR/tempo"
+asbot rsync -aP "${FACETS_EXCLUDES[@]}" post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
@@ -114,13 +146,22 @@ sed -e "s/{PROJNO}/$PROJECT_ID/g" \
   -e "s/{RUNDIR}/$CURRDIR/g" \
   -e "s/{VERSION}/$VERSION/g" \
   $RDIR/assets/delivery_email_template.txt \
-  | tee deliveryEmail_${PROJECT_ID}_$(date +%y%m%d).txt
+  | tee deliveryEmail_${PROJECT_ID}_${CURRDIR}_$(date +%y%m%d).txt
 
 BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
 Rscript $SDIR/readme2yaml.R adagio $CURRDIR
 
-module purge
-module load python/3.8.0
-PYTHON38=$(which python3.8)
-module load py-python-ldap/3.4.2
-$PYTHON38 $BIC_DELIVERY/authorization_db/init_impact_project_permissions.py -p project.yaml
+PERMS=$BIC_DELIVERY/authorization_db/init_impact_project_permissions.py
+if [[ "$DRYRUN" -eq 1 ]]; then
+    echo "DRYRUN: module load python/3.8.0 py-python-ldap/3.4.2"
+    echo "DRYRUN: python3.8 $PERMS -p project.yaml"
+    echo
+    echo "DRY RUN: would deliver to $ODIR/$CURRDIR; nothing was written there or to the database"
+    echo
+else
+    module purge
+    module load python/3.8.0
+    PYTHON38=$(which python3.8)
+    module load py-python-ldap/3.4.2
+    $PYTHON38 "$PERMS" -p project.yaml
+fi
