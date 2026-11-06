@@ -38,7 +38,7 @@ lists only the critical open bugs, with their issue numbers.
 | `bin/makeTempoBams.sh` | Tempo alignment only: FASTQs to BQSR BAMs plus a `bamMapping.tsv` (SLURM-submittable) |
 | `bin/doPost.sh` | Run the somatic post-processing R reports after the pipeline completes |
 | `bin/doGermlinePost.sh` | Run the germline reports |
-| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo`, with group `grp_hpc_core001` on every file (`rsync --chown`) and no macOS `._*` files, and fills the delivery email (`deliveryEmail_<no>_<r_NNN>_<yymmdd>.txt`). `-n` prints the `dzdo` and permissions-database commands instead of running them; the email and `project.yaml` are still written. `-r` skips the FACETS files (`--exclude` of `*facets*` and Tempo's cohort `cna_*`); the MAFs, `sample_data.txt`, MultiQC and the SNV and All reports keep their FACETS columns |
+| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo`, with group `grp_hpc_core001` on every file (`rsync --chown`) and no macOS `._*` files, and fills the delivery email (`deliveryEmail_<no>_<r_NNN>_<yymmdd>.txt`) from `assets/delivery_email_template.txt`, where lines tagged `{FACETS}` are dropped with `-r` and lines tagged `{WGS}` are kept only when `ASSAY_TYPE` in `cmd.sh.log` is `genome`. `-n` prints the `dzdo` and permissions-database commands instead of running them; the email and `project.yaml` are still written. `-r` skips the FACETS files (`--exclude` of `*facets*` and Tempo's cohort `cna_*`); the MAFs, `sample_data.txt`, MultiQC and the SNV and All reports keep their FACETS columns |
 | `bin/deliverGermline.sh` | Deliver germline results, also as `svc_core001_bot01` with group `grp_hpc_core001` and no `._*` files |
 | `bin/clean.sh` | Remove run outputs from the project folder |
 
@@ -68,6 +68,11 @@ runs the first six; `doGermlinePost.sh` runs the germline reports.
 | `reportGermSV01.R` | Germline SV report (WGS only) |
 | `reportTERT.R` | TERT mutations from the unfiltered MAFs (run by hand) |
 | `nfTraceReport.R` | Nextflow trace analysis (runs automatically post-pipeline) |
+
+The delivery email template (`assets/delivery_email_template.txt`) names
+the SNV, FACETS and whole-genome report lines with their report version
+numbers (v4, v5, v8, v2), so the template has to be updated when one of
+those versions changes.
 
 Shared R utilities in `scripts/rsrc/`:
 - `read_tempo_sv.R` — parses Tempo `.final.bedpe` SV files
