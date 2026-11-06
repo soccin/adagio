@@ -14,10 +14,12 @@ BOT_USER=svc_core001_bot01
 # got svc_core001_bot01 as their group.
 DGROUP=grp_hpc_core001
 
-# Options of every rsync to the delivery area: the group above, and no
-# macOS metadata files ("._<name>", written next to a file opened from
-# a Mac)
-RSYNC=(rsync -aP --chown=:"$DGROUP" --exclude="._*")
+# Options of every rsync to the delivery area: the group above; every
+# folder group-writable with setgid (rsync -a copies the source mode,
+# and post/reports is made without them, so the group could not
+# delete the files in it); and no macOS metadata files ("._<name>",
+# written next to a file opened from a Mac)
+RSYNC=(rsync -aP --chown=:"$DGROUP" --chmod=Dg+ws --exclude="._*")
 
 asbot() {
     if [[ "$DRYRUN" -eq 1 ]]; then
