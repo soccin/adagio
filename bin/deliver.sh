@@ -30,17 +30,21 @@ else
 fi
 
 usage() {
-    echo -e "\n   usage: deliver.sh [-n] /path/to/delivery/folder/r_00x"
-    echo -e "          deliver.sh [-n] -d|--default"
-    echo -e "\n   -n, --dry-run   print the delivery and database commands, do not"
-    echo -e "                   run them; the email and project.yaml are still"
-    echo -e "                   written here"
+    echo -e "\n   usage: deliver.sh [-n] [-r] /path/to/delivery/folder/r_00x"
+    echo -e "          deliver.sh [-n] [-r] -d|--default"
+    echo -e "\n   -n, --dry-run         print the delivery and database commands, do"
+    echo -e "                         not run them; the email and project.yaml are"
+    echo -e "                         still written here"
+    echo -e "   -r, --redact-facets   do not deliver the FACETS files; the MAFs,"
+    echo -e "                         sample_data.txt, MultiQC and reports keep"
+    echo -e "                         their FACETS columns"
     echo -e "\n   default: ${DPATH:-"(none)"}\n"
 }
 
 ODIR=""
 USE_DEFAULT=0
 DRYRUN=0
+REDACT_FACETS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d|--default)
@@ -49,6 +53,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -n|--dry-run)
             DRYRUN=1
+            shift
+            ;;
+        -r|--redact-facets)
+            REDACT_FACETS=1
             shift
             ;;
         -*)
@@ -93,11 +101,22 @@ fi
 
 echo "ODIR=$ODIR"
 echo "CURRDIR=$CURRDIR"
+echo "REDACT_FACETS=$REDACT_FACETS"
+
+# -r: skip the FACETS files: the per-pair facets/ folders, Tempo's
+# cohort cna_* files (SomaticAggregateFacets), post/plots/facets and
+# the *_facets_v5 and *_facetsQCRpt_v1 reports. Files that only carry
+# FACETS columns (MAFs, sample_data.txt, MultiQC, SNV and All reports)
+# are still delivered.
+FACETS_EXCLUDES=()
+if [[ "$REDACT_FACETS" -eq 1 ]]; then
+    FACETS_EXCLUDES=(--exclude="*facets*" --exclude="cna_*")
+fi
 
 asbot mkdir -p "$ODIR/$CURRDIR/tempo"
 
-asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" out/ "$ODIR/$CURRDIR/tempo"
-asbot rsync -aP post "$ODIR/$CURRDIR"
+asbot rsync -aP --exclude="*.ba[mi]" --exclude="*.snp_pileup.gz" --exclude="*germline*" "${FACETS_EXCLUDES[@]}" out/ "$ODIR/$CURRDIR/tempo"
+asbot rsync -aP "${FACETS_EXCLUDES[@]}" post "$ODIR/$CURRDIR"
 
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
