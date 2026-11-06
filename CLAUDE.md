@@ -69,6 +69,11 @@ runs the first six; `doGermlinePost.sh` runs the germline reports.
 | `reportTERT.R` | TERT mutations from the unfiltered MAFs (run by hand) |
 | `nfTraceReport.R` | Nextflow trace analysis (runs automatically post-pipeline) |
 
+The delivery email template (`assets/delivery_email_template.txt`) names
+the SNV, FACETS and whole-genome report lines with their report version
+numbers (v4, v5, v8, v2), so the template has to be updated when one of
+those versions changes.
+
 Shared R utilities in `scripts/rsrc/`:
 - `read_tempo_sv.R` — parses Tempo `.final.bedpe` SV files
 - `add_sv_scores.R` — adds SV evidence scores
