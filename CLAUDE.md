@@ -38,7 +38,7 @@ lists only the critical open bugs, with their issue numbers.
 | `bin/makeTempoBams.sh` | Tempo alignment only: FASTQs to BQSR BAMs plus a `bamMapping.tsv` (SLURM-submittable) |
 | `bin/doPost.sh` | Run the somatic post-processing R reports after the pipeline completes |
 | `bin/doGermlinePost.sh` | Run the germline reports |
-| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo` and fills the delivery email |
+| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo` and fills the delivery email (`deliveryEmail_<no>_<r_NNN>_<yymmdd>.txt`). `-n` prints the `dzdo` and permissions-database commands instead of running them; the email and `project.yaml` are still written |
 | `bin/deliverGermline.sh` | Deliver germline results, also as `svc_core001_bot01` |
 | `bin/clean.sh` | Remove run outputs from the project folder |
 
