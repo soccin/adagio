@@ -1,8 +1,10 @@
 # JUNO cluster — LSF reference
 
 > **Historical.** JUNO was shut down for good on 2026-10-01. Nothing runs
-> there. This file is kept as a record of the JUNO configs until they are
-> removed; do not use it to set IRIS resources.
+> there. The JUNO configs, run script branches and subnet detection it
+> describes were removed after v3.2.2 (#16); see that tag for the files.
+> This file is kept as a record of them; do not use it to set IRIS
+> resources.
 
 **Written: 2026-07-18. Derived from the repo configs only.**
 

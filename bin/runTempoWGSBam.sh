@@ -56,19 +56,6 @@ if [ "$CLUSTER" == "IRIS" ]; then
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
-
-elif [ "$CLUSTER" == "JUNO" ]; then
-
-    CONFIG=juno
-    TEMPO_PROFILE=juno
-
-    export NXF_OPTS='-Xms1g -Xmx4g'
-    export WORKDIR=work/$UUID
-    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-    export TMPDIR=/scratch/socci
-
-    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-
 else
 
     echo -e "\nUnknown cluster: $CLUSTER\n"
@@ -151,7 +138,7 @@ ODIR=$(pwd -P)/out/${PROJECT_ID}
 echo \$ODIR=$ODIR
 
 mkdir -p $WORKDIR
-cd $WORKDIR
+pushd $WORKDIR
 
 LOG=${PROJECT_ID}_runTempoWGSBam.log
 
@@ -200,7 +187,16 @@ if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
 
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+#
+# The trace report reads out/ in the project folder, so run it there
+#
+popd
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)

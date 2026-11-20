@@ -72,19 +72,6 @@ if [ "$CLUSTER" == "IRIS" ]; then
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
-
-elif [ "$CLUSTER" == "JUNO" ]; then
-
-    CONFIG=juno
-    TEMPO_PROFILE=juno
-
-    export NXF_OPTS='-Xms1g -Xmx4g'
-    export WORKDIR=work/$UUID
-    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-    export TMPDIR=/scratch/socci
-
-    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-
 else
 
     echo -e "\nUnknown cluster: $CLUSTER\n"
@@ -291,7 +278,12 @@ popd
 # Run the trace report either way -- it is most useful on a failure --
 # then report the real outcome.
 #
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
 
 if [ "$NF_EXIT" != "0" ]; then
     echo
