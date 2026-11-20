@@ -3,7 +3,7 @@
 #' Determines which compute cluster the script is running on by checking
 #' environment variables and matching against known cluster names.
 #'
-#' @return Character string of cluster name ("IRIS" or "JUNO"), or NA if unknown
+#' @return Character string of cluster name ("IRIS"), or NA if unknown
 get_cluster_name <- function() {
   
   # Extract zone from environment variable
@@ -31,16 +31,8 @@ get_cluster_name <- function() {
     return(NA)
   }
   
-  known_clusters <- c("IRIS", "JUNO")
+  known_clusters <- c("IRIS")
   cluster <- get_zone_from_env()
-  
-  # Fallback check for JUNO using LSF environment
-  if (is.na(cluster)) {
-    lsf_path <- Sys.getenv("LSF_ENVDIR")
-    if (lsf_path == "/admin/lsfjuno/lsf/conf") {
-      cluster <- "JUNO"
-    }
-  }
-  
+
   partial_prefix_match(cluster, known_clusters)
 }

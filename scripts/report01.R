@@ -74,9 +74,6 @@ mafFile=fs::dir_ls("out",recurs=2,regex="cohort_level") %>% fs::dir_ls(regex="mu
 maf <- data.table::fread(mafFile, skip = "Hugo_Symbol", sep = "\t", na.strings = c("", "NA")) %>% tibble
 
 switch(CLUSTER,
-    "JUNO"={
-        portalWESGeneFreqFile="/juno/bic/work/socci/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
-    },
     "IRIS"={
         portalWESGeneFreqFile="/home/soccin/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
     },
