@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
 
 SDIR=get_script_dir()
 source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
+source(file.path(SDIR,"rsrc/read_pairing.R"))
 
 maffile=fs::dir_ls("out",recur=3,regex="mut_germline.maf")
 
@@ -20,15 +21,10 @@ if(len(maffile)<1) {
 }
 
 #
-# Get normal samples
+# Get normal samples from the pairing file of the run
 #
 
-normals=readLines(cmdlog) %>%
-    grep("Script:",.,value=T) %>%
-    strsplit(" ") %>%
-    map_vec(5) %>%
-    read_tsv(show_col_types = FALSE,progress=T) %>%
-    pull(NORMAL_ID)
+normals=read_pairing() |> pull(NORMAL_ID) |> unique()
 
 projectId=readLines(cmdlog) %>% grep("PROJECT_ID:",.,value=T) %>% strsplit(" ") %>% map_vec(2)
 assayType=readLines(cmdlog) %>% grep("ASSAY_TYPE:",.,value=T) %>% strsplit(" ") %>% map_vec(2)

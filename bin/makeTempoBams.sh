@@ -104,6 +104,10 @@ ASSAY=genome
 RUN_QC=false
 ANONYMIZE=false
 
+# Save the full command line for the run log; the loop below shifts
+# the options off
+ARGS="$*"
+
 #
 # Parse optional arguments
 #
@@ -264,7 +268,7 @@ WORKFLOWS: $WORKFLOWS
 BAM_MAPPING: $BAM_MAPPING
 NF_EXIT: $NF_EXIT
 
-Script: $0 $*
+Script: $0 $ARGS
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \

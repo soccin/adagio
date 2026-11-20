@@ -96,6 +96,10 @@ DEFAULT_WORKFLOWS=snv,sv,qc,facets,mutsig
 WORKFLOWS=$DEFAULT_WORKFLOWS
 WORKFLOW_MODE="default"
 
+# Save the full command line for the run log; the loop below shifts
+# the options off
+ARGS="$*"
+
 #
 # Parse optional workflow arguments
 #
@@ -120,7 +124,7 @@ done
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBams.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBam.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     echo "  --workflows=W1,W2,...      Replace default workflows (default: snv,sv,qc,facets,mutsig)"
     echo "  --add-workflows=W3,W4,...  Add to default workflows"
@@ -149,7 +153,7 @@ echo \$ODIR=$ODIR
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-LOG=${PROJECT_ID}_runTempoWGSBams.log
+LOG=${PROJECT_ID}_runTempoWGSBam.log
 
 echo \$WORKDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
@@ -219,7 +223,7 @@ DEFAULT_WORKFLOWS: $DEFAULT_WORKFLOWS
 WORKFLOWS: $WORKFLOWS
 WORKFLOW_MODE: $WORKFLOW_MODE
 
-Script: $0 $*
+Script: $0 $ARGS
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
