@@ -124,7 +124,7 @@ done
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBams.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBam.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     echo "  --workflows=W1,W2,...      Replace default workflows (default: snv,sv,qc,facets,mutsig)"
     echo "  --add-workflows=W3,W4,...  Add to default workflows"
@@ -153,7 +153,7 @@ echo \$ODIR=$ODIR
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-LOG=${PROJECT_ID}_runTempoWGSBams.log
+LOG=${PROJECT_ID}_runTempoWGSBam.log
 
 echo \$WORKDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG

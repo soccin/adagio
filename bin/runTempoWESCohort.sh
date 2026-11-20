@@ -138,8 +138,8 @@ if [ "$#" -lt "3" ]; then
     echo "  --anonymize                Pass --anonymizeFQ to Tempo"
     echo
     echo "  Available workflows:"
-    echo "    Somatic: snv, sv, mutsig, lohhla, facets, msisensor"
-    echo "    Germline: germsnv, germsv"
+    echo "    Somatic: snv, mutsig, lohhla, facets, msisensor"
+    echo "    Germline: germsnv"
     echo "    QC: qc"
     echo
     exit
@@ -179,8 +179,9 @@ esac
 
 #
 # Full workflow options
-#   Somatic: --workflows="snv,sv,qc,facets,msisensor,mutsig,lohhla"
-#   Germline: --workflows="germsnv,germsv,qc"
+#   Somatic: --workflows="snv,qc,facets,msisensor,mutsig,lohhla"
+#   Germline: --workflows="germsnv,qc"
+#   SV calling (sv, germsv) is WGS only
 #
 # WORKFLOWS is now set earlier based on command-line arguments
 
