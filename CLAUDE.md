@@ -181,10 +181,10 @@ bin/runTempoWGSBam.sh PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
 sbatch bin/runTempoWGSBam.sh PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv
 ```
 
-For `sbatch`, a `SLM/` folder must exist in the project folder (the
-`#SBATCH -o` path), and the script must find its own location: plain `sbatch`
-runs a spooled copy, so use the `~/bin/sbatch` wrapper or pass
-`--export=SBATCH_SCRIPT_DIR=<adagio>/bin`.
+For `sbatch`, the script must find its own location: plain `sbatch` runs a
+spooled copy, so use the `~/bin/sbatch` wrapper or pass
+`--export=SBATCH_SCRIPT_DIR=<adagio>/bin`. SLURM output goes to `SLM/`;
+SLURM creates that folder if it is missing.
 
 Default WGS workflows: `snv,sv,qc,facets,mutsig`
 
