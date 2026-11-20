@@ -56,18 +56,6 @@ if [ "$CLUSTER" == "IRIS" ]; then
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
-
-elif [ "$CLUSTER" == "JUNO" ]; then
-
-    CONFIG=juno
-    TEMPO_PROFILE=juno
-
-    export WORKDIR=work/$UUID
-    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-    export TMPDIR=/scratch/socci
-
-    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-
 else
 
     echo -e "\nUnknown cluster: $CLUSTER\n"
@@ -96,6 +84,10 @@ DEFAULT_WORKFLOWS=snv,qc,facets
 WORKFLOWS=$DEFAULT_WORKFLOWS
 WORKFLOW_MODE="default"
 ANONYMIZE=false
+
+# Save the full command line for the run log; the loop below shifts
+# the options off
+ARGS="$*"
 
 #
 # Parse optional workflow arguments
@@ -134,8 +126,8 @@ if [ "$#" -lt "3" ]; then
     echo "  --anonymize                Pass --anonymizeFQ to Tempo"
     echo
     echo "  Available workflows:"
-    echo "    Somatic: snv, sv, mutsig, lohhla, facets, msisensor"
-    echo "    Germline: germsnv, germsv"
+    echo "    Somatic: snv, mutsig, lohhla, facets, msisensor"
+    echo "    Germline: germsnv"
     echo "    QC: qc"
     echo
     exit
@@ -175,8 +167,9 @@ esac
 
 #
 # Full workflow options
-#   Somatic: --workflows="snv,sv,qc,facets,msisensor,mutsig,lohhla"
-#   Germline: --workflows="germsnv,germsv,qc"
+#   Somatic: --workflows="snv,qc,facets,msisensor,mutsig,lohhla"
+#   Germline: --workflows="germsnv,qc"
+#   SV calling (sv, germsv) is WGS only
 #
 # WORKFLOWS is now set earlier based on command-line arguments
 
@@ -232,7 +225,7 @@ DEFAULT_WORKFLOWS: $DEFAULT_WORKFLOWS
 WORKFLOWS: $WORKFLOWS
 WORKFLOW_MODE: $WORKFLOW_MODE
 
-Script: $0 $*
+Script: $0 $ARGS
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
@@ -252,4 +245,19 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
 END_VERSION
 
 popd
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
+
+#
+# Tempo can drop a pair and still finish: a task that fails on every
+# attempt is ignored. Check that every pair has the output of each
+# workflow (written to $ODIR/runlog/pair_check.txt); exit 3 if not, so
+# SLURM reports the job as failed.
+#
+PAIR_CHECK=0
+Rscript $ADIR/scripts/checkPairOutputs.R $PAIRING $ODIR $WORKFLOWS || PAIR_CHECK=$?
+exit $PAIR_CHECK

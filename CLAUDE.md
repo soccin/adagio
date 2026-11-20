@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Tempo submodule at `tempo/` (branch `devs-iris`)
 - Runs on **IRIS** (SLURM) only — see [HPC clusters](#hpc-clusters) for the
   scheduling rules
-- **JUNO (LSF) was shut down for good on 2026-10-01.** Its code and config are
-  still in the repo but are dead; leave them untouched until they are removed.
+- **JUNO (LSF) was shut down for good on 2026-10-01.** Its code was removed
+  (#16); `docs/JUNO_LSF.md` is kept as a historical record.
 
 ## Architecture
 
@@ -38,8 +38,8 @@ lists only the critical open bugs, with their issue numbers.
 | `bin/makeTempoBams.sh` | Tempo alignment only: FASTQs to BQSR BAMs plus a `bamMapping.tsv` (SLURM-submittable) |
 | `bin/doPost.sh` | Run the somatic post-processing R reports after the pipeline completes |
 | `bin/doGermlinePost.sh` | Run the germline reports |
-| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo` and fills the delivery email |
-| `bin/deliverGermline.sh` | Deliver germline results, also as `svc_core001_bot01` |
+| `bin/deliver.sh` | Deliver results to the next `r_NNN` folder (`-d` for the default path); writes as `svc_core001_bot01` via `dzdo`, with group `grp_hpc_core001` on every file (`rsync --chown`), every folder group-writable with setgid (`--chmod=Dg+ws`), and no macOS `._*` files, and fills the delivery email (`deliveryEmail_<no>_<r_NNN>_<yymmdd>.txt`) from `assets/delivery_email_template.txt`, where lines tagged `{FACETS}` are dropped with `-r` and lines tagged `{WGS}` are kept only when `ASSAY_TYPE` in `cmd.sh.log` is `genome`. `-n` prints the `dzdo` and permissions-database commands instead of running them; the email and `project.yaml` are still written. `-r` skips the FACETS files (`--exclude` of `*facets*` and Tempo's cohort `cna_*`); the MAFs, `sample_data.txt`, MultiQC and the SNV and All reports keep their FACETS columns |
+| `bin/deliverGermline.sh` | Deliver germline results, also as `svc_core001_bot01` with group `grp_hpc_core001` and no `._*` files |
 | `bin/clean.sh` | Remove run outputs from the project folder |
 
 ### Config layering
@@ -48,8 +48,6 @@ Each run uses tempo's `iris` profile (`-profile iris`), then loads two
 Nextflow config files:
 1. `conf/iris.config` — cluster executor settings
 2. `conf/tempo-{wgs|wes}-iris.config` — per-process resource overrides
-
-The `conf/*juno*.config` files are dead (JUNO is shut down).
 
 ### Post-processing reports (`scripts/`)
 
@@ -68,11 +66,20 @@ runs the first six; `doGermlinePost.sh` runs the germline reports.
 | `reportGermSV01.R` | Germline SV report (WGS only) |
 | `reportTERT.R` | TERT mutations from the unfiltered MAFs (run by hand) |
 | `nfTraceReport.R` | Nextflow trace analysis (runs automatically post-pipeline) |
+| `checkPairOutputs.R` | Checks that every pair in the pairing file has the output of each workflow and writes `runlog/pair_check.txt`; the run scripts call it last and exit 3 if a pair is missing output |
+
+The delivery email template (`assets/delivery_email_template.txt`) names
+the SNV, FACETS and whole-genome report lines with their report version
+numbers (v4, v5, v8, v2), so the template has to be updated when one of
+those versions changes.
 
 Shared R utilities in `scripts/rsrc/`:
 - `read_tempo_sv.R` — parses Tempo `.final.bedpe` SV files
 - `add_sv_scores.R` — adds SV evidence scores
 - `read_pairing.R` — reads the pairing file from the run logs
+- `check_pairs.R` — the per-pair output file of each workflow and the
+  check for pairs missing it, used by `checkPairOutputs.R` and by the
+  `MissingPairs` sheets of the WES reports
 - `facets_rules.R` — the only definition of the FACETS sample rule
   (`|dipLogR| < 0.5`) and focal rule (segment <= 1 Mb); run
   `test_facets_rules.R` after changing it
@@ -83,35 +90,27 @@ Shared R utilities in `scripts/rsrc/`:
 
 ## HPC clusters
 
-Cluster is chosen by `$CLUSTER` (`bin/getClusterName.sh`); the run scripts switch
-config, Singularity cache, and `REFERENCE_BASE` on it.
+The cluster is detected from `CDC_JOINED_ZONE` by `bin/getClusterName.sh`
+(`$CLUSTER`) and `scripts/get_cluster_name.R`. The run scripts set the config,
+Singularity cache and `REFERENCE_BASE` for IRIS and stop with "Unknown cluster"
+on any other.
 
-### JUNO was shut down on 2026-10-01 — do not touch its code
+### JUNO was shut down on 2026-10-01
 
-**JUNO is gone for good.** Nothing can run there, so the JUNO code paths are dead
-code that a later release will remove. Until then, leave them as they are: do
-not edit them, do not modernize them, do not port IRIS changes onto them, and do
-not "fix" differences between the IRIS and JUNO configs. A difference is not a
-bug.
-
-Dead JUNO paths:
-
-- `conf/juno.config`, `conf/tempo-wgs-juno.config`, `conf/tempo-wes-juno.config`
-- `docs/JUNO_LSF.md` (historical reference)
-- the `JUNO` branches in the `bin/` run scripts and any
-  `workflow.profile == "juno"` blocks in `tempo/`
-
-If a change would touch a JUNO path, make the IRIS change only and say what was
-left alone.
+JUNO (LSF) is gone for good, and its code was removed from adagio (#16): the
+`conf/*juno*.config` files, the JUNO branches in the run scripts and cluster
+detection, and `scripts/resume00.sh`. `docs/JUNO_LSF.md` is kept as a
+historical record of its settings. The `workflow.profile == "juno"` blocks in
+`tempo/` are Tempo code and are left alone.
 
 **Not JUNO code despite the name:** tempo's `iris` profile loads
 `tempo/conf/juno.config`, `tempo/conf/resources_juno.config` and
 `tempo/conf/resources_juno_genome.config`. IRIS runs depend on these files. Do
-not delete them when the JUNO paths are removed.
+not delete them.
 
 **IRIS is the only supported cluster.**
 
-**IRIS is SLURM. JUNO was LSF. Do not copy settings from the JUNO configs.**
+**IRIS is SLURM. JUNO was LSF. Do not copy JUNO settings (`docs/JUNO_LSF.md`).**
 **Read `docs/IRIS_SLURM.md` before changing any resource setting:**
 
 | Cluster | Reference | Status |
@@ -137,7 +136,7 @@ Key rules, in full detail in those files:
   failures are overloaded nodes — retry unchanged, conclude nothing.
 - **JUNO was flat and generous:** LSF, no queue tiering, `time = { 500.h }`
   throughout, `-R 'cmorsc1'`, `maxRetries = 3`.
-- **Never copy settings from the JUNO configs.** JUNO's 500 h strands a job on
+- **Never copy JUNO settings.** JUNO's 500 h strands a job on
   IRIS's 19-node partition; `mem_per_core` flips `true` (JUNO) to `false` (IRIS),
   so a per-core memory figure silently under-requests by a factor of `cpus`; and
   IRIS caps retries at 2 (3 attempts), truncating JUNO's 4-attempt ramp
@@ -172,10 +171,10 @@ bin/runTempoWGSBam.sh PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
 sbatch bin/runTempoWGSBam.sh PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv
 ```
 
-For `sbatch`, a `SLM/` folder must exist in the project folder (the
-`#SBATCH -o` path), and the script must find its own location: plain `sbatch`
-runs a spooled copy, so use the `~/bin/sbatch` wrapper or pass
-`--export=SBATCH_SCRIPT_DIR=<adagio>/bin`.
+For `sbatch`, the script must find its own location: plain `sbatch` runs a
+spooled copy, so use the `~/bin/sbatch` wrapper or pass
+`--export=SBATCH_SCRIPT_DIR=<adagio>/bin`. SLURM output goes to `SLM/`;
+SLURM creates that folder if it is missing.
 
 Default WGS workflows: `snv,sv,qc,facets,mutsig`
 
@@ -187,7 +186,7 @@ bin/runTempoWESCohort.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
 
 Default WES workflows: `snv,qc,facets`
 
-Both scripts support `--workflows=W1,W2,...` to replace defaults and `--add-workflows=W3,...` to extend them. Available workflows: `snv, sv, mutsig, lohhla, facets, msisensor, germsnv, germsv, qc`.
+Both scripts support `--workflows=W1,W2,...` to replace defaults and `--add-workflows=W3,...` to extend them. Available workflows: `snv, sv, mutsig, lohhla, facets, msisensor, germsnv, germsv, qc`; `sv` and `germsv` are WGS only.
 
 ### Post-processing
 

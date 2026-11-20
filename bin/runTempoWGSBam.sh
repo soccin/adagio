@@ -56,19 +56,6 @@ if [ "$CLUSTER" == "IRIS" ]; then
 
     REFERENCE_BASE="/data1/core001/rsrc/genomic"
 
-
-elif [ "$CLUSTER" == "JUNO" ]; then
-
-    CONFIG=juno
-    TEMPO_PROFILE=juno
-
-    export NXF_OPTS='-Xms1g -Xmx4g'
-    export WORKDIR=work/$UUID
-    export NXF_SINGULARITY_CACHEDIR=/rtsess01/compute/juno/bic/ROOT/opt/singularity/cachedir_socci
-    export TMPDIR=/scratch/socci
-
-    REFERENCE_BASE="/rtsess01/compute/juno/bic/ROOT/rscr"
-
 else
 
     echo -e "\nUnknown cluster: $CLUSTER\n"
@@ -96,6 +83,10 @@ DEFAULT_WORKFLOWS=snv,sv,qc,facets,mutsig
 WORKFLOWS=$DEFAULT_WORKFLOWS
 WORKFLOW_MODE="default"
 
+# Save the full command line for the run log; the loop below shifts
+# the options off
+ARGS="$*"
+
 #
 # Parse optional workflow arguments
 #
@@ -120,7 +111,7 @@ done
 
 if [ "$#" -lt "3" ]; then
     echo
-    echo usage: runTempoWGSBams.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
+    echo usage: runTempoWGSBam.sh [--workflows=W1,W2,...] [--add-workflows=W3,W4,...] PROJECT_ID BAM_MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
     echo
     echo "  --workflows=W1,W2,...      Replace default workflows (default: snv,sv,qc,facets,mutsig)"
     echo "  --add-workflows=W3,W4,...  Add to default workflows"
@@ -147,9 +138,9 @@ ODIR=$(pwd -P)/out/${PROJECT_ID}
 echo \$ODIR=$ODIR
 
 mkdir -p $WORKDIR
-cd $WORKDIR
+pushd $WORKDIR
 
-LOG=${PROJECT_ID}_runTempoWGSBams.log
+LOG=${PROJECT_ID}_runTempoWGSBam.log
 
 echo \$WORKDIR=$(realpath .) >$LOG
 echo \$ODIR=$ODIR >>$LOG
@@ -196,7 +187,16 @@ if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
 
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+#
+# The trace report reads out/ in the project folder, so run it there
+#
+popd
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
@@ -219,7 +219,7 @@ DEFAULT_WORKFLOWS: $DEFAULT_WORKFLOWS
 WORKFLOWS: $WORKFLOWS
 WORKFLOW_MODE: $WORKFLOW_MODE
 
-Script: $0 $*
+Script: $0 $ARGS
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
@@ -237,3 +237,13 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --outDir $ODIR
 
 END_VERSION
+
+#
+# Tempo can drop a pair and still finish: a task that fails on every
+# attempt is ignored. Check that every pair has the output of each
+# workflow (written to $ODIR/runlog/pair_check.txt); exit 3 if not, so
+# SLURM reports the job as failed.
+#
+PAIR_CHECK=0
+Rscript $ADIR/scripts/checkPairOutputs.R $PAIRING $ODIR $WORKFLOWS || PAIR_CHECK=$?
+exit $PAIR_CHECK

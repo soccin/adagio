@@ -41,7 +41,7 @@ maf0 <- fs::dir_ls("out", recur = TRUE, regex = ".somatic.unfiltered.maf$") |>
 
 # Generate output filename based on project number
 projNo <- basename(fs::dir_ls("out"))
-rFile=cc("Proj",projNo,"TERT_Muts","v1.xlsx")
+rFile=cc("Proj",str_remove(projNo,"^Proj_"),"TERT_Muts","v1.xlsx")
 
 # Write TERT mutations to Excel file
 write_xlsx_report(maf0,rFile)

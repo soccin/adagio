@@ -4,6 +4,21 @@
 # processes, queries SLURM for job states, and writes an Excel summary
 # plus a Markdown-formatted status report to stdout.
 
+# R packages this report needs, here and in rsrc/nf-reports/*.R and
+# rsrc/xlsx_legacy.R. Checked with base R before anything is loaded, so a
+# missing package is named instead of failing later with no message.
+required_packages <- c("tidyverse", "lubridate", "glue", "fs", "knitr", "openxlsx")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  message(
+    "ERROR: nfTraceReport.R needs R packages that are not installed: ",
+    paste(missing_packages, collapse = ", ")
+  )
+  quit(status = 1)
+}
+
 # Load required libraries
 suppressPackageStartupMessages(require(tidyverse))
 

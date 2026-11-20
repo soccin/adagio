@@ -48,7 +48,9 @@ To resume a run on IRIS:
 
 A manual resume skips the steps the run script does after Nextflow: it
 does not copy the mapping and pairing files to `out/<PROJECT_ID>/runlog`,
-run `nfTraceReport.R`, or rewrite `cmd.sh.log`.
+run `nfTraceReport.R`, rewrite `cmd.sh.log`, or run the pair check
+(`scripts/checkPairOutputs.R PAIRING.tsv out/<PROJECT_ID> WORKFLOWS`,
+which writes `runlog/pair_check.txt`).
 
 The trace, report and timeline files are named by date under
 `out/<PROJECT_ID>/pipeline_info/`, so earlier ones do not need to be moved.

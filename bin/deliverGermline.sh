@@ -13,8 +13,13 @@ asbot() {
     dzdo -u "$BOT_USER" "$@"
 }
 
-asbot rsync -avP  out/*/germline $ODIR/tempo-germline
-asbot rsync -avP germline/* $ODIR/tempo-germline/post
+# Every delivered file and folder gets this group, every folder is
+# group-writable with setgid, and macOS metadata files ("._<name>") are
+# not delivered; see deliver.sh
+DGROUP=grp_hpc_core001
+
+asbot rsync -avP --chown=:"$DGROUP" --chmod=Dg+ws --exclude="._*" out/*/germline $ODIR/tempo-germline
+asbot rsync -avP --chown=:"$DGROUP" --chmod=Dg+ws --exclude="._*" germline/* $ODIR/tempo-germline/post
 
 BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
 Rscript $BIC_DELIVERY/readme2yaml.R adagio

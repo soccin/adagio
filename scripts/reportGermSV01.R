@@ -18,7 +18,7 @@ cmdlog=fs::dir_ls("out",recur=2,regex="cmd.sh.log")
 
 projNo=readLines(cmdlog) %>% grep("PROJECT_ID:",.,value=T) %>% strsplit(" ") %>% map_vec(2)
 
-rFile=cc(projNo,"SVGermline_Report01","v4.xlsx")
+rFile=cc("Proj",str_remove(projNo,"^Proj_"),"SVGermline_Report01","v4.xlsx")
 rDir="germline/reports"
 fs::dir_create(rDir)
 

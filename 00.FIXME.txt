@@ -4,6 +4,5 @@ https://github.com/soccin/adagio/issues
 
 - #5 ClusterSV crashes on samples with many SVs; the sample silently
   has no SV clustering. Reproducer: devs/BUG_REPORT_ClusterSV.zip
-- #6 A sample or pair can drop out of a run with no error.
 - #7 filter_regions_bedpe.py reports an OOM as zero overlaps; the SV
   report is delivered unfiltered.
