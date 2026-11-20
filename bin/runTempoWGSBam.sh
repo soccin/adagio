@@ -241,3 +241,13 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     --outDir $ODIR
 
 END_VERSION
+
+#
+# Tempo can drop a pair and still finish: a task that fails on every
+# attempt is ignored. Check that every pair has the output of each
+# workflow (written to $ODIR/runlog/pair_check.txt); exit 3 if not, so
+# SLURM reports the job as failed.
+#
+PAIR_CHECK=0
+Rscript $ADIR/scripts/checkPairOutputs.R $PAIRING $ODIR $WORKFLOWS || PAIR_CHECK=$?
+exit $PAIR_CHECK
