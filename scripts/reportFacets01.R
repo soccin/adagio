@@ -19,6 +19,10 @@ script_dir <- get_script_dir()
 # Sample and focal-segment rules shared with the other reports
 source(file.path(script_dir, "rsrc", "facets_rules.R"))
 
+# Pairing file of the run and the check for pairs with no output
+source(file.path(script_dir, "rsrc", "read_pairing.R"))
+source(file.path(script_dir, "rsrc", "check_pairs.R"))
+
 # Command-line options
 # ====================
 # Handle --help before any project file access so it works outside a project
@@ -96,6 +100,10 @@ fs::dir_create(reports_dir)
 
 facets_dir <- "post/plots/facets"
 fs::dir_create(facets_dir)
+
+# Pairs in the pairing file with no FACETS output (see rsrc/check_pairs.R);
+# listed in the MissingPairs sheet
+missing_pairs <- report_missing_pairs("facets")
 
 # Quality Control: Identify Failed Samples
 # =========================================
@@ -367,16 +375,20 @@ excel_filename <- str_c(
 
 source(file.path(script_dir, "rsrc", "xlsx_legacy.R"))
 
-write_xlsx_report(
-  list(
-    runInfo = run_info,
-    armLevel = cna_arm_level,
-    geneLevelFocal = gene_level_focal,
-    facetsQC = qc_data,
-    facetsParams = facets_parameters
-  ),
-  file.path(reports_dir, excel_filename)
+report_sheets <- list(
+  runInfo = run_info,
+  armLevel = cna_arm_level,
+  geneLevelFocal = gene_level_focal,
+  facetsQC = qc_data,
+  facetsParams = facets_parameters
 )
+
+# MissingPairs sheet only when a pair has no FACETS output
+if (nrow(missing_pairs) > 0) {
+  report_sheets$MissingPairs <- missing_pairs
+}
+
+write_xlsx_report(report_sheets, file.path(reports_dir, excel_filename))
 
 message("Generated comprehensive Excel report: ", excel_filename)
 message("  - runInfo sheet: ", nrow(run_info), " entries")

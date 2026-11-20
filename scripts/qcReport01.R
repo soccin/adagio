@@ -19,6 +19,16 @@ x11 = function (...) grDevices::x11(...,type='cairo')
 
 SDIR=get_script_dir()
 source(file.path(SDIR,"rsrc/facets_rules.R"))
+source(file.path(SDIR,"rsrc/read_pairing.R"))
+source(file.path(SDIR,"rsrc/check_pairs.R"))
+
+#
+# Pairs in the pairing file with no Conpair (qc) or FACETS output (see
+# rsrc/check_pairs.R); listed on the last page of the PDF and in the
+# MissingPairs sheet of the FACETS QC report
+#
+missingQC=report_missing_pairs("qc")
+missingFacets=report_missing_pairs("facets")
 
 dir_ls<-function(dir,re) {
     fs::dir_ls(dir,recur=T,regex=re)
@@ -144,6 +154,27 @@ pdf(file=file.path(rDir,rFile),width=11,height=8.5)
 print(pg1)
 print(pg2)
 print(phsm)
+
+if(nrow(missingQC)>0) {
+    maxLines=50
+    missingQCPairs=missingQC |>
+        distinct(TUMOR_ID,NORMAL_ID) |>
+        mutate(Pair=str_c(TUMOR_ID,"__",NORMAL_ID)) |>
+        pull(Pair)
+    pageLines=c(
+        str_glue("Missing pairs: {len(missingQCPairs)} pair(s) in the pairing file have no Conpair output"),
+        "",
+        head(missingQCPairs,maxLines),
+        if(len(missingQCPairs)>maxLines) str_glue("... and {len(missingQCPairs)-maxLines} more")
+    )
+    grid::grid.newpage()
+    grid::grid.text(
+        str_c(pageLines,collapse="\n"),
+        x=0.05,y=0.95,just=c("left","top"),
+        gp=grid::gpar(fontfamily="mono",fontsize=10)
+    )
+}
+
 dev.off()
 
 quiet_type_convert<-function(x) {
@@ -182,5 +213,14 @@ dg %>%
 
 rFile=cc(projNo,"facetsQCRpt_v1.xlsx")
 source(file.path(SDIR,"rsrc/xlsx_legacy.R"))
-write_xlsx_report(dg,file.path(rDir,rFile))
+
+#
+# "Sheet 1" is the name buildWorkbook gives a single data frame, so the
+# QC sheet keeps its name when the MissingPairs sheet is added
+#
+if(nrow(missingFacets)>0) {
+    write_xlsx_report(list(`Sheet 1`=dg,MissingPairs=missingFacets),file.path(rDir,rFile))
+} else {
+    write_xlsx_report(dg,file.path(rDir,rFile))
+}
 
