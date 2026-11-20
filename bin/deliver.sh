@@ -137,6 +137,9 @@ eval $(cat out/*/runlog/cmd.sh.log  | fgrep PROJECT_ID | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep GTAG: | sed 's/: /=/')
 eval $(cat out/*/runlog/cmd.sh.log  | fgrep ASSAY_TYPE: | sed 's/: /=/')
 
+# Bare project number for the email: the template adds "Proj_" itself
+PROJNO=${PROJECT_ID#Proj_}
+
 # Doc link points at the release tag the run was built from
 if [[ "$GTAG" =~ ^(.+)-[0-9]+-g[0-9a-f]+(-UNCOMMITED)?$ ]]; then
     VERSION="${BASH_REMATCH[1]}"
@@ -177,11 +180,11 @@ echo "========================================================================="
 echo
 sed -e "$FACETS_SED" \
   -e "$WGS_SED" \
-  -e "s/{PROJNO}/$PROJECT_ID/g" \
+  -e "s/{PROJNO}/$PROJNO/g" \
   -e "s/{RUNDIR}/$CURRDIR/g" \
   -e "s/{VERSION}/$VERSION/g" \
   $RDIR/assets/delivery_email_template.txt \
-  | tee deliveryEmail_${PROJECT_ID}_${CURRDIR}_$(date +%y%m%d).txt
+  | tee deliveryEmail_${PROJNO}_${CURRDIR}_$(date +%y%m%d).txt
 
 BIC_DELIVERY=$HOME/Code/BIC/Delivery/Version2j
 Rscript $SDIR/readme2yaml.R adagio $CURRDIR
