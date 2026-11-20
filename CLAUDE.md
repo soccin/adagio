@@ -68,6 +68,7 @@ runs the first six; `doGermlinePost.sh` runs the germline reports.
 | `reportGermSV01.R` | Germline SV report (WGS only) |
 | `reportTERT.R` | TERT mutations from the unfiltered MAFs (run by hand) |
 | `nfTraceReport.R` | Nextflow trace analysis (runs automatically post-pipeline) |
+| `checkPairOutputs.R` | Checks that every pair in the pairing file has the output of each workflow and writes `runlog/pair_check.txt`; the run scripts call it last and exit 3 if a pair is missing output |
 
 The delivery email template (`assets/delivery_email_template.txt`) names
 the SNV, FACETS and whole-genome report lines with their report version
@@ -78,6 +79,9 @@ Shared R utilities in `scripts/rsrc/`:
 - `read_tempo_sv.R` — parses Tempo `.final.bedpe` SV files
 - `add_sv_scores.R` — adds SV evidence scores
 - `read_pairing.R` — reads the pairing file from the run logs
+- `check_pairs.R` — the per-pair output file of each workflow and the
+  check for pairs missing it, used by `checkPairOutputs.R` and by the
+  `MissingPairs` sheets of the WES reports
 - `facets_rules.R` — the only definition of the FACETS sample rule
   (`|dipLogR| < 0.5`) and focal rule (segment <= 1 Mb); run
   `test_facets_rules.R` after changing it

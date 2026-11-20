@@ -48,6 +48,18 @@ mapping=read_tsv(r1mapFile,col_names=F) %>%
     mutate(FASTQ_PE1=fs::path_real(FASTQ_PE1)) %>%
     mutate(FASTQ_PE2=str_replace(FASTQ_PE1,"_R1_(\\d+).fastq","_R2_\\1.fastq"))
 
+#
+# An R1 name without _R1_NNN.fastq is left unchanged by the R2
+# substitution, so the R1 file would also be used as R2
+#
+badR1=mapping |> filter(!str_detect(basename(FASTQ_PE1),"_R1_\\d+\\.fastq"))
+if(nrow(badR1)>0) {
+    cat("\n\nERROR R1 files that do not match *_R1_NNN.fastq*:\n\n")
+    cat(str_glue("    {badR1$SAMPLE}  {badR1$FASTQ_PE1}"),sep="\n")
+    cat("\n")
+    rlang::abort("ERROR")
+}
+
 if(any(!fs::file_exists(mapping$FASTQ_PE2))) {
     cat("\n\nERROR missing R2 files\n\n")
     rlang::abort("ERROR")
@@ -62,13 +74,33 @@ if(is.null(targetFile)) {
     targets=read_csv(targetFile,col_names=c("SAMPLE","TARGET"))
     mapping=mapping %>% left_join(targets)
 
+    noTarget=mapping |> filter(is.na(TARGET)) |> distinct(SAMPLE) |> pull(SAMPLE)
+    if(len(noTarget)>0) {
+        cat("\n\nERROR samples missing from the target manifest",targetFile,"\n\n")
+        cat(str_c("    ",noTarget),sep="\n")
+        cat("\n")
+        rlang::abort("ERROR")
+    }
+
 }
 
 mapping=mapping %>% select(SAMPLE,TARGET,everything())
 
-write_tsv(mapping,"inputTempo_mapping.tsv")
-
 pairing=read_tsv(pairingFile,col_names=c("NORMAL_ID","TUMOR_ID"))
 
+#
+# A pair with a sample that is not in the mapping would be dropped by
+# Tempo with no message, so stop here and name it
+#
+droppedPairs=pairing |>
+    filter(!(NORMAL_ID %in% mapping$SAMPLE & TUMOR_ID %in% mapping$SAMPLE))
+if(nrow(droppedPairs)>0) {
+    cat("\n\nERROR pairs with a sample that is not in",r1mapFile,"\n\n")
+    cat(str_glue("    NORMAL={droppedPairs$NORMAL_ID}  TUMOR={droppedPairs$TUMOR_ID}"),sep="\n")
+    cat("\n")
+    rlang::abort("ERROR")
+}
+
+write_tsv(mapping,"inputTempo_mapping.tsv")
 write_tsv(pairing,"inputTempo_pairing.tsv")
 

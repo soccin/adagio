@@ -65,8 +65,9 @@ describes these files:
   pairs, for example `mut_somatic.maf` and `sample_data.txt`. For WGS,
   `sample_data.txt` also holds the mutational signature results.
 - `pipeline_info`: Nextflow run reports.
-- `runlog`: the run command and copies of the input mapping and pairing
-  files.
+- `runlog`: the run command, copies of the input mapping and pairing
+  files, and `pair_check.txt`, which lists any tumor/normal pair in the
+  pairing file that is missing the output of a workflow.
 
 To save space, the BAM and snp-pileup files are not delivered. If you
 need them, please contact us.
@@ -123,6 +124,10 @@ TERT promoter calls that Tempo filtered out. Columns:
 - `MSKWES_GENE_Frac`: fraction of samples in the MSK WES cohort on
   cBioPortal (2024-08-09) with a mutation in the gene.
 
+**MissingPairs.** Present only when a pair in the pairing file has no
+mutation calls. Lists the tumor, the normal, the workflow and the missing
+file. Do not use the Sample Data values of a pair listed here.
+
 ### FACETS Report (`Proj_<no>_facets_v5.xlsx`)
 
 Copy number results from FACETS. Samples that do not pass the FACETS
@@ -138,6 +143,8 @@ and the `.seg` files.
   gain or copy-neutral LOH at the gene.
 - `facetsQC`: the FACETS QC metrics and flags for every tumor.
 - `facetsParams`: the FACETS version and parameters.
+- `MissingPairs`: present only when a pair in the pairing file has no
+  FACETS output; lists the pair and the missing file.
 
 ### FACETS QC Report (`Proj_<no>_facetsQCRpt_v1.xlsx`)
 
@@ -145,14 +152,17 @@ One row per tumor: purity, ploidy, dipLogR, whole genome doubling,
 fraction of the genome altered, counts of amplifications and homozygous
 deletions, fraction of the genome homozygously deleted, number of
 segments, the overall `facets_qc` flag, and
-`FailedFilters`, the names of the QC checks the sample failed.
+`FailedFilters`, the names of the QC checks the sample failed. A
+`MissingPairs` sheet is added when a pair in the pairing file has no
+FACETS output.
 
 ### QC Report (`Proj_<no>_qcRpt01.pdf`)
 
 Plots of Conpair tumor/normal concordance and contamination for each pair.
 For exomes, it also plots target coverage from CollectHsMetrics (mean
 target coverage, fraction of targets with zero coverage, fraction of
-target bases at 20x and 100x), with caution and fail lines.
+target bases at 20x and 100x), with caution and fail lines. When a pair
+in the pairing file has no Conpair output, a last page lists it.
 
 ### WGS Reports
 

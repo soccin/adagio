@@ -7,8 +7,16 @@ if(is.na(ASSAY)) { ASSAY="UNKNOWN" }
 SDIR=get_script_dir()
 source(file.path(SDIR,"get_cluster_name.R"))
 source(file.path(SDIR,"rsrc/facets_rules.R"))
+source(file.path(SDIR,"rsrc/read_pairing.R"))
+source(file.path(SDIR,"rsrc/check_pairs.R"))
 CLUSTER=get_cluster_name()
 cat("CLUSTER =",CLUSTER,"\n\n")
+
+#
+# Pairs in the pairing file with no SNV output (see rsrc/check_pairs.R);
+# listed in the MissingPairs sheet
+#
+missingPairs=report_missing_pairs("snv")
 
 #
 # Get Facets QC info
@@ -209,6 +217,16 @@ addStyle(wb,sheet="Mutations",cols=1:ncol(tblMutations),row=1,style=styleHeader,
 setColWidths(wb,sheet="Mutations",cols=1:ncol(tblMutations),widths="auto")
 setColWidths(wb,sheet="Mutations",cols=1,widths=12)
 setColWidths(wb,sheet="Mutations",cols=5:6,widths=14)
+
+#
+# Sheet 4 - MissingPairs, only when a pair has no SNV output
+#
+if(nrow(missingPairs)>0) {
+    addWorksheet(wb,sheetName="MissingPairs")
+    writeDataTable(wb,sheet="MissingPairs",missingPairs,tableStyle="none",withFilter=F)
+    addStyle(wb,sheet="MissingPairs",cols=1:ncol(missingPairs),row=1,style=styleHeader,gridExpand=T)
+    setColWidths(wb,sheet="MissingPairs",cols=1:ncol(missingPairs),widths="auto")
+}
 
 projNo <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 if(!grepl("^Proj_",projNo)) {
