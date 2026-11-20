@@ -75,7 +75,7 @@ maf <- data.table::fread(mafFile, skip = "Hugo_Symbol", sep = "\t", na.strings =
 
 switch(CLUSTER,
     "IRIS"={
-        portalWESGeneFreqFile="/home/soccin/Work/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
+        portalWESGeneFreqFile="/data1/core001/work/bic/socci/Resources/Portal/2024-08-09/msk-wes_MutatedGenes_2024-08-09.txt"
     },
     {
         cat("\n\nUnknown CLUSTER",CLUSTER,"\n\n")
