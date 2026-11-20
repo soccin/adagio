@@ -1,5 +1,81 @@
 # Changelog
 
+## Unreleased
+
+Changes on master since v3.2.2. Tempo submodule unchanged (`a7ecd35a`).
+IRIS only; the JUNO code is now removed.
+
+### Added
+- `bin/deliver.sh -n` (dry run): prints the `dzdo` and permissions
+  commands instead of running them; the email and `project.yaml` are
+  still written [`4f0ab84`]
+- `bin/deliver.sh -r`: skips the FACETS files (`*facets*`, Tempo's
+  cohort `cna_*`); files that only carry FACETS columns are still
+  delivered [`c3b6edd`]
+- `scripts/checkPairOutputs.R` and `scripts/rsrc/check_pairs.R`: check
+  that every pair in the pairing file has the output of each workflow,
+  write `out/<ID>/runlog/pair_check.txt`; the run scripts call it last
+  and exit 3 if a pair is missing output (#6) [`17218a4`]
+- WES reports list pairs missing output: `MissingPairs` sheet in the
+  SNV, FACETS and FACETS QC reports and a last page in the QC PDF, only
+  when a pair is missing (#6) [`8fcc66e`]
+- `scripts/nfTraceReport.R` checks its R packages before loading them
+  and names any that are missing (#22) [`5fafdac`]
+
+### Changed
+- Delivery email rewritten: one line per main report, `{FACETS}` lines
+  dropped with `-r`, `{WGS}` lines kept only for genome runs, one line
+  per paragraph [`725900f`, `92047d2`]
+- Delivery email file is `deliveryEmail_<no>_<r_NNN>_<yymmdd>.txt` and
+  uses the project number without `Proj_` [`4f0ab84`, `6f33dcc`]
+- `scripts/bic2tempo.R` and `scripts/fastq2tempo.R` stop and name the
+  sample on bad input: a pair with a sample not in the mapping
+  (including an `na` normal), a sample with no R1 files, R1 and R2
+  files that do not pair up, a sample missing from the target
+  manifest, an R1 name without `_R1_NNN.fastq` (#6) [`0fb6e93`]
+- The WES reports now need exactly one `out/*/runlog/cmd.sh.log`, as
+  the WGS reports already did [`8fcc66e`]
+- `runTempoWESCohort.sh` usage no longer lists `sv` or `germsv` (WGS
+  only); `runTempoWGSBam.sh` writes `<ID>_runTempoWGSBam.log` (was
+  `_runTempoWGSBams.log`) (#15) [`d31c928`]
+- Bugs and planned work are GitHub issues; `00.FIXME.txt` lists only
+  critical open bugs; `notes/` moved into `devs/` [`de45267`,
+  `fce1549`, `a1c1a85`]
+- IRIS config comments: no version stamp, correct headers, the SvABA
+  comment describes the actual settings, `cmobic_cpu` is 14 x 56-core
+  and 5 x 96-core nodes (#18) [`c48d9ba`]
+
+### Fixed
+- Silent loss of a sample or pair: the converters, the post-run check
+  and the WES reports above (#6) [`0fb6e93`, `17218a4`, `8fcc66e`]
+- Delivered files get group `grp_hpc_core001` and delivered folders are
+  group-writable with setgid; macOS `._*` files are not delivered
+  [`ecf75a8`, `337d16d`]
+- `reportFacets01.R` wrote `Proj_Proj_` file names for a `Proj_` ID
+  (#13) [`ae85113`]; the TERT, germline, germline SV and multi-SV
+  reports now also name files `Proj_<ID>_...` [`9ca8cd8`]
+- The `Script:` line in `cmd.sh.log` now logs the options;
+  `reportGerm01.R` reads the normals with `read_pairing()` instead of
+  the 5th field of that line (#15) [`bd67147`]
+- `runTempoWGSBam.sh` usage text named `runTempoWGSBams.sh` (#15)
+  [`d31c928`]
+- A failed trace report now prints a WARNING; the WGS trace report ran
+  in the scratch WORKDIR and always failed (#22, #12) [`5fafdac`]
+- `report01.R` read the portal gene-frequency file through
+  `/home/soccin`, which other users cannot enter [`9f1a367`]
+- `qcReport01.R` showed an extra "R" facet in the HS metrics plot
+  [`c992789`]
+- `CLAUDE.md` said `sbatch` needs `SLM/` to exist; SLURM creates it
+  (#20) [`b2c0586`]
+
+### Removed
+- JUNO code: `conf/*juno*.config`, the JUNO branches in the run
+  scripts, the subnet test in `getClusterName.sh`, JUNO in
+  `get_cluster_name.R` and `report01.R`, `scripts/resume00.sh`;
+  `docs/JUNO_LSF.md` kept as a record (#16) [`45b6e8a`]
+- `TODO.md`, `bugs/` and finished dev files (content moved to GitHub
+  issues) [`de45267`]
+
 ## v3.2.2 [2026-10-03] - Cordelia Patch: Combined Report, FACETS Rules, WES Sizing
 
 Patch release on the Cordelia line. 24 commits since v3.2.1. Tempo
