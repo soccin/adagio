@@ -192,7 +192,7 @@ bin/runTempoWESCohort.sh PROJECT_ID MAPPING.tsv PAIRING.tsv [AGGREGATE.tsv]
 
 Default WES workflows: `snv,qc,facets`
 
-Both scripts support `--workflows=W1,W2,...` to replace defaults and `--add-workflows=W3,...` to extend them. Available workflows: `snv, sv, mutsig, lohhla, facets, msisensor, germsnv, germsv, qc`.
+Both scripts support `--workflows=W1,W2,...` to replace defaults and `--add-workflows=W3,...` to extend them. Available workflows: `snv, sv, mutsig, lohhla, facets, msisensor, germsnv, germsv, qc`; `sv` and `germsv` are WGS only.
 
 ### Post-processing
 
