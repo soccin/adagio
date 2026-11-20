@@ -97,6 +97,10 @@ WORKFLOWS=$DEFAULT_WORKFLOWS
 WORKFLOW_MODE="default"
 ANONYMIZE=false
 
+# Save the full command line for the run log; the loop below shifts
+# the options off
+ARGS="$*"
+
 #
 # Parse optional workflow arguments
 #
@@ -232,7 +236,7 @@ DEFAULT_WORKFLOWS: $DEFAULT_WORKFLOWS
 WORKFLOWS: $WORKFLOWS
 WORKFLOW_MODE: $WORKFLOW_MODE
 
-Script: $0 $*
+Script: $0 $ARGS
 
 nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     -resume \
