@@ -88,6 +88,9 @@ dir_ls <- function(dir, pattern) {
 project_no <- fs::dir_ls("out") %>% grep("/metrics",.,invert=T,value=T) %>% basename
 sample_dir <- file.path("out", project_no, "somatic")
 
+# Output file prefix: add "Proj_" only if the project ID lacks it
+file_prefix <- str_c("Proj_", str_remove(project_no, "^Proj_"))
+
 reports_dir <- "post/reports"
 fs::dir_create(reports_dir)
 
@@ -171,7 +174,7 @@ process_segmentation_file <- function(file_pattern, output_suffix) {
   if(nrow(segmentation_data)>0) {
 
     filter_tag <- if (keep_failed) "_NO_FILT_" else "_Filtered_"
-    output_filename <- str_c("Proj_", project_no, filter_tag, output_suffix)
+    output_filename <- str_c(file_prefix, filter_tag, output_suffix)
     write_tsv(segmentation_data, file.path(facets_dir, output_filename))
 
     message("Wrote ", nrow(segmentation_data), " segments to ", output_filename)
@@ -359,7 +362,7 @@ gene_level_focal <- if (nrow(cna_gene_level) > 0) {
 # - geneLevelFocal: Genes on focal segments, with cohort CN-state stats
 
 excel_filename <- str_c(
-  "Proj_", project_no, if (keep_failed) "_NO_FILT" else "", "_facets_v5.xlsx"
+  file_prefix, if (keep_failed) "_NO_FILT" else "", "_facets_v5.xlsx"
 )
 
 source(file.path(script_dir, "rsrc", "xlsx_legacy.R"))
