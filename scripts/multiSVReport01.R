@@ -40,11 +40,17 @@ tbl1=left_join(vcf,infoParse) %>%
     arrange(desc(NumCallers),desc(NumCallersPass),TUMOR_ID) %>%
     type_convert
 
-projectNo=gsub("Proj_","",grep("^Proj",strsplit(getwd(),"/")[[1]],value=T))
-if(len(projectNo)==0) {
-    projectNo=strsplit(getwd(),"/")[[1]]
-    projectNo=projectNo[len(projectNo)]
+# Project ID from the run log; this script is run by hand, so fall
+# back to the current folder name when there is no run log
+cmdlog=fs::dir_ls("out",recurse=2,regexp="cmd.sh.log",fail=FALSE)
+if(len(cmdlog)==1) {
+    projectNo=readLines(cmdlog) |>
+        str_subset("^PROJECT_ID:") |>
+        str_remove("^PROJECT_ID: *")
+} else {
+    projectNo=basename(getwd())
 }
+projectNo=str_remove(projectNo,"^Proj_")
 
 headers=grep("^##(INFO)",readLines(SVFILES[1]),value=T)
 
@@ -98,5 +104,5 @@ write_xlsx_report(
         SVTable=tbl1,
         Glossary=infoTbl
     ),
-    cc("proj",projectNo,"tempoSVCalls.xlsx")
+    cc("Proj",projectNo,"tempoSVCalls.xlsx")
 )
