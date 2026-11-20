@@ -291,7 +291,12 @@ popd
 # Run the trace report either way -- it is most useful on a failure --
 # then report the real outcome.
 #
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
 
 if [ "$NF_EXIT" != "0" ]; then
     echo

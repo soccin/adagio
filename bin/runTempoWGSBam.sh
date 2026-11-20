@@ -151,7 +151,7 @@ ODIR=$(pwd -P)/out/${PROJECT_ID}
 echo \$ODIR=$ODIR
 
 mkdir -p $WORKDIR
-cd $WORKDIR
+pushd $WORKDIR
 
 LOG=${PROJECT_ID}_runTempoWGSBam.log
 
@@ -200,7 +200,16 @@ if [ "$AGGREGATE" != "true" ]; then
     cp $AGGREGATE $ODIR/runlog
 fi
 
-Rscript $ADIR/scripts/nfTraceReport.R | tee RUN_REPORT_$(date +%y%m%d)_.md
+#
+# The trace report reads out/ in the project folder, so run it there
+#
+popd
+RUN_REPORT=RUN_REPORT_$(date +%y%m%d)_.md
+Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
+TRACE_EXIT=${PIPESTATUS[0]}
+if [ "$TRACE_EXIT" != "0" ]; then
+    echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
 
 GTAG=$(git --git-dir=$ADIR/.git --work-tree=$ADIR describe --long --tags --dirty="-UNCOMMITED" --always)
 GURL=$(git --git-dir=$ADIR/.git --work-tree=$ADIR config --get remote.origin.url)
