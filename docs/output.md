@@ -64,6 +64,12 @@ describes these files:
 - `cohort_level/default_cohort`: the same results merged across all
   pairs, for example `mut_somatic.maf` and `sample_data.txt`. For WGS,
   `sample_data.txt` also holds the mutational signature results.
+- `post/qc` (exomes, when present): Picard CollectHsMetrics rerun on
+  the same BAMs with a coverage cap of 1000x. Tempo's files in `bams`
+  use Picard's default cap of 200x, so for samples covered deeper than
+  200x their median target coverage stops at 200 and the fold-80 base
+  penalty and HS penalties can be off. Use the files in `post/qc` for
+  these metrics.
 - `pipeline_info`: Nextflow run reports.
 - `runlog`: the run command, copies of the input mapping and pairing
   files, and `pair_check.txt`, which lists any tumor/normal pair in the
