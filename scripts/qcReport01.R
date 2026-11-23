@@ -113,13 +113,13 @@ Ng=round(nrow(typeMap)/12)
 Nb=round(nrow(typeMap)/Ng)
 typeMap=typeMap %>% mutate(R=floor((row_number()-1)/Nb))
 
-hsmFiles=fs::dir_ls("out",recur=T,regex="hs_metrics.txt")
+hsmFiles=fs::dir_ls("out",recur=T,regex="/bams/.*hs_metrics.txt$")
 #
 # WGS does not have hsmfiles
 #
 if(len(hsmFiles)>0) {
 
-  hsm=fs::dir_ls("out",recur=T,regex="hs_metrics.txt") %>%
+  hsm=fs::dir_ls("out",recur=T,regex="/bams/.*hs_metrics.txt$") %>%
       map(read_tsv,comment="#",n_max=1,progress=F,show_col_types=F) %>%
       bind_rows(.id="PATH") %>%
       mutate(SAMPLE=basename(PATH)%>%gsub(".hs_metrics.*","",.)) %>%
