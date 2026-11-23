@@ -1,4 +1,4 @@
-# BIC Variant Pipeline (v3.2.2)
+# BIC Variant Pipeline (v3.2.3)
 
 ## Introduction
 

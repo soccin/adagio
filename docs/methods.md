@@ -1,13 +1,13 @@
 # Variant Calling Pipeline
 
-### Version 3.2.2
+### Version 3.2.3
 
 ## Overview
 
 Tumor/normal pairs were analyzed with the Tempo pipeline (Nextflow;
 Di Tommaso 2017, Ewels 2020), run through our wrapper, adagio. The code,
 including the exact Tempo version used, is at
-[https://github.com/soccin/adagio/releases/tag/v3.2.2](https://github.com/soccin/adagio/releases/tag/v3.2.2).
+[https://github.com/soccin/adagio/releases/tag/v3.2.3](https://github.com/soccin/adagio/releases/tag/v3.2.3).
 Tempo was run from commit `a7ecd35` of
 [https://github.com/soccin/tempo](https://github.com/soccin/tempo)
 (branch `devs-iris`), a fork of

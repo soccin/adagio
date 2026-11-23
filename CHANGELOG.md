@@ -1,11 +1,26 @@
 # Changelog
 
-## Unreleased
+## v3.2.3 [2026-11-23] - Cordelia Patch: Pair Checks, Delivery, QC Database, Uncapped HsMetrics
 
-Changes on master since v3.2.2. Tempo submodule unchanged (`a7ecd35a`).
-IRIS only; the JUNO code is now removed.
+Patch release on the Cordelia line. 45 commits since v3.2.2. Tempo
+submodule unchanged (`a7ecd35a`). IRIS only; the JUNO code is now
+removed.
 
 ### Added
+- `scripts/hsmetrics/doHsMetrics.sh` and `runHsMetrics.sh`: rerun
+  Picard CollectHsMetrics (GATK 4.1.0.0, Tempo's options) with
+  `COVERAGE_CAP 1000` instead of Picard's default 200, which caps
+  median target coverage, fold-80 and the HS penalties; one SLURM array
+  task per sample, output in `out/<ID>/post/qc/` [`5fdad87`]
+- `scripts/qcdb/`: QC background database builder (`buildQCDb.R`,
+  SLURM wrapper `runBuildQCDb.sh`, readers in `rsrc/qcdb_readers.R`),
+  which collects every QC output of a finished run into one `.rds`
+  [`bc0ed9f`, `b493aa9`]
+- `assets/qcdb/qcdb_index.tsv` and `scripts/qcdb/rsrc/qcdb_index.R`
+  (`find_qcdb`, `load_qcdb`): the `.rds` files stay out of git and the
+  index lists where each is stored; first database WES IDT v2 (200
+  pairs), version `261123` built from the uncapped HsMetrics
+  [`7938777`, `fa39938`, `b493aa9`]
 - `bin/deliver.sh -n` (dry run): prints the `dzdo` and permissions
   commands instead of running them; the email and `project.yaml` are
   still written [`4f0ab84`]
@@ -23,6 +38,15 @@ IRIS only; the JUNO code is now removed.
   and names any that are missing (#22) [`5fafdac`]
 
 ### Changed
+- `runTempoWESCohort.sh` submits `doHsMetrics.sh -p <ID>` when
+  nextflow exits 0, and takes nextflow's exit status from `PIPESTATUS`
+  (the pipe into `tee` hid it); the run job ends before the HsMetrics
+  jobs, so wait for them before `deliver.sh` [`37b010c`]
+- `qcReport01.R` reads only Tempo's HsMetrics files under `bams/`, since
+  the uncapped files in `post/qc` have the same names [`5fdad87`]
+- Docs: `README.md`, `CLAUDE.md`, `docs/methods.md` and `docs/output.md`
+  describe the HsMetrics rerun, `post/qc` and the QC database
+  [`80baecf`, `8e7ba37`, `b096bee`]
 - Delivery email rewritten: one line per main report, `{FACETS}` lines
   dropped with `-r`, `{WGS}` lines kept only for genome runs, one line
   per paragraph [`725900f`, `92047d2`]
@@ -46,6 +70,11 @@ IRIS only; the JUNO code is now removed.
   and 5 x 96-core nodes (#18) [`c48d9ba`]
 
 ### Fixed
+- WES median target coverage capped at 200x: 102 of 200 tumors in the
+  IDT v2 background sat at exactly 200; with the rerun, 1 does and the
+  tumor medians run 99-337 [`5fdad87`, `37b010c`]
+- `runTempoWESCohort.sh` could not tell whether nextflow failed; the
+  pipe into `tee` returned `tee`'s status [`37b010c`]
 - Silent loss of a sample or pair: the converters, the post-run check
   and the WES reports above (#6) [`0fb6e93`, `17218a4`, `8fcc66e`]
 - Delivered files get group `grp_hpc_core001` and delivered folders are
@@ -75,6 +104,8 @@ IRIS only; the JUNO code is now removed.
   `docs/JUNO_LSF.md` kept as a record (#16) [`45b6e8a`]
 - `TODO.md`, `bugs/` and finished dev files (content moved to GitHub
   issues) [`de45267`]
+
+See `docs/releases/CHANGE_REPORT_v3.2.3.md` for the full release narrative.
 
 ## v3.2.2 [2026-10-03] - Cordelia Patch: Combined Report, FACETS Rules, WES Sizing
 
