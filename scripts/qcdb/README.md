@@ -34,6 +34,7 @@ where each one is:
 |---|---|
 | `ASSAY` | assay label (`--assay`) |
 | `VERSION` | build date, `yymmdd` |
+| `DATE` | build date, `YYYY-MM-DD` |
 | `PATH` | absolute path to the `.rds` |
 
 The builder prints the index line at the end of a build; add it to

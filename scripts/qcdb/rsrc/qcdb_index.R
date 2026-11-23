@@ -2,8 +2,9 @@
 # qcdb_index.R
 #
 # Find a QC background database. The .rds files are not in git; the
-# tracked index assets/qcdb/qcdb_index.tsv (ASSAY, VERSION, PATH) lists
-# where each one is stored. VERSION is the build date, yymmdd.
+# tracked index assets/qcdb/qcdb_index.tsv (ASSAY, VERSION, DATE, PATH)
+# lists where each one is stored. VERSION is the build date as yymmdd;
+# DATE is the same date as YYYY-MM-DD.
 #
 
 read_qcdb_index <- function(adagio) {
