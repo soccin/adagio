@@ -196,6 +196,7 @@ nextflow run $ADIR/tempo/dsl2.nf -ansi-log $ANSI_LOG \
     $NF_PARAMS \
     2> ${LOG/.log/.err} \
     | tee -a $LOG
+NF_EXIT=${PIPESTATUS[0]}
 
 mkdir -p $ODIR/runlog
 
@@ -250,6 +251,19 @@ Rscript $ADIR/scripts/nfTraceReport.R | tee $RUN_REPORT
 TRACE_EXIT=${PIPESTATUS[0]}
 if [ "$TRACE_EXIT" != "0" ]; then
     echo -e "\nWARNING: nfTraceReport.R failed (exit $TRACE_EXIT); $RUN_REPORT is incomplete\n"
+fi
+
+#
+# Rerun Picard CollectHsMetrics without Tempo's 200x coverage cap
+# (scripts/hsmetrics/README.md), only if nextflow succeeded. It submits
+# a SLURM array writing to $ODIR/post/qc and returns. A failure here is
+# reported but does not change this script's exit code.
+#
+if [ "$NF_EXIT" == "0" ]; then
+    $ADIR/scripts/hsmetrics/doHsMetrics.sh -p $PROJECT_ID \
+        || echo -e "\nWARNING: doHsMetrics.sh failed; rerun it from $OPWD with -p $PROJECT_ID\n"
+else
+    echo -e "\nnextflow exited $NF_EXIT; doHsMetrics.sh not run\n"
 fi
 
 #

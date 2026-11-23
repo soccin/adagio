@@ -1,13 +1,13 @@
 # Variant Calling Pipeline
 
-### Version 3.2.2
+### Version 3.2.3
 
 ## Overview
 
 Tumor/normal pairs were analyzed with the Tempo pipeline (Nextflow;
 Di Tommaso 2017, Ewels 2020), run through our wrapper, adagio. The code,
 including the exact Tempo version used, is at
-[https://github.com/soccin/adagio/releases/tag/v3.2.2](https://github.com/soccin/adagio/releases/tag/v3.2.2).
+[https://github.com/soccin/adagio/releases/tag/v3.2.3](https://github.com/soccin/adagio/releases/tag/v3.2.3).
 Tempo was run from commit `a7ecd35` of
 [https://github.com/soccin/tempo](https://github.com/soccin/tempo)
 (branch `devs-iris`), a fork of
@@ -58,7 +58,10 @@ SvABA and BRASS, merged, and annotated with iAnnotateSV.
 **QC.** Tumor/normal concordance and contamination were checked with
 Conpair 0.3.3 (Bergmann 2016). Alignment and coverage metrics came from
 Alfred, Qualimap and GATK CollectHsMetrics (exomes), and were summarized
-with MultiQC (Ewels 2016).
+with MultiQC (Ewels 2016). For exomes, CollectHsMetrics (GATK 4.1.0.0)
+was also run with a coverage cap of 1000x instead of the default 200x,
+so that median target coverage and the fold-80 base penalty are correct
+for samples covered deeper than 200x.
 
 **Reports.** Custom R scripts in adagio build the delivered reports. The
 SNV report keeps mutations that change the protein (a non-synonymous

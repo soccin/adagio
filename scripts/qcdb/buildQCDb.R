@@ -24,6 +24,10 @@ Options:
   --lims=FILE     optional sample metadata CSV with one row per sample;
                   joined on the column given by --lims-key
   --lims-key=COL  sample ID column in --lims (default: dir_sample_name)
+  --hsmetrics=DIR folder of <SAMPLE>.hs_metrics.txt files
+                  (default: <out>/post/qc, written by
+                  scripts/hsmetrics/doHsMetrics.sh without Tempo's 200x
+                  cap; <out>/bams reads Tempo's capped files)
   --assay=LABEL   assay label used in the file name (default: WES_IDT_v2)
   --dest=DIR      output folder (default: ./qcdb in the project folder)
   --cores=N       parallel workers (default: SLURM_CPUS_PER_TASK or 1)
@@ -129,11 +133,40 @@ bamDir <- file.path(outDir, "bams")
 somDir <- file.path(outDir, "somatic")
 
 #
+# HsMetrics: by default the files from scripts/hsmetrics/doHsMetrics.sh,
+# which reruns Picard without Tempo's COVERAGE_CAP of 200
+#
+hsmDir <- normalizePath(opt$hsmetrics %||% file.path(outDir, "post", "qc"), mustWork = FALSE)
+hsmFiles <- if (fs::dir_exists(hsmDir)) find_files(hsmDir, "\\.hs_metrics\\.txt$") else character()
+if (len(hsmFiles) == 0) {
+    stop(glue("No .hs_metrics.txt files in {hsmDir}\n",
+              "Run scripts/hsmetrics/doHsMetrics.sh first, or use --hsmetrics=<out>/bams ",
+              "for Tempo's files (capped at 200x)"), call. = FALSE)
+}
+# Picard writes its command line in the header; no COVERAGE_CAP there
+# means the default, 200
+hsm_cap <- function(file) {
+    read_lines(file, n_max = 2) |>
+        str_c(collapse = " ") |>
+        str_extract("--COVERAGE_CAP (\\d+)", group = 1) |>
+        coalesce("200")
+}
+hsmCap <- hsmFiles |>
+    map_chr(hsm_cap) |>
+    unique() |>
+    as.integer()
+if (len(hsmCap) != 1) {
+    stop(glue("HsMetrics files in {hsmDir} use different COVERAGE_CAP values: {str_c(hsmCap, collapse = ', ')}"),
+         call. = FALSE)
+}
+message(glue("HsMetrics: {hsmDir} (COVERAGE_CAP {hsmCap})"))
+
+#
 # Per-sample QC
 #
 message("Reading per-sample QC")
 
-hsm <- find_files(bamDir, "\\.hs_metrics\\.txt$") |> map_files(read_hs_metrics, "hs_metrics")
+hsm <- hsmFiles |> map_files(read_hs_metrics, "hs_metrics")
 alfred <- find_files(bamDir, "/alfred/[^/]+\\.alfred\\.tsv\\.gz$") |> map_files(read_alfred, "alfred")
 qualimap <- find_files(bamDir, "_qualimap_rawdata\\.tar\\.gz$") |> map_files(read_qualimap, "qualimap")
 fastpLanes <- find_files(bamDir, "\\.fastp\\.json$") |> map_files(read_fastp, "fastp") |> bind_rows()
@@ -215,8 +248,9 @@ if (len(alfredOK) > 0) {
     # the sample median, interquartile range of normalized coverage, and
     # fraction of targets with zero coverage
     #
-    # TARGET_MEDIAN_COV is the median of per-target mean coverage. Unlike
-    # HSM_MEDIAN_TARGET_COVERAGE it is not capped (Picard COVERAGE_CAP 200)
+    # TARGET_MEDIAN_COV is the median of Alfred per-target mean coverage.
+    # It counts duplicates, so it runs higher than
+    # HSM_MEDIAN_TARGET_COVERAGE, and it has no coverage cap
     targetSampleMetrics <- tibble(
         SAMPLE = colnames(covMat),
         TARGET_MEDIAN_COV = matrixStats::colMedians(covMat, na.rm = TRUE),
@@ -487,7 +521,11 @@ meta <- list(
     builder = "scripts/qcdb/buildQCDb.R",
     r_version = R.version.string,
     lims_file = opt$lims %||% NA_character_,
+    hsmetrics_dir = hsmDir,
+    hsmetrics_coverage_cap = hsmCap,
     notes = c(
+        glue("HSM_ metrics and hsm_coverage come from {hsmDir}; Picard COVERAGE_CAP {hsmCap} caps ",
+             "HSM_MEDIAN_TARGET_COVERAGE, FOLD_80_BASE_PENALTY, HS_PENALTY_* and the histogram."),
         "CONPAIR_CONTAMINATION is a fraction (Conpair percent / 100).",
         "Target coverage summaries use Alfred TC AvgCov normalized to each sample's median target coverage.",
         "alfred_insert_size is capped at 1000 bp and alfred_coverage at 500x (genome-wide, not target).",

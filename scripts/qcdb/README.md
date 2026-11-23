@@ -11,14 +11,17 @@ exome) selected to be typical in data size; see
 
 ## Build
 
-Submit from the project folder (the one that holds `out/`):
+From the project folder (the one that holds `out/`), first run
+`<adagio>/scripts/hsmetrics/doHsMetrics.sh` and wait for its array job,
+then submit:
 
 ```
 sbatch --export=ALL,SBATCH_SCRIPT_DIR=<adagio>/scripts/qcdb \
     <adagio>/scripts/qcdb/runBuildQCDb.sh \
-    --pairing=inputTempo_pairing.tsv \
     --lims=inputs/TN_pairs_200_samples.csv
 ```
+
+The pairing is read from the run log; `--pairing` overrides it.
 
 Output: `qcdb/qcdb_<assay>_<yymmdd>.rds` in the project folder. The
 date in the name is the version. `--dest` writes elsewhere (use it for
@@ -44,7 +47,14 @@ the assay (`version=` picks a specific one, `qcdb=` overrides the
 index), and `load_qcdb()` reads it.
 
 The build reads about 400 Alfred files of ~500k lines each, so it runs
-as a SLURM job (8 cores, under 2 h).
+as a SLURM job (8 cores, under 2 h; about 4 min for 400 samples).
+
+Versions in the index:
+
+| Version | HsMetrics | Notes |
+|---|---|---|
+| `261122` | Tempo's files, cap 200 | first draft; tumor median coverage capped |
+| `261123` | `post/qc`, cap 1000 | current; same 200 pairs |
 
 ## Layout
 
@@ -81,16 +91,21 @@ Column names start with their source:
 | `MAFUNFILT_` | `somatic.unfiltered.maf` summary | pair |
 | `MANTA_` | Manta somatic SV counts | pair |
 
-Picard runs with `COVERAGE_CAP 200`, so `HSM_MEDIAN_TARGET_COVERAGE`
-and `hsm_coverage` stop at 200x; most tumors reach the cap. Use
-`TARGET_MEDIAN_COV` for an uncapped median (it counts duplicates, so it
-runs higher than Picard).
+`HSM_` metrics come from `out/<PROJECT_ID>/post/qc`, written by
+`scripts/hsmetrics/doHsMetrics.sh`, which reruns Picard with
+`COVERAGE_CAP 1000`. Tempo's own files use Picard's default cap of 200,
+which caps `HSM_MEDIAN_TARGET_COVERAGE`, `HSM_FOLD_80_BASE_PENALTY`,
+`HSM_HS_PENALTY_*` and `hsm_coverage`; about half of tumors sit at the
+cap. Run `doHsMetrics.sh` before the build. `--hsmetrics=DIR` reads
+another folder (`<out>/bams` for Tempo's files). The folder and the cap
+are recorded in `meta`. `TARGET_MEDIAN_COV` is the Alfred median; it
+counts duplicates, so it runs higher than Picard's.
 
 `dist` elements:
 
 | Element | Contents |
 |---|---|
-| `hsm_coverage` | Picard target coverage histogram (capped at 200x) |
+| `hsm_coverage` | Picard target coverage histogram (to the cap in `meta`, 1000x by default) |
 | `alfred_insert_size` | insert size counts, 0-1000 bp, all layouts summed |
 | `alfred_coverage` | genome-wide coverage histogram, 0-500x |
 | `alfred_gc` | GC content of reads, sample and reference |
