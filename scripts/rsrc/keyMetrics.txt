@@ -1,0 +1,8 @@
+# Key QC metrics for the summary QC report (qcReport02.R), part A.
+# One QC database column name per line; the order here is the plot
+# order, five panels per page. Lines starting with # are ignored.
+HSM_MEAN_TARGET_COVERAGE
+HSM_PCT_TARGET_BASES_20X
+HSM_PCT_EXC_DUPE
+CONPAIR_CONTAMINATION
+CONPAIR_CONCORDANCE

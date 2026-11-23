@@ -1,0 +1,22 @@
+# QC metrics for the full QC report (qcReport02.R).
+# One QC database column name per line; the order here is the plot
+# order, five panels per page. Lines starting with # are ignored.
+#
+# Coverage
+HSM_MEAN_TARGET_COVERAGE
+HSM_PCT_TARGET_BASES_20X
+HSM_PCT_TARGET_BASES_100X
+HSM_ZERO_CVG_TARGETS_PCT
+# Capture and uniformity
+HSM_FOLD_80_BASE_PENALTY
+HSM_PCT_EXC_DUPE
+TARGET_FRAC_NORM_COV_LT_0.2
+HSM_GC_DROPOUT
+# Reads and library
+FASTP_BEFORE_TOTAL_READS
+FASTP_AFTER_Q30_RATE
+ALFRED_MEDIANINSERTSIZE
+ALFRED_MISMATCHRATE
+# Conpair
+CONPAIR_CONTAMINATION
+CONPAIR_CONCORDANCE
