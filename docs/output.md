@@ -1,4 +1,4 @@
-# BIC Variant Pipeline (v3.2.2)
+# BIC Variant Pipeline (v3.2.3)
 
 ## Introduction
 
@@ -43,6 +43,8 @@ whole-genome projects; the others are made for exome and genome projects.
         ├── bams
         ├── cohort_level
         ├── pipeline_info
+        ├── post
+        │   └── qc        (exomes)
         ├── runlog
         └── somatic
 ```
@@ -64,7 +66,7 @@ describes these files:
 - `cohort_level/default_cohort`: the same results merged across all
   pairs, for example `mut_somatic.maf` and `sample_data.txt`. For WGS,
   `sample_data.txt` also holds the mutational signature results.
-- `post/qc` (exomes, when present): Picard CollectHsMetrics rerun on
+- `post/qc` (exomes): Picard CollectHsMetrics, rerun by adagio on
   the same BAMs with a coverage cap of 1000x. Tempo's files in `bams`
   use Picard's default cap of 200x, so for samples covered deeper than
   200x their median target coverage stops at 200 and the fold-80 base

@@ -2,6 +2,12 @@
 
 This changelog documents all changes to the tempo submodule from commit `00eb724` to `a7ecd35a` (26 commits total).
 
+## adagio v3.2.3 (2026-11-23)
+
+No tempo change; still `a7ecd35a` on `devs-iris`. The uncapped
+CollectHsMetrics rerun is done in adagio (`scripts/hsmetrics/`), not in
+tempo.
+
 ## adagio v3.2.2 (2026-10-03)
 
 No tempo change; still `a7ecd35a`. The tracking branch in `.gitmodules` is

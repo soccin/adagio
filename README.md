@@ -4,7 +4,7 @@ A derivation of [_Tempo_](https://github.com/mskcc/tempo).
 
 Some nice [adagios](https://open.spotify.com/playlist/3o1pG5q6H3FadR6zmeNBTo?si=48d2b7228a754dc0).
 
-## Version: v3.2.2
+## Version: v3.2.3
 
 Cordelia: current tempo submodule at `a7ecd35a` (branch `devs-iris`).
 
@@ -48,9 +48,21 @@ To resume a run on IRIS:
 
 A manual resume skips the steps the run script does after Nextflow: it
 does not copy the mapping and pairing files to `out/<PROJECT_ID>/runlog`,
-run `nfTraceReport.R`, rewrite `cmd.sh.log`, or run the pair check
+run `nfTraceReport.R`, rewrite `cmd.sh.log`, run the pair check
 (`scripts/checkPairOutputs.R PAIRING.tsv out/<PROJECT_ID> WORKFLOWS`,
-which writes `runlog/pair_check.txt`).
+which writes `runlog/pair_check.txt`), or, for WES, submit the uncapped
+HsMetrics jobs (`scripts/hsmetrics/doHsMetrics.sh -p <PROJECT_ID>`, run
+from the project folder).
+
+## WES: HsMetrics without the 200x cap
+
+Tempo runs Picard CollectHsMetrics with a coverage cap of 200, so the
+median target coverage, fold-80 and HS penalties stop at 200x for deeper
+samples. At the end of a WES run, `runTempoWESCohort.sh` submits
+`scripts/hsmetrics/doHsMetrics.sh`, which reruns it with a cap of 1000
+as a SLURM array and writes `out/<PROJECT_ID>/post/qc/`. The run job
+ends before these jobs do; wait for them before `deliver.sh`. See
+`scripts/hsmetrics/README.md`.
 
 The trace, report and timeline files are named by date under
 `out/<PROJECT_ID>/pipeline_info/`, so earlier ones do not need to be moved.
