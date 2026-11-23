@@ -28,7 +28,7 @@
 <header id="title-block-header">
 <h1 class="title">Variant Output</h1>
 </header>
-<h1 id="bic-variant-pipeline-v3.2.2">BIC Variant Pipeline (v3.2.2)</h1>
+<h1 id="bic-variant-pipeline-v3.2.3">BIC Variant Pipeline (v3.2.3)</h1>
 <h2 id="introduction">Introduction</h2>
 <p>The results have two parts. The <code>tempo</code> folder holds the
 output of the Tempo pipeline as it was produced. The <code>post</code>
@@ -69,6 +69,8 @@ the others are made for exome and genome projects.</p>
         ├── bams
         ├── cohort_level
         ├── pipeline_info
+        ├── post
+        │   └── qc        (exomes)
         ├── runlog
         └── somatic</code></pre>
 <h2 id="tempo-output">Tempo Output</h2>
@@ -90,6 +92,12 @@ contamination, and for WGS structural variants.</li>
 across all pairs, for example <code>mut_somatic.maf</code> and
 <code>sample_data.txt</code>. For WGS, <code>sample_data.txt</code> also
 holds the mutational signature results.</li>
+<li><code>post/qc</code> (exomes): Picard CollectHsMetrics, rerun by
+adagio on the same BAMs with a coverage cap of 1000x. Tempo’s files in
+<code>bams</code> use Picard’s default cap of 200x, so for samples
+covered deeper than 200x their median target coverage stops at 200 and
+the fold-80 base penalty and HS penalties can be off. Use the files in
+<code>post/qc</code> for these metrics.</li>
 <li><code>pipeline_info</code>: Nextflow run reports.</li>
 <li><code>runlog</code>: the run command, copies of the input mapping
 and pairing files, and <code>pair_check.txt</code>, which lists any
