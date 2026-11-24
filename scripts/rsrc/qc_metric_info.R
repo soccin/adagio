@@ -126,7 +126,7 @@ split_token <- function(token) {
 
 auto_metric_label <- function(metric) {
     name <- metric |>
-        str_remove("^(HSM|ALFRED|FASTP|CONPAIR)_")
+        str_remove("^(HSM|ASM|ALFRED|FASTP|CONPAIR)_")
     if (str_starts(metric, "QUALIMAP_")) {
         name <- name |>
             str_remove("^QUALIMAP_") |>

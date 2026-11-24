@@ -28,8 +28,9 @@
 # taller than the others.
 #
 # Run from the project folder (the one that holds out/) after
-# scripts/hsmetrics/doHsMetrics.sh. It reads every Alfred and Qualimap
-# file of the project, so submit large projects with sbatch.
+# scripts/picardqc/doPicardQC.sh (uncapped HsMetrics and
+# AlignmentSummaryMetrics). It reads every Alfred and Qualimap file of
+# the project, so submit large projects with sbatch.
 #
 
 usage <- function() {
