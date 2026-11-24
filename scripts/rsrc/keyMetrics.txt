@@ -1,8 +1,19 @@
 # Key QC metrics for the summary QC report (qcReport02.R), part A.
 # One QC database column name per line; the order here is the plot
 # order, five panels per page. Lines starting with # are ignored.
+#
+# Page 1: coverage and capture
 HSM_MEAN_TARGET_COVERAGE
+HSM_PCT_TARGET_BASES_100X
 HSM_PCT_TARGET_BASES_20X
-HSM_PCT_EXC_DUPE
+HSM_ZERO_CVG_TARGETS_PCT
+HSM_FOLD_ENRICHMENT
+# Page 2: reads, library and Conpair. ALFRED_DUPLICATEFRACTION stands
+# in for Picard MarkDuplicates PERCENT_DUPLICATION: Tempo does not
+# keep the MarkDuplicates metrics file. Alfred counts the duplicate
+# flags that Tempo's MarkDuplicates sets.
+HSM_TOTAL_READS
+ALFRED_DUPLICATEFRACTION
+ASM_PCT_CHIMERAS
 CONPAIR_CONTAMINATION
 CONPAIR_CONCORDANCE

@@ -17,6 +17,7 @@ HSM_PCT_TARGET_BASES_100X	low	% Target Bases at 100X or More
 HSM_ZERO_CVG_TARGETS_PCT	high	% Targets with Zero Coverage
 HSM_PCT_USABLE_BASES_ON_TARGET	low	% Usable Bases On Target
 HSM_FOLD_80_BASE_PENALTY	high	Fold-80 Base Penalty
+HSM_FOLD_ENRICHMENT	low	Fold Enrichment
 HSM_PCT_EXC_DUPE	high	% Excluded from Duplicates
 HSM_PCT_EXC_MAPQ	high	% Excluded from Low Mapping Quality
 HSM_PCT_EXC_BASEQ	high	% Excluded from Low Base Quality
@@ -37,6 +38,16 @@ HSM_AT_DROPOUT	high	AT Dropout
 HSM_GC_DROPOUT	high	GC Dropout
 HSM_HET_SNP_SENSITIVITY	low	Het SNP Sensitivity
 HSM_HET_SNP_Q	low	Het SNP Sensitivity (Phred)
+ASM_PCT_CHIMERAS	high	% Chimeras
+ASM_PCT_PF_READS_ALIGNED	low	% Reads Aligned
+ASM_PCT_READS_ALIGNED_IN_PAIRS	low	% Aligned Reads with Mate Aligned
+ASM_PCT_PF_READS_IMPROPER_PAIRS	high	% Reads in Improper Pairs
+ASM_PF_MISMATCH_RATE	high	Mismatch Rate, Duplicates Included
+ASM_PF_HQ_ERROR_RATE	high	Mismatch Rate, Reads with MAPQ 20 or More
+ASM_PF_INDEL_RATE	high	Indel Rate
+ASM_PCT_ADAPTER	high	% Adapter Reads
+ASM_STRAND_BALANCE	both	Strand Balance, Fraction Forward Reads
+ASM_BAD_CYCLES	high	Bad Cycles
 TARGET_MEDIAN_COV	low	Median Target Coverage, Duplicates Included
 TARGET_FRAC_NORM_COV_LT_0.2	high	% Targets Below 0.2x Median Coverage
 TARGET_FRAC_NORM_COV_GT_2	high	% Targets Above 2x Median Coverage
