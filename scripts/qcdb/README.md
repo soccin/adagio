@@ -12,8 +12,8 @@ exome) selected to be typical in data size; see
 ## Build
 
 From the project folder (the one that holds `out/`), first run
-`<adagio>/scripts/hsmetrics/doHsMetrics.sh` and wait for its array job,
-then submit:
+`<adagio>/scripts/picardqc/doPicardQC.sh` (uncapped HsMetrics and
+AlignmentSummaryMetrics) and wait for its array job, then submit:
 
 ```
 sbatch --export=ALL,SBATCH_SCRIPT_DIR=<adagio>/scripts/qcdb \
@@ -23,9 +23,12 @@ sbatch --export=ALL,SBATCH_SCRIPT_DIR=<adagio>/scripts/qcdb \
 
 The pairing is read from the run log; `--pairing` overrides it.
 
-Output: `qcdb/qcdb_<assay>_<yymmdd>.rds` in the project folder. The
-date in the name is the version. `--dest` writes elsewhere (use it for
-test builds). `Rscript buildQCDb.R --help` lists every option.
+Output: `qcdb/qcdb_<assay>_<version>.rds` in the project folder. The
+version is the build date, `yymmdd`, unless `--version` sets it. The
+builder stops at the start if the file exists, so a second build on
+the same day needs `--version` (for example `261123b`). `--dest` writes
+elsewhere (use it for test builds). `Rscript buildQCDb.R --help` lists
+every option.
 
 ## Storage and lookup
 
@@ -36,7 +39,7 @@ where each one is:
 | Column | Contents |
 |---|---|
 | `ASSAY` | assay label (`--assay`) |
-| `VERSION` | build date, `yymmdd` |
+| `VERSION` | build date, `yymmdd`, or the `--version` label |
 | `DATE` | build date, `YYYY-MM-DD` |
 | `PATH` | absolute path to the `.rds` |
 
@@ -54,7 +57,8 @@ Versions in the index:
 | Version | HsMetrics | Notes |
 |---|---|---|
 | `261122` | Tempo's files, cap 200 | first draft; tumor median coverage capped |
-| `261123` | `post/qc`, cap 1000 | current; same 200 pairs |
+| `261123` | `post/qc`, cap 1000 | same 200 pairs |
+| `261123b` | `post/qc`, cap 1000 | current; adds `ASM_` (AlignmentSummaryMetrics) |
 
 ## Layout
 
@@ -80,6 +84,7 @@ Column names start with their source:
 | Prefix | Source | Level |
 |---|---|---|
 | `HSM_` | Picard CollectHsMetrics | sample |
+| `ASM_` | Picard CollectAlignmentSummaryMetrics, `PAIR` row | sample |
 | `ALFRED_` | Alfred summary (ME), on-target rate, chrX/chrY observed/expected | sample |
 | `TARGET_` | Alfred per-target coverage: uncapped median (`TARGET_MEDIAN_COV`) and uniformity summaries | sample |
 | `QUALIMAP_` | Qualimap bamqc `genome_results.txt` | sample |
@@ -92,20 +97,29 @@ Column names start with their source:
 | `MANTA_` | Manta somatic SV counts | pair |
 
 `HSM_` metrics come from `out/<PROJECT_ID>/post/qc`, written by
-`scripts/hsmetrics/doHsMetrics.sh`, which reruns Picard with
+`scripts/picardqc/doPicardQC.sh`, which reruns Picard with
 `COVERAGE_CAP 1000`. Tempo's own files use Picard's default cap of 200,
 which caps `HSM_MEDIAN_TARGET_COVERAGE`, `HSM_FOLD_80_BASE_PENALTY`,
 `HSM_HS_PENALTY_*` and `hsm_coverage`; about half of tumors sit at the
-cap. Run `doHsMetrics.sh` before the build. `--hsmetrics=DIR` reads
+cap. Run `doPicardQC.sh` before the build. `--hsmetrics=DIR` reads
 another folder (`<out>/bams` for Tempo's files). The folder and the cap
 are recorded in `meta`. `TARGET_MEDIAN_COV` is the Alfred median; it
 counts duplicates, so it runs higher than Picard's.
+
+`ASM_` metrics come from `out/<PROJECT_ID>/post/qc/<SAMPLE>.asm.txt`,
+also written by `doPicardQC.sh` (Tempo does not run this tool;
+`--asm=DIR` reads another folder). They are the `PAIR` row, over all
+reads including duplicates: for example `ASM_PCT_CHIMERAS`,
+`ASM_PF_MISMATCH_RATE`, `ASM_PCT_PF_READS_ALIGNED`, `ASM_STRAND_BALANCE`.
+`ASM_PCT_ADAPTER` is close to 0 because fastp trims adapters before
+alignment.
 
 `dist` elements:
 
 | Element | Contents |
 |---|---|
 | `hsm_coverage` | Picard target coverage histogram (to the cap in `meta`, 1000x by default) |
+| `asm_categories` | Picard AlignmentSummaryMetrics, all three rows (`FIRST_OF_PAIR`, `SECOND_OF_PAIR`, `PAIR`) |
 | `alfred_insert_size` | insert size counts, 0-1000 bp, all layouts summed |
 | `alfred_coverage` | genome-wide coverage histogram, 0-500x |
 | `alfred_gc` | GC content of reads, sample and reference |

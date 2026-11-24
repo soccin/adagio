@@ -35,6 +35,28 @@ read_hs_metrics <- function(file) {
 }
 
 #
+# Picard CollectAlignmentSummaryMetrics (<SAMPLE>.asm.txt, written by
+# scripts/picardqc/doPicardQC.sh): one row per CATEGORY (FIRST_OF_PAIR,
+# SECOND_OF_PAIR, PAIR). metrics is the PAIR row; categories keeps all
+# rows.
+#
+read_asm <- function(file) {
+    sample <- sample_from_path(file, "\\.asm\\.txt$")
+    lines <- read_lines(file, progress = FALSE)
+    iMet <- str_which(lines, "^## METRICS CLASS")
+    if (len(iMet) != 1) stop("no METRICS CLASS section")
+    rows <- lines[-seq_len(iMet)]
+    iEnd <- match(TRUE, !str_detect(rows, "\\S"), nomatch = len(rows) + 1)
+    categories <- read_tsv_quiet(I(rows[seq_len(iEnd - 1)]), col_types = cols(.default = "c")) |>
+        select(-any_of(c("SAMPLE", "LIBRARY", "READ_GROUP"))) |>
+        mutate(across(-CATEGORY, as.numeric)) |>
+        mutate(SAMPLE = sample, .before = 1)
+    pair <- categories |> filter(CATEGORY == "PAIR")
+    if (nrow(pair) != 1) stop("no PAIR row")
+    list(metrics = pair |> select(-CATEGORY), categories = categories)
+}
+
+#
 # Alfred: split the file into its sections (ME, IS, CO, ...). Each
 # section starts with a header row whose first field is the section key.
 #

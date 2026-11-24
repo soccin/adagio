@@ -26,14 +26,19 @@ Options:
   --lims-key=COL  sample ID column in --lims (default: dir_sample_name)
   --hsmetrics=DIR folder of <SAMPLE>.hs_metrics.txt files
                   (default: <out>/post/qc, written by
-                  scripts/hsmetrics/doHsMetrics.sh without Tempo's 200x
+                  scripts/picardqc/doPicardQC.sh without Tempo's 200x
                   cap; <out>/bams reads Tempo's capped files)
+  --asm=DIR       folder of <SAMPLE>.asm.txt files, Picard
+                  CollectAlignmentSummaryMetrics (default: <out>/post/qc,
+                  written by scripts/picardqc/doPicardQC.sh)
   --assay=LABEL   assay label used in the file name (default: WES_IDT_v2)
+  --version=V     version label (default: the build date, yymmdd)
   --dest=DIR      output folder (default: ./qcdb in the project folder)
   --cores=N       parallel workers (default: SLURM_CPUS_PER_TASK or 1)
   -h, --help      show this help
 
-Output: <dest>/qcdb_<assay>_<yymmdd>.rds
+Output: <dest>/qcdb_<assay>_<version>.rds. An existing file is never
+overwritten; give a new --version instead.
 
 The .rds is not stored in git. After a build, add the line printed at
 the end to <adagio>/assets/qcdb/qcdb_index.tsv so reports can find it.
@@ -73,6 +78,15 @@ nCores <- as.integer(opt$cores %||% Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 assay <- opt$assay %||% "WES_IDT_v2"
 destDir <- opt$dest %||% "qcdb"
 limsKey <- opt[["lims-key"]] %||% "dir_sample_name"
+
+# Stop before reading anything if the output exists: a second build on
+# the same day would otherwise replace a database already in the index
+version <- opt$version %||% format(Sys.Date(), "%y%m%d")
+if (!str_detect(version, "^[A-Za-z0-9_.-]+$")) stop(glue("Bad --version: {version}"), call. = FALSE)
+outFile <- file.path(destDir, glue("qcdb_{assay}_{version}.rds"))
+if (fs::file_exists(outFile)) {
+    stop(glue("{outFile} exists; give a new --version"), call. = FALSE)
+}
 
 #
 # Parallel map over files; the result is a list in input order. A file
@@ -133,16 +147,28 @@ bamDir <- file.path(outDir, "bams")
 somDir <- file.path(outDir, "somatic")
 
 #
-# HsMetrics: by default the files from scripts/hsmetrics/doHsMetrics.sh,
+# HsMetrics: by default the files from scripts/picardqc/doPicardQC.sh,
 # which reruns Picard without Tempo's COVERAGE_CAP of 200
 #
 hsmDir <- normalizePath(opt$hsmetrics %||% file.path(outDir, "post", "qc"), mustWork = FALSE)
 hsmFiles <- if (fs::dir_exists(hsmDir)) find_files(hsmDir, "\\.hs_metrics\\.txt$") else character()
 if (len(hsmFiles) == 0) {
     stop(glue("No .hs_metrics.txt files in {hsmDir}\n",
-              "Run scripts/hsmetrics/doHsMetrics.sh first, or use --hsmetrics=<out>/bams ",
+              "Run scripts/picardqc/doPicardQC.sh first, or use --hsmetrics=<out>/bams ",
               "for Tempo's files (capped at 200x)"), call. = FALSE)
 }
+
+#
+# Picard CollectAlignmentSummaryMetrics: Tempo does not run it;
+# scripts/picardqc/doPicardQC.sh does
+#
+asmDir <- normalizePath(opt$asm %||% file.path(outDir, "post", "qc"), mustWork = FALSE)
+asmFiles <- if (fs::dir_exists(asmDir)) find_files(asmDir, "\\.asm\\.txt$") else character()
+if (len(asmFiles) == 0) {
+    stop(glue("No .asm.txt files in {asmDir}\n",
+              "Run scripts/picardqc/doPicardQC.sh first (-t asm)"), call. = FALSE)
+}
+message(glue("AlignmentSummaryMetrics: {asmDir}"))
 # Picard writes its command line in the header; no COVERAGE_CAP there
 # means the default, 200
 hsm_cap <- function(file) {
@@ -167,6 +193,7 @@ message(glue("HsMetrics: {hsmDir} (COVERAGE_CAP {hsmCap})"))
 message("Reading per-sample QC")
 
 hsm <- hsmFiles |> map_files(read_hs_metrics, "hs_metrics")
+asm <- asmFiles |> map_files(read_asm, "asm")
 alfred <- find_files(bamDir, "/alfred/[^/]+\\.alfred\\.tsv\\.gz$") |> map_files(read_alfred, "alfred")
 qualimap <- find_files(bamDir, "_qualimap_rawdata\\.tar\\.gz$") |> map_files(read_qualimap, "qualimap")
 fastpLanes <- find_files(bamDir, "\\.fastp\\.json$") |> map_files(read_fastp, "fastp") |> bind_rows()
@@ -177,6 +204,7 @@ statusSample <- find_files(bamDir, "/multiqc/[^/]+\\.QC_Status\\.txt$") |>
 pluck_bind <- function(lst, el) lst |> compact() |> map(el) |> bind_rows()
 
 hsmMetrics <- pluck_bind(hsm, "metrics") |> rename_with(\(x) str_c("HSM_", x), -SAMPLE)
+asmMetrics <- pluck_bind(asm, "metrics") |> rename_with(\(x) str_c("ASM_", x), -SAMPLE)
 alfredMetrics <- pluck_bind(alfred, "metrics") |> rename_with(\(x) str_c("ALFRED_", str_to_upper(x)), -SAMPLE)
 qualimapMetrics <- qualimap |> compact() |> bind_rows() |> rename_with(\(x) str_c("QUALIMAP_", x), -SAMPLE)
 fastpMetrics <- if (nrow(fastpLanes) > 0) summarize_fastp(fastpLanes) else tibble(SAMPLE = character())
@@ -316,6 +344,7 @@ facetsPrefixed <- facetsQC |>
 sampleMetrics <- sampleMap |>
     distinct(SAMPLE, TYPE) |>
     left_join(hsmMetrics, by = "SAMPLE") |>
+    left_join(asmMetrics, by = "SAMPLE") |>
     left_join(alfredMetrics, by = "SAMPLE") |>
     left_join(onTargetMetrics, by = "SAMPLE") |>
     left_join(sexMetrics, by = "SAMPLE") |>
@@ -412,6 +441,7 @@ reference <- bind_rows(
 #
 dist <- list(
     hsm_coverage = pluck_bind(hsm, "hist"),
+    asm_categories = pluck_bind(asm, "categories"),
     alfred_insert_size = pluck_bind(alfred, "insertSize"),
     alfred_coverage = pluck_bind(alfred, "coverage"),
     alfred_gc = pluck_bind(alfred, "gc"),
@@ -458,6 +488,7 @@ completeness <- list(
         distinct(SAMPLE, TYPE) |>
         mutate(
             HSM = has_rows(SAMPLE, hsmMetrics, "SAMPLE"),
+            ASM = has_rows(SAMPLE, asmMetrics, "SAMPLE"),
             ALFRED = has_rows(SAMPLE, alfredMetrics, "SAMPLE"),
             QUALIMAP = has_rows(SAMPLE, qualimapMetrics, "SAMPLE"),
             FASTP = has_rows(SAMPLE, fastpMetrics, "SAMPLE"),
@@ -481,7 +512,9 @@ completeness <- list(
 # Data dictionary: every column of the two metric tables and its source
 #
 sourceNames <- c(
-    HSM = "Picard CollectHsMetrics", ALFRED = "Alfred qc (whole BAM)",
+    HSM = "Picard CollectHsMetrics",
+    ASM = "Picard CollectAlignmentSummaryMetrics, PAIR row (all reads, duplicates included)",
+    ALFRED = "Alfred qc (whole BAM)",
     TARGET = "Alfred per-target coverage (TC), normalized to sample median",
     QUALIMAP = "Qualimap bamqc genome_results.txt", FASTP = "fastp, summed over lanes",
     CONPAIR = "Conpair", TEMPO = "Tempo (sample_data.txt, multiqc QC_Status)",
@@ -505,7 +538,6 @@ git_rev <- function(dir) {
              error = \(e) NA_character_, warning = \(w) NA_character_)
 }
 
-version <- format(Sys.Date(), "%y%m%d")
 meta <- list(
     name = "adagio QC background database",
     assay = assay,
@@ -523,9 +555,12 @@ meta <- list(
     lims_file = opt$lims %||% NA_character_,
     hsmetrics_dir = hsmDir,
     hsmetrics_coverage_cap = hsmCap,
+    asm_dir = asmDir,
     notes = c(
         glue("HSM_ metrics and hsm_coverage come from {hsmDir}; Picard COVERAGE_CAP {hsmCap} caps ",
              "HSM_MEDIAN_TARGET_COVERAGE, FOLD_80_BASE_PENALTY, HS_PENALTY_* and the histogram."),
+        glue("ASM_ metrics are the PAIR row of Picard CollectAlignmentSummaryMetrics from {asmDir}; ",
+             "dist$asm_categories has the FIRST_OF_PAIR, SECOND_OF_PAIR and PAIR rows."),
         "CONPAIR_CONTAMINATION is a fraction (Conpair percent / 100).",
         "Target coverage summaries use Alfred TC AvgCov normalized to each sample's median target coverage.",
         "alfred_insert_size is capped at 1000 bp and alfred_coverage at 500x (genome-wide, not target).",
@@ -550,7 +585,6 @@ qcdb <- list(
 )
 
 fs::dir_create(destDir)
-outFile <- file.path(destDir, glue("qcdb_{assay}_{version}.rds"))
 saveRDS(qcdb, outFile, compress = "xz")
 
 message(glue("\nWrote {outFile} ({round(fs::file_size(outFile) / 1024^2, 1)} MB)"))

@@ -254,16 +254,17 @@ if [ "$TRACE_EXIT" != "0" ]; then
 fi
 
 #
-# Rerun Picard CollectHsMetrics without Tempo's 200x coverage cap
-# (scripts/hsmetrics/README.md), only if nextflow succeeded. It submits
+# Picard QC that Tempo does not run as we want (scripts/picardqc/README.md):
+# CollectHsMetrics without Tempo's 200x coverage cap, and
+# CollectAlignmentSummaryMetrics. Only if nextflow succeeded. It submits
 # a SLURM array writing to $ODIR/post/qc and returns. A failure here is
 # reported but does not change this script's exit code.
 #
 if [ "$NF_EXIT" == "0" ]; then
-    $ADIR/scripts/hsmetrics/doHsMetrics.sh -p $PROJECT_ID \
-        || echo -e "\nWARNING: doHsMetrics.sh failed; rerun it from $OPWD with -p $PROJECT_ID\n"
+    $ADIR/scripts/picardqc/doPicardQC.sh -p $PROJECT_ID \
+        || echo -e "\nWARNING: doPicardQC.sh failed; rerun it from $OPWD with -p $PROJECT_ID\n"
 else
-    echo -e "\nnextflow exited $NF_EXIT; doHsMetrics.sh not run\n"
+    echo -e "\nnextflow exited $NF_EXIT; doPicardQC.sh not run\n"
 fi
 
 #
