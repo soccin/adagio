@@ -1,0 +1,16 @@
+# Metrics the BAD scan of the summary QC report (qcReport02.R) looks at:
+# a metric is scanned when it matches one of these regular expressions
+# (and no pattern in anomalyExclude.txt or redundantMetrics.txt). Lines
+# starting with # are ignored.
+#
+# Picard (HsMetrics, AlignmentSummaryMetrics) plus the three metrics
+# Picard does not cover. Alfred, Qualimap and the rest of fastp were
+# compared with Picard on the whole QC background (2026-11-24): nearly
+# every outlier they find, Picard finds too.
+^HSM_
+^ASM_
+# Tempo does not keep the MarkDuplicates metrics file
+^ALFRED_DUPLICATEFRACTION$
+# Base quality: Picard has no direct equivalent
+^FASTP_AFTER_Q30_RATE$
+^CONPAIR_

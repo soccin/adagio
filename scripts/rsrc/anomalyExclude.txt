@@ -1,4 +1,4 @@
-# Metrics the 3 SD scan of the summary QC report (qcReport02.R) skips.
+# Metrics the BAD scan of the summary QC report (qcReport02.R) skips.
 # One regular expression per line, matched against the QC database
 # column name. Lines starting with # are ignored.
 #
@@ -8,3 +8,7 @@
 ^ALFRED_N_
 ^QUALIMAP_.*NUMBER_OF_(?!.*_PCT$)
 ^FASTP_.*_BASES$
+# Picard AlignmentSummaryMetrics counts: they repeat the HSM_ counts or
+# the ASM_ fractions
+^ASM_(TOTAL_READS|PF_READS|PF_NOISE_READS|PF_READS_ALIGNED|PF_ALIGNED_BASES)$
+^ASM_(PF_HQ_ALIGNED_(READS|BASES|Q20_BASES)|READS_ALIGNED_IN_PAIRS|PF_READS_IMPROPER_PAIRS)$

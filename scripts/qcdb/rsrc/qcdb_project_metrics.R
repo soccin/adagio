@@ -4,7 +4,7 @@
 # Per-sample and per-pair QC metrics of one project, computed the same
 # way buildQCDb.R computes them for the background, so the project can
 # be compared with a QC database. Column names match the database
-# (HSM_, ALFRED_, TARGET_, QUALIMAP_, FASTP_, CONPAIR_).
+# (HSM_, ASM_, ALFRED_, TARGET_, QUALIMAP_, FASTP_, CONPAIR_).
 #
 # Needs qcdb_readers.R. If buildQCDb.R changes how a metric is computed,
 # change it here too.
@@ -46,16 +46,19 @@ target_sample_metrics <- function(targetCov, sample) {
 
 #
 # One row per sample in sampleMap (SAMPLE, TYPE), one column per metric.
-# HsMetrics come from hsmDir (post/qc, written by doHsMetrics.sh with
-# COVERAGE_CAP 1000); the rest from Tempo's bams and somatic folders.
+# HsMetrics (COVERAGE_CAP 1000) come from hsmDir and
+# AlignmentSummaryMetrics (PAIR row) from asmDir, both post/qc, written
+# by scripts/picardqc/doPicardQC.sh; the rest from Tempo's bams and
+# somatic folders.
 #
-project_sample_metrics <- function(outDir, sampleMap, hsmDir = file.path(outDir, "post", "qc"), nCores = 1) {
+project_sample_metrics <- function(outDir, sampleMap, hsmDir = file.path(outDir, "post", "qc"),
+                                   asmDir = file.path(outDir, "post", "qc"), nCores = 1) {
     bamDir <- file.path(outDir, "bams")
     somDir <- file.path(outDir, "somatic")
 
     hsmFiles <- find_qc_files(hsmDir, "\\.hs_metrics\\.txt$")
     if (len(hsmFiles) == 0) {
-        stop(glue("No .hs_metrics.txt files in {hsmDir}; run scripts/hsmetrics/doHsMetrics.sh first"),
+        stop(glue("No .hs_metrics.txt files in {hsmDir}; run scripts/picardqc/doPicardQC.sh first"),
              call. = FALSE)
     }
     hsm <- hsmFiles |>
@@ -63,6 +66,17 @@ project_sample_metrics <- function(outDir, sampleMap, hsmDir = file.path(outDir,
         map("metrics") |>
         bind_rows() |>
         rename_with(\(x) str_c("HSM_", x), -SAMPLE)
+
+    asmFiles <- find_qc_files(asmDir, "\\.asm\\.txt$")
+    if (len(asmFiles) == 0) {
+        stop(glue("No .asm.txt files in {asmDir}; run scripts/picardqc/doPicardQC.sh first (-t asm)"),
+             call. = FALSE)
+    }
+    asm <- asmFiles |>
+        map_qc_files(read_asm, nCores) |>
+        map("metrics") |>
+        bind_rows() |>
+        rename_with(\(x) str_c("ASM_", x), -SAMPLE)
 
     # Keep only the parts of the Alfred file that are used, so the
     # per-target vectors of every sample are not held at once
@@ -117,6 +131,7 @@ project_sample_metrics <- function(outDir, sampleMap, hsmDir = file.path(outDir,
     sampleMap |>
         distinct(SAMPLE, TYPE) |>
         left_join(hsm, by = "SAMPLE") |>
+        left_join(asm, by = "SAMPLE") |>
         left_join(alfredMetrics, by = "SAMPLE") |>
         left_join(onTargetMetrics, by = "SAMPLE") |>
         left_join(sexMetrics, by = "SAMPLE") |>

@@ -1,0 +1,28 @@
+# Scanned metrics (scanMetrics.txt) that repeat another scanned metric,
+# left out of the BAD scan of the summary QC report (qcReport02.R).
+# One regular expression per line; # starts a comment. Key metrics are
+# always scanned.
+#
+# Made 2026-11-24 with post/metricGroups/metricGroups.R in
+# Proj_16083_H: Spearman rho on all 400 samples of the WES IDT v2 QC
+# background (NovaSeq X and 6000), in tumors and normals separately;
+# complete-linkage groups where every pair has |rho| >= 0.9 in both.
+# Kept from each group: ALFRED_DUPLICATEFRACTION, else Picard, else a
+# key metric, else a full-report metric. Series: one member kept
+# (HS penalty: 40X).
+#
+^HSM_PF_UQ_BASES_ALIGNED$           # repeats HSM_MEAN_TARGET_COVERAGE
+^HSM_ON_TARGET_BASES$               # repeats HSM_MEAN_TARGET_COVERAGE
+^HSM_PF_UNIQUE_READS$               # repeats HSM_MEAN_TARGET_COVERAGE
+^HSM_PF_UQ_READS_ALIGNED$           # repeats HSM_MEAN_TARGET_COVERAGE
+^HSM_MEDIAN_TARGET_COVERAGE$        # repeats HSM_MEAN_TARGET_COVERAGE
+^HSM_PCT_EXC_DUPE$                  # repeats ALFRED_DUPLICATEFRACTION
+^HSM_PCT_PF_UQ_READS$               # repeats ALFRED_DUPLICATEFRACTION
+^HSM_PCT_USABLE_BASES_ON_TARGET$    # repeats ALFRED_DUPLICATEFRACTION
+^HSM_PF_READS$                      # repeats HSM_TOTAL_READS
+^HSM_PF_BASES_ALIGNED$              # repeats HSM_TOTAL_READS
+^ASM_PCT_READS_ALIGNED_IN_PAIRS$    # repeats ASM_PCT_PF_READS_ALIGNED
+^ASM_PF_HQ_ERROR_RATE$              # repeats ASM_PF_MISMATCH_RATE
+^HSM_HET_SNP_SENSITIVITY$           # repeats HSM_ZERO_CVG_TARGETS_PCT
+# HS penalty series: 40X kept
+^HSM_HS_PENALTY_(10|20|30|50|100)X$

@@ -2,15 +2,24 @@
 # qc_metric_info.R
 #
 # Per-metric information for the QC report (qcReport02.R): units, the
-# display name, the bad side, and the background median and robust SD
-# of the bad-sample rule (see background_stats).
+# display name, the bad side, and the background percentiles of the
+# WARN and FAIL rule (see background_stats).
 #
-# Percentages (fractions and 0-100 values) are judged in log-odds space:
-# median and robust SD of logit(p) over the background, and the limits
-# mapped back to percent. Other metrics use the values as they are.
+# A project value is WARN beyond the background 95th percentile of its
+# type on the bad side and FAIL beyond the 99th: below the 5th / 1st
+# percentile for metrics bad when low, above the 95th / 99th for
+# metrics bad when high. Metrics bad on both sides use the central
+# intervals: outside 2.5-97.5% WARN, outside 0.5-99.5% FAIL.
+#
+# The robust z (median and robust SD, in log-odds space for
+# percentages) only ranks flagged cases; it does not flag them.
 #
 
-Z_FLAG <- 3
+WARN_PCT <- 0.95
+FAIL_PCT <- 0.99
+
+# 0.95 -> "95th", for report text
+pct_label <- function(p) str_c(100 * p, "th")
 PERCENT_KINDS <- c("frac", "pct100")
 LOGIT_EPS <- 1e-6
 
@@ -126,7 +135,7 @@ split_token <- function(token) {
 
 auto_metric_label <- function(metric) {
     name <- metric |>
-        str_remove("^(HSM|ALFRED|FASTP|CONPAIR)_")
+        str_remove("^(HSM|ASM|ALFRED|FASTP|CONPAIR)_")
     if (str_starts(metric, "QUALIMAP_")) {
         name <- name |>
             str_remove("^QUALIMAP_") |>
@@ -186,13 +195,18 @@ from_z_space <- function(x, zspace, scaleBy) {
 }
 
 #
-# Background center and spread per metric and type, in z space, and the
-# Z_FLAG limits in the metric's own units. Robust, to match the box
-# plots: center MU = median; spread SIGMA = MAD_TO_SD x the mean absolute
-# deviation from the median (1.2533 = sqrt(pi/2) makes it estimate the
-# SD for normal data).
+# Background per metric and type: the WARN and FAIL limits (percentiles,
+# see the top of this file), the median, and the robust center MU and
+# spread SIGMA in z space for ranking: MU = median, SIGMA = MAD_TO_SD x
+# the mean absolute deviation from the median (1.2533 = sqrt(pi/2) makes
+# it estimate the SD for normal data). VALUES keeps the sorted values for
+# the percentile of each project value.
 #
 MAD_TO_SD <- 1.2533
+
+# Lower-tail probability of the limit on each side: one-sided for low
+# or high, central interval for both
+tail_prob <- function(pct, bad) if_else(bad == "both", (1 - pct) / 2, 1 - pct)
 
 background_stats <- function(bgLong, info) {
     bgLong |>
@@ -202,45 +216,62 @@ background_stats <- function(bgLong, info) {
             MU = median(ZV),
             SIGMA = MAD_TO_SD * mean(abs(ZV - median(ZV))),
             MEDIAN = median(VALUE),
-            MIN = min(VALUE),
+            WARN_LOW = quantile(VALUE, tail_prob(WARN_PCT, BAD[1]), names = FALSE),
+            WARN_HIGH = quantile(VALUE, 1 - tail_prob(WARN_PCT, BAD[1]), names = FALSE),
+            FAIL_LOW = quantile(VALUE, tail_prob(FAIL_PCT, BAD[1]), names = FALSE),
+            FAIL_HIGH = quantile(VALUE, 1 - tail_prob(FAIL_PCT, BAD[1]), names = FALSE),
+            VALUES = list(sort(VALUE)),
             .by = c(METRIC, TYPE, ZSPACE, SCALE_BY, BAD)
-        ) |>
-        mutate(
-            LOW = from_z_space(MU - Z_FLAG * SIGMA, ZSPACE, SCALE_BY),
-            HIGH = from_z_space(MU + Z_FLAG * SIGMA, ZSPACE, SCALE_BY)
         )
 }
 
 #
-# The limits on the bad side, for the dotted lines. A limit below
-# zero for a metric that is never negative is dropped.
+# The limits on the bad side, for the short vertical lines: LEVEL WARN
+# or FAIL, LIMIT. None for a background with no spread.
 #
 limit_lines <- function(stats) {
     stats |>
         filter(is.finite(SIGMA), SIGMA > 0) |>
-        pivot_longer(c(LOW, HIGH), names_to = "SIDE", values_to = "LIMIT") |>
-        filter(
-            (SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both")),
-            !(MIN >= 0 & LIMIT < 0)
-        ) |>
-        select(METRIC, TYPE, SIDE, LIMIT)
+        pivot_longer(c(WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH), names_to = c("LEVEL", "SIDE"),
+                     names_sep = "_", values_to = "LIMIT") |>
+        filter((SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both"))) |>
+        select(METRIC, TYPE, LEVEL, SIDE, LIMIT)
 }
 
 #
-# z of each project value against the background of its type, and
-# IS_BAD: beyond Z_FLAG on the bad side
+# Each project value against the background of its type: LEVEL (FAIL,
+# WARN or NA) on the bad side, LIMIT (the limit crossed), PCTILE (the
+# fraction of the background at or below the value), and Z for ranking.
+# IS_BAD: LEVEL is FAIL or WARN. No flags when the background has no
+# spread.
 #
 score_project <- function(projLong, stats) {
     projLong |>
         left_join(
-            stats |> select(METRIC, TYPE, ZSPACE, SCALE_BY, BAD, MU, SIGMA, MEDIAN, LOW, HIGH),
+            stats |> select(METRIC, TYPE, ZSPACE, SCALE_BY, BAD, MU, SIGMA, MEDIAN,
+                            WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH, VALUES),
             by = c("METRIC", "TYPE")
         ) |>
         mutate(
-            Z = if_else(is.finite(SIGMA) & SIGMA > 0, (to_z_space(VALUE, ZSPACE, SCALE_BY) - MU) / SIGMA, NA_real_),
-            IS_BAD = coalesce(
-                (BAD %in% c("low", "both") & Z < -Z_FLAG) | (BAD %in% c("high", "both") & Z > Z_FLAG),
-                FALSE
-            )
-        )
+            SPREAD = is.finite(SIGMA) & SIGMA > 0,
+            Z = if_else(SPREAD, (to_z_space(VALUE, ZSPACE, SCALE_BY) - MU) / SIGMA, NA_real_),
+            LOW_SIDE = BAD %in% c("low", "both"),
+            HIGH_SIDE = BAD %in% c("high", "both"),
+            LEVEL = case_when(
+                !SPREAD | is.na(VALUE) ~ NA_character_,
+                LOW_SIDE & VALUE < FAIL_LOW ~ "FAIL",
+                HIGH_SIDE & VALUE > FAIL_HIGH ~ "FAIL",
+                LOW_SIDE & VALUE < WARN_LOW ~ "WARN",
+                HIGH_SIDE & VALUE > WARN_HIGH ~ "WARN"
+            ),
+            LIMIT = case_when(
+                LEVEL == "FAIL" & VALUE < FAIL_LOW ~ FAIL_LOW,
+                LEVEL == "FAIL" ~ FAIL_HIGH,
+                LEVEL == "WARN" & VALUE < WARN_LOW ~ WARN_LOW,
+                LEVEL == "WARN" ~ WARN_HIGH
+            ),
+            PCTILE = map2_dbl(VALUES, VALUE, \(b, v) if (is.null(b) || is.na(v)) NA_real_ else mean(b <= v)),
+            IS_BAD = !is.na(LEVEL)
+        ) |>
+        select(-VALUES, -SPREAD, -LOW_SIDE, -HIGH_SIDE)
 }
