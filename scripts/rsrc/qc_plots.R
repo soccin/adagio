@@ -17,13 +17,13 @@ suppressPackageStartupMessages({
 
 TN_COLORS <- c(Tumor = "#C0392B", Normal = "#4F81BD")
 TYPE_COLORS <- c(TN_COLORS, Pair = "grey60")
-FLAG_COLOR <- "#F39C12"
-LIMIT_COLOR <- "#E0C9A0"
-LIMIT_BASE_COLOR <- "grey75"
+# Rings and limit lines: dark yellow WARN, dark red FAIL
+LEVEL_COLORS <- c(WARN = "#C79A00", FAIL = "#9B1B1B")
+LIMIT_BASE_COLOR <- "grey80"
 LIMIT_WIDTH <- 0.75
 
 N_LABEL <- 4
-PANELS_PER_PAGE <- 5
+PANELS_PER_PAGE <- 4
 MIN_PCT_AXIS <- 0.10
 
 #
@@ -34,6 +34,25 @@ read_metric_list <- function(file) {
         str_remove("#.*$") |>
         str_trim() |>
         discard(\(x) x == "")
+}
+
+#
+# Metric list with an optional type after the name ("METRIC Tumor"):
+# one row per line, METRIC and TYPE (Tumor, Normal, or NA for every
+# type)
+#
+read_typed_metric_list <- function(file) {
+    parts <- read_metric_list(file) |> str_split("\\s+")
+    if (any(lengths(parts) > 2)) {
+        stop(glue("{file}: a line holds a metric name and at most one type"), call. = FALSE)
+    }
+    tbl <- tibble(METRIC = map_chr(parts, 1), TYPE = map_chr(parts, \(p) p[2]))
+    badTypes <- setdiff(na.omit(tbl$TYPE), c("Tumor", "Normal"))
+    if (len(badTypes) > 0) {
+        stop(glue("{file}: the type must be Tumor or Normal, not {str_c(badTypes, collapse = ', ')}"),
+             call. = FALSE)
+    }
+    tbl
 }
 
 qc_theme <- function(baseSize = 11, titleSize = 10) {
@@ -180,15 +199,17 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
 
 #
 # One panel. info: the metric's row of metric_info(). bg: TYPE, VALUE
-# (background). proj: SAMPLE, LABEL, TYPE, VALUE, Z, IS_BAD (project).
-# lims: TYPE, LIMIT (limits on the bad side). fillTypes: the types
-# in the page legend.
+# (background). proj: SAMPLE, LABEL, TYPE, VALUE, Z, LEVEL, IS_BAD
+# (project). lims: TYPE, LEVEL, LIMIT (WARN and FAIL limits on the bad
+# side). fillTypes: the types in the page legend.
 #
-# Bad samples (beyond the limit on the bad side) get the orange ring; the
-# N_LABEL of them with the largest |z| also get a label.
+# Flagged samples get a ring, dark yellow for WARN and dark red for
+# FAIL; up to N_LABEL of them (FAIL first, then largest |z|) also get a
+# label.
 #
 qc_panel <- function(info, bg, proj, lims, fillTypes) {
-    rows <- if (any(bg$TYPE == "Pair")) "Pair" else c("Normal", "Tumor")
+    # One row for pairs, or for a metric limited to one type
+    rows <- if (any(bg$TYPE == "Pair")) "Pair" else intersect(c("Normal", "Tumor"), bg$TYPE)
     yLimits <- if (len(rows) == 1) c(0, 2) else c(0.5, len(rows) + 0.5)
     lims <- lims |> filter(TYPE %in% rows)
     # Background outliers are not drawn, so the axis covers only the
@@ -213,20 +234,26 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
             Y = match(TYPE, rows) + runif(n(), -0.12, 0.12),
             TYPE = factor(TYPE, levels = fillTypes)
         )
-    flagged <- proj |> filter(IS_BAD)
-    labeled <- flagged |> slice_max(abs(Z), n = N_LABEL, with_ties = FALSE)
+    flagged <- proj |>
+        filter(IS_BAD) |>
+        mutate(RING = LEVEL_COLORS[LEVEL])
+    labeled <- flagged |>
+        arrange(LEVEL != "FAIL", desc(abs(Z))) |>
+        head(N_LABEL)
+    lims <- lims |> mutate(LINE = LEVEL_COLORS[LEVEL])
 
-    # limit lines: a solid grey line with the dotted tinted line on
-    # top. "11": dots as long as the gaps; R's "dotted" (13) leaves gaps
-    # three times the dot length
-    # A single-row panel (Pair) has the height of two rows; its lines
+    # limit lines: a solid grey line with the dotted level-colored line
+    # on top. "11": dots as long as the gaps; R's "dotted" (13) leaves
+    # gaps three times the dot length
+    # A single-row panel (Pair, or one type) has the height of two rows; its lines
     # span most of the panel rather than one row's band
     halfHeight <- if (len(rows) == 1) 0.85 else 0.4
     limitSegment <- aes(x = X, xend = X, y = Y - halfHeight, yend = Y + halfHeight)
 
     ggplot(mapping = aes(x = X, y = Y)) +
         geom_segment(data = lims, limitSegment, colour = LIMIT_BASE_COLOR, linewidth = LIMIT_WIDTH) +
-        geom_segment(data = lims, limitSegment, colour = LIMIT_COLOR, linetype = "11", linewidth = LIMIT_WIDTH) +
+        geom_segment(data = lims, aes(x = X, xend = X, y = Y - halfHeight, yend = Y + halfHeight, colour = LINE),
+                     linetype = "11", linewidth = LIMIT_WIDTH) +
         geom_boxplot(
             data = bg,
             aes(group = TYPE, fill = TYPE),
@@ -250,7 +277,7 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
             size = 2.2,
             show.legend = TRUE
         ) +
-        geom_point(data = flagged, shape = 21, fill = NA, colour = FLAG_COLOR, size = 5, stroke = 1.6) +
+        geom_point(data = flagged, aes(colour = RING), shape = 21, fill = NA, size = 5, stroke = 1.6) +
         geom_label_repel(
             data = labeled,
             aes(label = LABEL),
@@ -261,12 +288,13 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
             label.size = 0.3,
             box.padding = 0.6,
             min.segment.length = 0,
-            segment.colour = FLAG_COLOR,
+            segment.colour = "grey30",
             segment.size = 0.6,
             max.overlaps = Inf,
             seed = 1
         ) +
         scale_fill_manual(values = TYPE_COLORS, limits = fillTypes, drop = FALSE, name = "Project samples") +
+        scale_colour_identity() +
         scale_y_continuous(breaks = seq_along(rows), labels = rows, limits = yLimits, expand = expansion(0)) +
         ax$scale +
         # zoom, not scale limits: values outside still count in the box stats
@@ -323,23 +351,63 @@ qc_pages <- function(metrics, info, bgLong, projLong, limLong, title, subtitle, 
 }
 
 #
+# Concordance and sex page: the Conpair panels (metrics), then the sex
+# plot beside the text of the sex rules, then the first maxRows rows of
+# the sex table (one row per pair). The rest of the table continues on
+# table pages.
+#
+concordance_pages <- function(metrics, info, bgLong, projLong, limLong, sexPlotFn, sexTbl, sexText,
+                              title, subtitle, caption = NULL, maxRows = 8) {
+    fillTypes <- c("Tumor", "Normal", "Pair")
+    panels <- map(metrics, \(m) qc_panel(
+        info |> filter(METRIC == m),
+        bgLong |> filter(METRIC == m),
+        projLong |> filter(METRIC == m),
+        limLong |> filter(METRIC == m),
+        fillTypes
+    ))
+    rules <- wrap_elements(full = grid::textGrob(
+        sexText, x = 0.04, y = 0.95, just = c("left", "top"),
+        gp = grid::gpar(fontsize = 8, col = "grey20", lineheight = 1.15)
+    ))
+    sexRow <- wrap_plots(sexPlotFn(fillTypes), rules, nrow = 1, widths = c(1.15, 1))
+    firstRows <- head(sexTbl, maxRows)
+    rest <- tail(sexTbl, -maxRows)
+    tableNote <- if (nrow(rest) > 0) glue("Sex table: first {maxRows} of {nrow(sexTbl)} pairs, continued on the next page") else NULL
+    tableBlock <- wrap_elements(full = table_grob(firstRows, baseSize = 7))
+    heights <- c(rep(1, len(panels)), 1.25, PANELS_PER_PAGE - len(panels) - 1.25)
+    pageCaption <- str_c(c(caption, "Pair rows: one point per tumor/normal pair, labeled with the tumor ID.",
+                           tableNote), collapse = "\n")
+    first <- wrap_plots(c(panels, list(sexRow, tableBlock)), ncol = 1, heights = heights, guides = "collect") +
+        plot_annotation(title = title, subtitle = subtitle, caption = pageCaption, theme = page_theme(9)) &
+        theme(legend.position = "bottom")
+    c(list(first), table_pages(rest, glue("{title}: sex table, continued"), NULL))
+}
+
+#
 # Text pages: a table (tibble) split into pages of maxRows rows
 #
-table_pages <- function(tbl, title, subtitle, maxRows = 40) {
-    if (nrow(tbl) == 0) return(list())
-    chunks <- split(tbl, ceiling(seq_len(nrow(tbl)) / maxRows))
+# A table (tibble) as a grob placed at the top left of its area
+# rather than centered
+table_grob <- function(tbl, baseSize = 8) {
     tt <- gridExtra::ttheme_minimal(
-        base_size = 8,
+        base_size = baseSize,
         colhead = list(fg_params = list(fontface = "bold", hjust = 0, x = 0.02)),
         core = list(fg_params = list(hjust = 0, x = 0.02))
     )
+    tg <- gridExtra::tableGrob(tbl, rows = NULL, theme = tt)
+    tg$vp <- grid::viewport(
+        x = 0, y = 1, just = c("left", "top"),
+        width = sum(tg$widths), height = sum(tg$heights)
+    )
+    tg
+}
+
+table_pages <- function(tbl, title, subtitle, maxRows = 40) {
+    if (nrow(tbl) == 0) return(list())
+    chunks <- split(tbl, ceiling(seq_len(nrow(tbl)) / maxRows))
     imap(unname(chunks), function(chunk, i) {
-        tg <- gridExtra::tableGrob(chunk, rows = NULL, theme = tt)
-        # top-left of the page rather than centered
-        tg$vp <- grid::viewport(
-            x = 0, y = 1, just = c("left", "top"),
-            width = sum(tg$widths), height = sum(tg$heights)
-        )
+        tg <- table_grob(chunk)
         wrap_elements(full = tg) +
             plot_annotation(
                 title = glue("{title}, page {i} of {len(chunks)}"),
@@ -353,4 +421,38 @@ text_page <- function(title, text) {
     wrap_elements(full = grid::textGrob(text, x = 0.05, y = 0.95, just = c("left", "top"),
                                         gp = grid::gpar(fontsize = 11))) +
         plot_annotation(title = title, theme = page_theme(9))
+}
+
+#
+# One page with a whole table (tibble) in monospace text: rows split
+# into side by side columns (up to 4), font sized so every row fits an
+# 8.5 x 11 in page under a subtitle of a few lines
+#
+FIT_TEXT_W_PT <- 540
+FIT_TEXT_H_PT <- 540
+FIT_MAX_FONT <- 10
+
+fit_table_page <- function(title, subtitle, tbl) {
+    cells <- tbl |> mutate(across(everything(), as.character))
+    widths <- map_int(names(cells), \(n) max(nchar(c(n, cells[[n]]))))
+    fmt_row <- \(x) str_c(str_pad(x, widths, side = "right"), collapse = "  ")
+    header <- fmt_row(names(cells))
+    rows <- pmap_chr(cells, \(...) fmt_row(c(...)))
+
+    # Monospace: a character is 0.6 em wide and a line 1.2 em high
+    font_for <- \(k) min(
+        FIT_MAX_FONT,
+        FIT_TEXT_H_PT / (1.2 * (ceiling(len(rows) / k) + 2)),
+        FIT_TEXT_W_PT / (0.6 * k * (nchar(header) + 4))
+    )
+    fonts <- map_dbl(1:4, font_for)
+    nCol <- which.max(fonts)
+    chunks <- split(rows, ceiling(seq_along(rows) / ceiling(len(rows) / nCol)))
+    cols <- imap(unname(chunks), \(chunk, i) grid::textGrob(
+        str_c(c(header, strrep("-", nchar(header)), chunk), collapse = "\n"),
+        x = (i - 1) / nCol, y = 1, just = c("left", "top"),
+        gp = grid::gpar(fontfamily = "mono", fontsize = fonts[nCol], lineheight = 1.2)
+    ))
+    wrap_elements(full = grid::gTree(children = do.call(grid::gList, cols))) +
+        plot_annotation(title = title, subtitle = subtitle, theme = page_theme(10))
 }
