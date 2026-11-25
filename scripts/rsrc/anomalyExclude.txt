@@ -1,4 +1,4 @@
-# Metrics the 3 SD scan of the summary QC report (qcReport02.R) skips.
+# Metrics the BAD scan of the summary QC report (qcReport02.R) skips.
 # One regular expression per line, matched against the QC database
 # column name. Lines starting with # are ignored.
 #

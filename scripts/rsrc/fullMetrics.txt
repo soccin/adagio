@@ -1,6 +1,8 @@
 # QC metrics for the full QC report (qcReport02.R).
 # One QC database column name per line; the order here is the plot
-# order, five panels per page. Lines starting with # are ignored.
+# order, four panels per page. Lines starting with # are ignored.
+# The Conpair metrics are drawn on the concordance and sex page, not in
+# this order.
 #
 # Coverage
 HSM_MEAN_TARGET_COVERAGE
@@ -12,14 +14,13 @@ HSM_FOLD_ENRICHMENT
 HSM_FOLD_80_BASE_PENALTY
 HSM_PCT_EXC_DUPE
 ALFRED_DUPLICATEFRACTION
-TARGET_FRAC_NORM_COV_LT_0.2
 HSM_GC_DROPOUT
-# Reads and library
-FASTP_BEFORE_TOTAL_READS
+# Reads and library. ALFRED_MEDIANINSERTSIZE: Picard
+# CollectInsertSizeMetrics is not run, so Alfred is the only insert size
 HSM_TOTAL_READS
 FASTP_AFTER_Q30_RATE
 ALFRED_MEDIANINSERTSIZE
-ALFRED_MISMATCHRATE
+ASM_PF_MISMATCH_RATE
 ASM_PCT_CHIMERAS
 # Conpair
 CONPAIR_CONTAMINATION
