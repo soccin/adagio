@@ -133,7 +133,9 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             summarize(W = IQR(VALUE / scaleBy, na.rm = TRUE), .by = TYPE) |>
             pull(W) |>
             max()
-        squeezed <- iqrWidth < 0.03 * diff(frac_range(d, minWidth = 0))
+        # Over the data and the limits: a fixed limit far from the data
+        # (concordance 95%) widens the axis
+        squeezed <- iqrWidth < 0.03 * diff(frac_range(c(d, v), minWidth = 0))
         nearOne <- median(bg$VALUE / scaleBy, na.rm = TRUE) > 0.5
 
         if (squeezed && nearOne) {

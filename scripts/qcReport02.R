@@ -4,7 +4,7 @@
 # WES QC report against the QC background database (scripts/qcdb). Each
 # metric is a panel with the background as one box per type (tumors,
 # normals, or pairs) and this project's samples as points over the box
-# of their type. Writes two PDFs to post/reports:
+# of their type. Writes three PDFs and an Excel file to post/reports:
 #
 #   Proj_<no>_qcRpt02_full.pdf     the metrics in rsrc/fullMetrics.txt,
 #                                  the concordance and sex page, then
@@ -13,8 +13,18 @@
 #                                  the concordance and sex page
 #                                  (B) every other metric with a FAIL
 #                                  then a table of every FAIL and WARN
+#                                  and a glossary (rsrc/qc_glossary.R)
 #   Proj_<no>_qcRpt02_flagged.xlsx the same table, with metric IDs and
 #                                  unformatted numbers
+#   Proj_<no>_qcRpt02_samples.pdf  one landscape legal page per tumor/
+#                                  normal pair, modeled on Hartwig's QSee
+#                                  report (rsrc/qc_pair_*.R): a table of
+#                                  QC metrics with the background, target
+#                                  coverage and insert size, and the
+#                                  tumor's genes most likely to miss a
+#                                  variant. Then a table of every flag of
+#                                  each pair, and a legend and glossary.
+#                                  Its flags are this report's.
 #
 # The concordance and sex page holds the Conpair panels (concordance,
 # contamination), ChrY against ChrX (Alfred) for the background and the
@@ -34,7 +44,9 @@
 # listed; both-sided metrics use the central 95% and 99% intervals; see
 # rsrc/qc_metric_info.R). Flagged samples get a dark yellow (WARN) or
 # dark red (FAIL) ring and a label; short vertical lines in the same
-# colors mark the limits on the bad side.
+# colors mark the limits on the bad side. The Conpair metrics have fixed
+# limits instead (FIXED_LIMITS in rsrc/qc_metric_info.R): contamination
+# WARN from 2%, FAIL from 5%; tumor/normal concordance FAIL below 95%.
 #
 # The scan for (B) covers the metrics in rsrc/scanMetrics.txt (Picard,
 # ALFRED_DUPLICATEFRACTION, FASTP_AFTER_Q30_RATE and Conpair), minus the
@@ -70,6 +82,10 @@ Options:
                   assets/qcdb/qcdb_index.tsv)
   --version=V     QC database version (yymmdd) from the index
   --cores=N       parallel workers (default: SLURM_CPUS_PER_TASK or 1)
+  --pairs=no      skip the per-pair pages
+  --genes=DIR     gene resources for the per-pair pages (default:
+                  QC_GENES_DIR in rsrc/qc_pair_data.R; see
+                  scripts/qcgenes/README.md)
   -h, --help      show this help
 ")
 }
@@ -103,6 +119,10 @@ source(file.path(SDIR, "rsrc", "qc_metric_info.R"))
 source(file.path(SDIR, "rsrc", "qc_plots.R"))
 source(file.path(SDIR, "rsrc", "xlsx_report.R"))
 source(file.path(SDIR, "rsrc", "qc_sex.R"))
+source(file.path(SDIR, "rsrc", "qc_glossary.R"))
+source(file.path(SDIR, "rsrc", "qc_pair_data.R"))
+source(file.path(SDIR, "rsrc", "qc_pair_page.R"))
+source(file.path(SDIR, "rsrc", "qc_pair_glossary.R"))
 
 nCores <- as.integer(opt$cores %||% Sys.getenv("SLURM_CPUS_PER_TASK", "1"))
 
@@ -155,10 +175,13 @@ sampleMap <- bind_rows(
 )
 
 rDir <- "post/reports"
-write_pdf <- function(pages, file) {
+# A page that is a function is built with the device open (the glossary
+# measures its text). Cairo, not pdf(): pdf() maps "-" to a minus sign
+# in every encoding, so IDs copied from the PDF would not match.
+write_pdf <- function(pages, file, width = 8.5, height = 11) {
     fs::dir_create(dirname(file))
-    pdf(file, width = 8.5, height = 11)
-    walk(pages, print)
+    cairo_pdf(file, width = width, height = height, onefile = TRUE)
+    walk(pages, \(p) print(if (is.function(p)) p() else p))
     invisible(dev.off())
     message(glue("Wrote {file} ({len(pages)} pages)"))
 }
@@ -361,10 +384,14 @@ if (nrow(hits) > 0) {
 #
 meta <- qcdb$meta
 nProj <- n_distinct(sampleMap$SAMPLE)
-subtitle <- str_c(
+boxText <- str_c(
     glue("Boxes: QC background {meta$assay} version {meta$version}, {seqTech} samples only: {nBgTumor} tumors, ",
          "{nBgNormal} normals and {nrow(bgPairs)} pairs;"),
     glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech})."),
+    sep = "\n"
+)
+subtitle <- str_c(
+    boxText,
     glue("Rings: dark yellow WARN, beyond the {pct_label(WARN_PCT)} percentile of the background of the same type ",
          "on the bad side;"),
     glue("dark red FAIL, beyond the {pct_label(FAIL_PCT)} (labeled, up to {N_LABEL} per panel, FAIL first)."),
@@ -415,14 +442,24 @@ sexLabels <- sexTbl |>
     select(TUMOR_ID, NORMAL_ID) |>
     unlist() |>
     head(2 * N_LABEL)
+# The Conpair panels have fixed limits, not background percentiles
+concordSubtitle <- str_c(
+    boxText,
+    "Rings: dark yellow WARN, dark red FAIL (labeled), by fixed limits, not the background:",
+    glue("{fixed_limits_text()}."),
+    sep = "\n"
+)
+concordCaption <- str_c(
+    "Short vertical lines: the fixed WARN (dark yellow) and FAIL (dark red) limits.",
+    "Sex table: N normal, T tumor; ChrX and ChrY reads, observed/expected (Alfred).",
+    sep = "\n"
+)
 concord_section <- function(title) {
     concordance_pages(
         CONCORD_METRICS, info, bgLong, projLong, limLong,
         \(fillTypes) sex_plot(bgXY, projXY, sexLabels, fillTypes),
         sexDisplay, sex_rules_text(),
-        title, subtitle,
-        str_c(caption, "Sex table: N normal, T tumor; ChrX and ChrY reads, observed/expected (Alfred).",
-              sep = "\n")
+        title, concordSubtitle, concordCaption
     )
 }
 
@@ -455,14 +492,7 @@ scanPages <- qc_pages(
     panelHeight = 1.3
 )
 
-format_num <- function(x, digits = 4) {
-    map_chr(x, \(v) format(signif(v, digits), big.mark = ",", scientific = FALSE, trim = TRUE, drop0trailing = TRUE))
-}
-# Percentages as percent, everything else as a number
-format_value <- function(x, kind, scaleBy) {
-    if_else(kind %in% PERCENT_KINDS, str_c(format_num(100 * x / scaleBy, 3), "%"), format_num(x))
-}
-
+# format_value: rsrc/qc_metric_info.R
 hitTable <- hits |>
     left_join(info |> select(METRIC, KIND, METRIC_LABEL = LABEL), by = "METRIC") |>
     transmute(
@@ -527,7 +557,8 @@ hitPages <- if (nrow(hits) == 0) {
     list(text_page(
         tableTitle,
         glue("No sample is beyond the {pct_label(WARN_PCT)} percentile of the {seqTech} background of its type\n",
-             "on the bad side of any scanned metric.")
+             "on the bad side of any scanned metric, and none crosses the fixed Conpair limits\n",
+             "({fixed_limits_text()}).")
     ))
 } else {
     table_pages(
@@ -538,6 +569,7 @@ hitPages <- if (nrow(hits) == 0) {
                  "FAIL: beyond the {pct_label(FAIL_PCT)} percentile of the background"),
             glue("of the same type on the bad side; WARN: beyond the {pct_label(WARN_PCT)}. ",
                  "Metrics bad on both sides: the central {100 * WARN_PCT}% and {100 * FAIL_PCT}% intervals."),
+            glue("Fixed limits instead for Conpair: {fixed_limits_text()}."),
             glue("Background: the {seqTech} samples of QC background version {meta$version}. ",
                  "Median: background median. Limit: the limit crossed."),
             "Percentile: percent of the background of the same type at or below the value. *: a key metric.",
@@ -546,6 +578,79 @@ hitPages <- if (nrow(hits) == 0) {
     )
 }
 
+#
+# Glossary, last page of the summary (rsrc/qc_glossary.R)
+#
+glossaryCtx <- list(
+    assay = meta$assay, version = meta$version, seqTech = seqTech,
+    nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+    typeLimited = keySpec |>
+        filter(!is.na(TYPE), METRIC %in% keyMetrics) |>
+        left_join(info |> select(METRIC, LABEL), by = "METRIC") |>
+        glue_data("{LABEL} in {str_to_lower(TYPE)}s"),
+    nScanned = len(scanned),
+    xlsxName = basename(xlsxFile)
+)
+glossaryPage <- glossary_page(
+    summary_glossary_entries(glossaryCtx), summary_glossary_keys(),
+    glue("{projNo} QC summary: glossary"),
+    "The terms and marks used in this report, with its limits."
+)
+
 write_pdf(fullPages, file.path(rDir, glue("{projNo}_qcRpt02_full.pdf")))
 concordPages <- concord_section(glue("{projNo} QC summary: concordance and sex"))
-write_pdf(c(keyPages, concordPages, scanPages, hitPages), file.path(rDir, glue("{projNo}_qcRpt02_summary.pdf")))
+summaryFile <- file.path(rDir, glue("{projNo}_qcRpt02_summary.pdf"))
+write_pdf(c(keyPages, concordPages, scanPages, hitPages, list(glossaryPage)), summaryFile)
+
+#
+# Per-pair pages (rsrc/qc_pair_*.R): one landscape legal page per pair,
+# with this report's flags, then a table of every flag of each pair, then
+# a legend and glossary page with all the text the pair pages share
+#
+if (!identical(opt$pairs, "no")) {
+    message("Per-pair pages")
+    genesRes <- read_gene_resources(opt$genes %||% QC_GENES_DIR, assay)
+    pairReport <- pair_report_pages(list(
+        pairing = pairing,
+        projLong = projLong,
+        bgLong = bgLong,
+        bgSamples = bgSamples,
+        hits = hits,
+        limLong = limLong,
+        info = info,
+        scanned = scanned,
+        keyDrop = keyDrop,
+        pairExtra = project_pair_extra(outDir, pairing, nCores),
+        pairDist = pair_distributions(outDir, unique(sampleMap$SAMPLE), genesRes$targets, nCores = nCores),
+        bgCoverage = qcdb$dist$hsm_coverage |> filter(SAMPLE %in% bgSamples$SAMPLE),
+        bgInsertSize = qcdb$dist$alfred_insert_size |> filter(SAMPLE %in% bgSamples$SAMPLE),
+        genes = genesRes,
+        sexTbl = sexTbl,
+        sampleMeta = read_sample_meta("meta")
+    ))
+    mvlhGenes <- genesRes$genes |>
+        filter(!is.na(CDS_BASES), CDS_BASES_IN_TARGETS >= MVLH_MIN_IN_TARGETS * CDS_BASES)
+    glossaryCtx <- list(
+        assay = meta$assay, version = meta$version, seqTech = seqTech,
+        nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+        nOncokb = sum(mvlhGenes$ONCOKB),
+        xlsxName = basename(xlsxFile), summaryName = basename(summaryFile)
+    )
+    pairTableTitle <- glue("{projNo} pair QC: flagged metrics")
+    pairTablePages <- if (nrow(pairReport$flagTable) == 0) {
+        list(text_page(pairTableTitle, "No pair has a FAIL or WARN."))
+    } else {
+        table_pages(pairReport$flagTable, pairTableTitle,
+                    "Every FAIL and WARN of each pair, by page: FAIL first, then the farthest from the background median.",
+                    maxRows = PAIR_TABLE_ROWS)
+    }
+    pairGlossary <- glossary_page(
+        pair_glossary_entries(glossaryCtx),
+        pair_glossary_keys(),
+        glue("{projNo} pair QC: legend and glossary"),
+        pair_glossary_subtitle(glossaryCtx),
+        dims = GLOSSARY_LANDSCAPE
+    )
+    write_pdf(c(pairReport$pages, pairTablePages, list(pairGlossary)),
+              file.path(rDir, glue("{projNo}_qcRpt02_samples.pdf")), width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT)
+}

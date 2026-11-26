@@ -11,6 +11,8 @@
 # metrics bad when high. Metrics bad on both sides use the central
 # intervals: outside 2.5-97.5% WARN, outside 0.5-99.5% FAIL.
 #
+# The Conpair metrics have fixed limits instead (FIXED_LIMITS below).
+#
 # The robust z (median and robust SD, in log-odds space for
 # percentages) only ranks flagged cases; it does not flag them.
 #
@@ -20,8 +22,41 @@ FAIL_PCT <- 0.99
 
 # 0.95 -> "95th", for report text
 pct_label <- function(p) str_c(100 * p, "th")
+
+#
+# Metrics judged against fixed limits instead of background
+# percentiles, in the metric's own units (contamination is a fraction,
+# concordance 0-100); NA: no limit. A value at a high limit is flagged
+# (contamination of exactly 2% is WARN); a value at a low limit is not.
+# Contamination: Tempo's cutoffs. Concordance: a tumor and its normal
+# come from one person, so below 95% is a FAIL; there is no WARN.
+#
+CONTAM_WARN <- 0.02
+CONTAM_FAIL <- 0.05
+CONCORD_FAIL <- 95
+FIXED_LIMITS <- tribble(
+    ~METRIC,                 ~WARN_LOW, ~FAIL_LOW,    ~WARN_HIGH,  ~FAIL_HIGH,
+    "CONPAIR_CONTAMINATION", NA_real_,  NA_real_,     CONTAM_WARN, CONTAM_FAIL,
+    "CONPAIR_CONCORDANCE",   NA_real_,  CONCORD_FAIL, NA_real_,    NA_real_
+)
+
+# For report text
+fixed_limits_text <- function() {
+    glue("contamination WARN from {100 * CONTAM_WARN}%, FAIL from {100 * CONTAM_FAIL}%; ",
+         "tumor/normal concordance FAIL below {CONCORD_FAIL}%")
+}
 PERCENT_KINDS <- c("frac", "pct100")
 LOGIT_EPS <- 1e-6
+
+# Report text for values: percentages as percent (3 significant
+# digits), everything else as a number (4)
+format_num <- function(x, digits = 4) {
+    map_chr(x, \(v) format(signif(v, digits), big.mark = ",", scientific = FALSE, trim = TRUE, drop0trailing = TRUE))
+}
+
+format_value <- function(x, kind, scaleBy) {
+    if_else(kind %in% PERCENT_KINDS, str_c(format_num(100 * x / scaleBy, 3), "%"), format_num(x))
+}
 
 logit <- function(p) {
     p <- pmin(pmax(p, LOGIT_EPS), 1 - LOGIT_EPS)
@@ -200,7 +235,8 @@ from_z_space <- function(x, zspace, scaleBy) {
 # spread SIGMA in z space for ranking: MU = median, SIGMA = MAD_TO_SD x
 # the mean absolute deviation from the median (1.2533 = sqrt(pi/2) makes
 # it estimate the SD for normal data). VALUES keeps the sorted values for
-# the percentile of each project value.
+# the percentile of each project value. FIXED: the limits come from
+# FIXED_LIMITS.
 #
 MAD_TO_SD <- 1.2533
 
@@ -222,19 +258,32 @@ background_stats <- function(bgLong, info) {
             FAIL_HIGH = quantile(VALUE, 1 - tail_prob(FAIL_PCT, BAD[1]), names = FALSE),
             VALUES = list(sort(VALUE)),
             .by = c(METRIC, TYPE, ZSPACE, SCALE_BY, BAD)
-        )
+        ) |>
+        left_join(FIXED_LIMITS |> rename_with(\(n) str_c(n, "_FIXED"), -METRIC), by = "METRIC") |>
+        mutate(
+            FIXED = METRIC %in% FIXED_LIMITS$METRIC,
+            WARN_LOW = if_else(FIXED, WARN_LOW_FIXED, WARN_LOW),
+            WARN_HIGH = if_else(FIXED, WARN_HIGH_FIXED, WARN_HIGH),
+            FAIL_LOW = if_else(FIXED, FAIL_LOW_FIXED, FAIL_LOW),
+            FAIL_HIGH = if_else(FIXED, FAIL_HIGH_FIXED, FAIL_HIGH)
+        ) |>
+        select(-ends_with("_FIXED"))
 }
 
 #
 # The limits on the bad side, for the short vertical lines: LEVEL WARN
-# or FAIL, LIMIT. None for a background with no spread.
+# or FAIL, LIMIT. None for a background with no spread, unless the
+# limits are fixed.
 #
 limit_lines <- function(stats) {
     stats |>
-        filter(is.finite(SIGMA), SIGMA > 0) |>
+        filter(FIXED | (is.finite(SIGMA) & SIGMA > 0)) |>
         pivot_longer(c(WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH), names_to = c("LEVEL", "SIDE"),
                      names_sep = "_", values_to = "LIMIT") |>
-        filter((SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both"))) |>
+        filter(
+            !is.na(LIMIT),
+            (SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both"))
+        ) |>
         select(METRIC, TYPE, LEVEL, SIDE, LIMIT)
 }
 
@@ -243,26 +292,30 @@ limit_lines <- function(stats) {
 # WARN or NA) on the bad side, LIMIT (the limit crossed), PCTILE (the
 # fraction of the background at or below the value), and Z for ranking.
 # IS_BAD: LEVEL is FAIL or WARN. No flags when the background has no
-# spread.
+# spread, unless the limits are fixed. A value at a fixed high limit is
+# flagged.
 #
 score_project <- function(projLong, stats) {
     projLong |>
         left_join(
             stats |> select(METRIC, TYPE, ZSPACE, SCALE_BY, BAD, MU, SIGMA, MEDIAN,
-                            WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH, VALUES),
+                            WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH, FIXED, VALUES),
             by = c("METRIC", "TYPE")
         ) |>
         mutate(
+            FIXED = coalesce(FIXED, FALSE),
             SPREAD = is.finite(SIGMA) & SIGMA > 0,
             Z = if_else(SPREAD, (to_z_space(VALUE, ZSPACE, SCALE_BY) - MU) / SIGMA, NA_real_),
             LOW_SIDE = BAD %in% c("low", "both"),
             HIGH_SIDE = BAD %in% c("high", "both"),
+            OVER_FAIL = if_else(FIXED, VALUE >= FAIL_HIGH, VALUE > FAIL_HIGH),
+            OVER_WARN = if_else(FIXED, VALUE >= WARN_HIGH, VALUE > WARN_HIGH),
             LEVEL = case_when(
-                !SPREAD | is.na(VALUE) ~ NA_character_,
+                !(SPREAD | FIXED) | is.na(VALUE) ~ NA_character_,
                 LOW_SIDE & VALUE < FAIL_LOW ~ "FAIL",
-                HIGH_SIDE & VALUE > FAIL_HIGH ~ "FAIL",
+                HIGH_SIDE & OVER_FAIL ~ "FAIL",
                 LOW_SIDE & VALUE < WARN_LOW ~ "WARN",
-                HIGH_SIDE & VALUE > WARN_HIGH ~ "WARN"
+                HIGH_SIDE & OVER_WARN ~ "WARN"
             ),
             LIMIT = case_when(
                 LEVEL == "FAIL" & VALUE < FAIL_LOW ~ FAIL_LOW,
@@ -273,5 +326,5 @@ score_project <- function(projLong, stats) {
             PCTILE = map2_dbl(VALUES, VALUE, \(b, v) if (is.null(b) || is.na(v)) NA_real_ else mean(b <= v)),
             IS_BAD = !is.na(LEVEL)
         ) |>
-        select(-VALUES, -SPREAD, -LOW_SIDE, -HIGH_SIDE)
+        select(-VALUES, -SPREAD, -LOW_SIDE, -HIGH_SIDE, -OVER_FAIL, -OVER_WARN)
 }
