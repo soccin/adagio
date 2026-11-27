@@ -68,7 +68,7 @@ runs the first six; `doGermlinePost.sh` runs the germline reports.
 | `nfTraceReport.R` | Nextflow trace analysis (runs automatically post-pipeline) |
 | `checkPairOutputs.R` | Checks that every pair in the pairing file has the output of each workflow and writes `runlog/pair_check.txt`; the run scripts call it last and exit 3 if a pair is missing output |
 | `picardqc/doPicardQC.sh` | WES only; `runTempoWESCohort.sh` runs it last when nextflow exits 0 (or run by hand with `-p PROJECT_ID`): a SLURM array, one task per sample and tool, of Picard CollectHsMetrics with `COVERAGE_CAP 1000` (Tempo uses 200, which caps the median coverage, fold-80 and HS penalties) and CollectAlignmentSummaryMetrics (Tempo does not run it); writes `out/<PROJECT_ID>/post/qc/<SAMPLE>.hs_metrics.txt` and `<SAMPLE>.asm.txt`. See `scripts/picardqc/README.md` |
-| `qcdb/buildQCDb.R` | Builds the QC background database (`.rds`) from a finished run; reads HsMetrics and AlignmentSummaryMetrics from `post/qc`. The `.rds` files are not in git; `assets/qcdb/qcdb_index.tsv` lists them. See `scripts/qcdb/README.md` |
+| `qcdb/buildQCDb.R` | Builds the QC background database (`.rds`) from one or more finished runs (`--out=DIR1,DIR2`); reads HsMetrics and AlignmentSummaryMetrics from `post/qc`, and the per-target GC table in `assets/qcdb/` (made by `qcdb/makeTargetGC.R`). The `.rds` files are not in git; `assets/qcdb/qcdb_index.tsv` lists them. See `scripts/qcdb/README.md` |
 
 `<SAMPLE>.hs_metrics.txt` exists twice in a run that has the rerun:
 Tempo's under `out/*/bams/` (cap 200) and the rerun under
