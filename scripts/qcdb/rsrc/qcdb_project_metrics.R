@@ -4,10 +4,13 @@
 # Per-sample and per-pair QC metrics of one project, computed the same
 # way buildQCDb.R computes them for the background, so the project can
 # be compared with a QC database. Column names match the database
-# (HSM_, ASM_, ALFRED_, TARGET_, QUALIMAP_, FASTP_, CONPAIR_).
+# (HSM_, ASM_, ALFRED_, TARGET_, QUALIMAP_, FASTP_, CONPAIR_, TEMPO_,
+# FACETS_, MANTA_), and project_sample_dists() and project_gene_mvlh()
+# return tables shaped like the database's dist tables.
 #
-# Needs qcdb_readers.R. If buildQCDb.R changes how a metric is computed,
-# change it here too.
+# Needs qcdb_readers.R; project_gene_mvlh() also needs
+# scripts/rsrc/qc_pair_data.R. If buildQCDb.R changes how a metric is
+# computed, change it here too.
 #
 
 #
@@ -142,14 +145,91 @@ project_sample_metrics <- function(outDir, sampleMap, hsmDir = file.path(outDir,
 }
 
 #
-# One row per pair (PAIR = TUMOR__NORMAL): Conpair concordance
+# One row per pair (PAIR = TUMOR__NORMAL), with the columns buildQCDb.R
+# puts in pair_metrics: Conpair concordance, Tempo sample_data (TEMPO_
+# purity, ploidy, WGD, mutations, TMB), the FACETS QC row (FACETS_), the
+# number of HOMDEL genes (FACETS_N_HOMDEL_GENES) and the Manta SV counts
+# (MANTA_). Not read: the MAF summaries and the Tempo pair status. A
+# source with no files adds no columns, except CONPAIR_CONCORDANCE, which
+# is always there.
 #
 project_pair_metrics <- function(outDir, pairing, nCores = 1) {
-    concordance <- find_qc_files(file.path(outDir, "somatic"), "\\.concordance\\.txt$") |>
-        map_qc_files(read_concordance, nCores) |>
-        bind_rows()
-    if (nrow(concordance) == 0) concordance <- tibble(PAIR = character(), CONPAIR_CONCORDANCE = numeric())
+    somDir <- file.path(outDir, "somatic")
+    read_pairs <- function(re, fn) {
+        res <- find_qc_files(somDir, re) |>
+            map_qc_files(fn, nCores) |>
+            bind_rows()
+        if (nrow(res) == 0) tibble(PAIR = character()) else res
+    }
+    concordance <- read_pairs("\\.concordance\\.txt$", read_concordance)
+    if (!"CONPAIR_CONCORDANCE" %in% names(concordance)) {
+        concordance <- tibble(PAIR = character(), CONPAIR_CONCORDANCE = numeric())
+    }
+    sampleData <- read_pairs("\\.sample_data\\.txt$", read_sample_data)
+    facets <- find_qc_files(somDir, "/facets/[^/]+/[^/]+\\.facets_qc\\.txt$") |>
+        map_qc_files(read_facets_qc, nCores) |>
+        bind_rows() |>
+        convert_facets_qc() |>
+        rename_with(\(x) str_c("FACETS_", x), -PAIR)
+    facetsGeneLevel <- read_pairs(FACETS_GENE_LEVEL_RE, read_facets_gene_level)
+    manta <- read_pairs("\\.manta\\.vcf\\.gz$", read_manta_count)
     pairing |>
         select(PAIR, TUMOR_ID, NORMAL_ID) |>
-        left_join(concordance, by = "PAIR")
+        left_join(concordance, by = "PAIR") |>
+        left_join(sampleData, by = "PAIR") |>
+        left_join(facets, by = "PAIR") |>
+        left_join(facetsGeneLevel, by = "PAIR") |>
+        left_join(manta, by = "PAIR")
+}
+
+#
+# Per-sample distributions shaped like the database's dist tables, for
+# the given samples:
+#   fastp_dup_hist  fastp duplication histogram of each lane
+#                   (read_fastp_dup_hist)
+#   target_gc_bias  GC-bias curve (target_gc_curve); gcTable is
+#                   read_target_gc() of the database's meta$target_gc_file
+#
+project_sample_dists <- function(outDir, samples, gcTable, nCores = 1) {
+    bamDir <- file.path(outDir, "bams")
+    fastpFiles <- find_qc_files(bamDir, "\\.fastp\\.json$")
+    fastpFiles <- fastpFiles[sample_from_path(fastpFiles, "@.*$") %in% samples]
+    alfredFiles <- find_qc_files(bamDir, "/alfred/[^/]+\\.alfred\\.tsv\\.gz$")
+    alfredFiles <- alfredFiles[sample_from_path(alfredFiles, "\\.alfred\\.tsv\\.gz$") %in% samples]
+    list(
+        fastp_dup_hist = fastpFiles |>
+            map_qc_files(read_fastp_dup_hist, nCores) |>
+            bind_rows(),
+        target_gc_bias = alfredFiles |>
+            map_qc_files(\(f) {
+                a <- read_alfred(f)
+                target_gc_curve(a$targetCov$cov, a$targetCov$id, gcTable) |>
+                    mutate(SAMPLE = a$metrics$SAMPLE[1], .before = 1)
+            }, nCores) |>
+            bind_rows()
+    )
+}
+
+#
+# Missed-variant likelihood of each tumor over the OncoKB genes, as
+# buildQCDb.R computes dist$gene_mvlh (tumor_gene_mvlh). tumors: one row
+# per tumor with SAMPLE, HSM_MEAN_TARGET_COVERAGE, PURITY (FACETS_purity
+# of its pair) and MALE (mvlh_male() of the pair's sex call and reported
+# sex). genes: read_gene_resources(). Returns SAMPLE plus gene_mvlh()'s
+# columns (GENE, MVLH, MEAN_DEPTH, CHROM, FRAC_IN_TARGETS); a tumor with
+# no purity has no rows.
+#
+project_gene_mvlh <- function(outDir, tumors, genes, nCores = 1) {
+    alfredFiles <- find_qc_files(file.path(outDir, "bams"), "/alfred/[^/]+\\.alfred\\.tsv\\.gz$")
+    alfredFiles <- alfredFiles[sample_from_path(alfredFiles, "\\.alfred\\.tsv\\.gz$") %in% tumors$SAMPLE]
+    alfredFiles |>
+        map_qc_files(\(f) {
+            a <- read_alfred(f)
+            s <- a$metrics$SAMPLE[1]
+            r <- tumors |> filter(SAMPLE == s)
+            m <- tumor_gene_mvlh(a$targetCov$cov, a$targetCov$id, r$HSM_MEAN_TARGET_COVERAGE[1], r$PURITY[1],
+                                 r$MALE[1], genes)
+            if (is.null(m)) NULL else m |> mutate(SAMPLE = s, .before = 1)
+        }, nCores) |>
+        bind_rows()
 }

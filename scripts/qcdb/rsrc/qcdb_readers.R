@@ -1,10 +1,15 @@
 #
 # Readers for the Tempo QC outputs used to build the QC background
-# database (see ../buildQCDb.R and ../README.md).
+# database (see ../buildQCDb.R and ../README.md), and the per-sample
+# computations that buildQCDb.R (background) and qcdb_project_metrics.R
+# (project) must do the same way.
 #
 # Every reader takes one file and returns a tibble. Per-sample readers
 # return a SAMPLE column; per-pair readers return a PAIR column
 # (TUMOR__NORMAL, as Tempo names the somatic folders).
+#
+# tumor_gene_mvlh() calls gene_mvlh() from scripts/rsrc/qc_pair_data.R;
+# source that file to use it.
 #
 
 read_tsv_quiet <- function(file, ...) {
@@ -148,6 +153,99 @@ read_alfred <- function(file, maxInsert = 1000, maxCov = 500) {
 }
 
 #
+# Per-target GC table (TARGET, CHROM, START, END, LENGTH, GC), built once
+# per target set by ../makeTargetGC.R on the intervals of Alfred's TC
+# section
+#
+read_target_gc <- function(file) {
+    read_tsv_quiet(file, col_types = cols(TARGET = "c", CHROM = "c", START = "i", END = "i", LENGTH = "i",
+                                          GC = "d"))
+}
+
+#
+# GC-bias curve of one sample (the exome version of QSee's COBALT GC
+# plot). Each target's coverage is divided by the sample's median target
+# coverage (over every TC row, as normMat in buildQCDb.R); then, over the
+# autosomal targets, the median of that per GC bin. Targets listed twice
+# in TC count once; targets with GC NA (all N) are left out. Bins with
+# fewer than minTargets targets are dropped. GC_BIN is the bin midpoint.
+#
+# cov, targetIds: Alfred TC AvgCov and Chr:Start-End IDs (read_alfred()
+# targetCov), in the same order. gcTable: read_target_gc().
+#
+target_gc_curve <- function(cov, targetIds, gcTable, binWidth = 0.01, minTargets = 100) {
+    autosomes <- c(as.character(1:22), str_c("chr", 1:22))
+    gc <- gcTable |>
+        filter(CHROM %in% autosomes, !is.na(GC)) |>
+        select(TARGET, GC)
+    tibble(TARGET = targetIds, NORM_COV = cov / median(cov, na.rm = TRUE)) |>
+        distinct(TARGET, .keep_all = TRUE) |>
+        filter(!is.na(NORM_COV)) |>
+        inner_join(gc, by = "TARGET") |>
+        # the small offset keeps values on a bin edge (0.29 / 0.01 is
+        # 28.999...) in the bin above, as exact arithmetic would
+        mutate(GC_BIN = round((floor(GC / binWidth + 1e-9) + 0.5) * binWidth, 6)) |>
+        summarize(
+            N_TARGETS = n(),
+            MEDIAN_NORM_COV = median(NORM_COV),
+            Q25_NORM_COV = quantile(NORM_COV, 0.25, names = FALSE),
+            Q75_NORM_COV = quantile(NORM_COV, 0.75, names = FALSE),
+            .by = GC_BIN
+        ) |>
+        filter(N_TARGETS >= minTargets) |>
+        arrange(GC_BIN)
+}
+
+#
+# Alfred TC coverage as a table: TARGET, COV, LENGTH (End - Start), with
+# targets listed twice kept once; and its length-weighted mean
+#
+alfred_target_table <- function(cov, targetIds) {
+    tibble(TARGET = targetIds, COV = cov) |>
+        distinct(TARGET, .keep_all = TRUE) |>
+        mutate(LENGTH = as.numeric(str_extract(TARGET, "\\d+$")) - as.numeric(str_extract(TARGET, "(?<=:)\\d+")))
+}
+
+alfred_target_mean <- function(tc) {
+    sum(tc$COV * tc$LENGTH) / sum(tc$LENGTH)
+}
+
+#
+# Missed-variant likelihood of one tumor over the OncoKB genes, with the
+# arguments of the per-pair QC pages (gene_mvlh() in
+# scripts/rsrc/qc_pair_data.R, which must be sourced):
+#   - geneCov: the tumor's Alfred TC coverage on the genes' targets,
+#     targets listed twice kept once
+#   - scale: Picard mean target coverage (hsmMeanCov) over the
+#     length-weighted mean of the Alfred target coverage, so depths are
+#     on Picard's scale (Alfred counts duplicates and low-quality reads)
+#   - coding bases outside the targets left out (uncaptured = "drop")
+# Returns gene_mvlh()'s table (GENE, MVLH, MEAN_DEPTH, CHROM,
+# FRAC_IN_TARGETS), or NULL when purity is NA or the scale is not finite.
+#
+# cov, targetIds: as for target_gc_curve(). male: mvlh_male().
+# genes: read_gene_resources() (scripts/rsrc/qc_pair_data.R).
+#
+tumor_gene_mvlh <- function(cov, targetIds, hsmMeanCov, purity, male, genes) {
+    tc <- alfred_target_table(cov, targetIds)
+    scale <- hsmMeanCov / alfred_target_mean(tc)
+    if (len(scale) != 1 || !is.finite(scale)) return(NULL)
+    geneCov <- tc |>
+        filter(TARGET %in% genes$targets$TARGET) |>
+        select(TARGET, COV)
+    gene_mvlh(geneCov, genes$targets, genes$genes |> filter(ONCOKB), purity, male, scale, uncaptured = "drop")
+}
+
+#
+# One X (and Y) allele for the MVLH: the normal's sex call
+# (call_normal_sex() in scripts/rsrc/qc_sex.R) is Male, or it is not
+# Female and the reported sex is Male. Vectorized; NA counts as not male.
+#
+mvlh_male <- function(call, reported) {
+    coalesce(call == "Male" | (call != "Female" & coalesce(reported, "") == "Male"), FALSE)
+}
+
+#
 # Qualimap bamqc: genome_results.txt from the raw data tarball. Lines of
 # the form "key = value" are taken with their section name as prefix;
 # "There is a X% of reference with a coverageData >= NX" lines become
@@ -251,6 +349,34 @@ summarize_fastp <- function(lanes) {
 }
 
 #
+# fastp duplication histogram of one lane. In fastp 0.19.7 (Tempo's;
+# src/duplicate.cpp) each read pair goes into one of 4^12 buckets by the
+# first 12 bases of R1; a bucket keeps one representative (the pair with
+# the smallest first 32 bases of R2) and counts how often that exact
+# sequence was seen. Element j of duplication$histogram is the number of
+# buckets whose representative was seen j times; the last, 31, is 31 or
+# more. mean_gc is the mean GC of those reads. So N_SETS is a sample of
+# distinct fragments, about one per bucket, per lane and before
+# alignment. MEAN_GC is NA where N_SETS is 0 (fastp writes 0).
+#
+read_fastp_dup_hist <- function(file) {
+    d <- jsonlite::read_json(file)
+    parts <- basename(file) |>
+        str_remove("\\.fastp\\.json$") |>
+        str_split_1("@")
+    nSets <- as.double(unlist(d$duplication$histogram))
+    meanGc <- as.double(unlist(d$duplication$mean_gc))
+    if (len(nSets) == 0 || len(nSets) != len(meanGc)) stop("no duplication histogram")
+    tibble(
+        SAMPLE = parts[1],
+        LANE_TAG = str_c(parts[-1], collapse = "@"),
+        DUP_LEVEL = seq_along(nSets),
+        N_SETS = nSets,
+        MEAN_GC = if_else(nSets > 0, meanGc, NA_real_)
+    )
+}
+
+#
 # Conpair
 #
 read_concordance <- function(file) {
@@ -288,6 +414,26 @@ convert_facets_qc <- function(df) {
         type_convert(col_types = cols(.default = col_guess())) |>
         suppressMessages() |>
         mutate(across(where(is.logical), as.numeric))
+}
+
+#
+# FACETS gene-level calls (facets/<pair>/<run>/<pair>.gene_level.txt):
+# the number of genes with cn_state HOMDEL and filter PASS or RESCUE
+# (QSee's "Deleted genes"). Calls facets-suite suppresses
+# (suppress_large_homdel, suppress_segment_too_large) are left out: in
+# the WES background they are 95% of HOMDEL gene rows, up to 6,536
+# genes in one pair. The QC row's n_homdels counts segments.
+#
+FACETS_GENE_LEVEL_RE <- "/facets/[^/]+/[^/]+/[^/]+\\.gene_level\\.txt$"
+FACETS_HOMDEL_FILTERS <- c("PASS", "RESCUE")
+
+read_facets_gene_level <- function(file) {
+    d <- read_tsv_quiet(file, col_types = cols(.default = "c"), col_select = c(gene, cn_state, filter))
+    tibble(
+        PAIR = sample_from_path(file, "\\.gene_level\\.txt$"),
+        FACETS_N_HOMDEL_GENES = as.numeric(n_distinct(d$gene[d$cn_state %in% "HOMDEL" &
+                                                                 d$filter %in% FACETS_HOMDEL_FILTERS]))
+    )
 }
 
 read_sample_data <- function(file) {
