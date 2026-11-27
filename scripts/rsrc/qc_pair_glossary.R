@@ -32,13 +32,16 @@ pair_glossary_keys <- function() {
 # The page subtitle: the QC background every box and band is drawn from
 pair_glossary_subtitle <- function(ctx) {
     glue("QC background (boxes and bands): samples of earlier {ctx$assay} projects, QC database version ",
-         "{ctx$version}, {ctx$seqTech} only: {ctx$nTumor} tumors, {ctx$nNormal} normals, {ctx$nPair} pairs.")
+         "{ctx$version}, {ctx$seqTech} only: {ctx$nTumor} tumors, {ctx$nNormal} normals, {ctx$nPair} pairs.",
+         "{self_text(ctx$nSelf)}")
 }
 
 #
 # Entries: section, term, text, key. The marks come first, as the
-# legend. ctx: assay, version, seqTech, nTumor, nNormal, nPair (the
-# background), nOncokb, xlsxName, summaryName.
+# legend. ctx: assay, version, seqTech, nTumor, nNormal, nPair, nSelf
+# (the background, and the project's samples left out of it), nMvlh
+# (background tumors with a missed-variant likelihood), nOncokb,
+# xlsxName, summaryName.
 #
 pair_glossary_entries <- function(ctx) {
     tribble(
@@ -55,8 +58,12 @@ pair_glossary_entries <- function(ctx) {
         "A flagged value in the table: yellow WARN, red FAIL. A FACETS QC fail is shaded red too.", "cells",
         "Marks", "Dotted line", "A limit of a scanned metric on its bad side: dark yellow WARN, dark red FAIL.", "limits",
         "Marks", "Band",
-        "The QC background's 5th to 95th percentile in each bin, tumors above the line, normals below.", "bands",
-        "Marks", "Line", "This pair's distribution: tumor above, normal below.", "lines",
+        str_c("The QC background's 5th to 95th percentile in each bin: tumors above the line and normals below ",
+              "in the coverage and insert size plots, both on one axis in the GC bias and duplicate plots."),
+        "bands",
+        "Marks", "Line",
+        "This pair: red tumor, blue normal; above and below the line in the coverage and insert size plots.",
+        "lines",
         "Marks", "Vertical line", "The sample's median: Picard's median target coverage, Alfred's median insert size.",
         "median",
         "Marks", "*",
@@ -132,8 +139,12 @@ pair_glossary_entries <- function(ctx) {
               "of each allele (or four copies, two of each, when the genome is doubled). Chromosome X and the ",
               "gaps between segments count."),
         NA,
-        "Table", "Segments, Homdel segments",
-        "FACETS: the number of copy number segments, and of homozygously deleted ones.", NA,
+        "Table", "Segments", "FACETS: the number of copy number segments.", NA,
+        "Table", "Deleted genes",
+        str_c("FACETS (gene-level calls): the number of genes with a homozygous deletion (HOMDEL), as QSee's ",
+              "deleted genes. Calls facets-suite suppresses (in a large deletion or a too-long segment) are ",
+              "not counted."),
+        NA,
         "Table", "FACETS QC",
         str_c("facets-suite's overall QC call. A fail means purity and copy number may be unreliable; it is ",
               "shaded red, though the project report does not flag it."),
@@ -153,23 +164,35 @@ pair_glossary_entries <- function(ctx) {
         NA,
         "Plots", "Insert size",
         "Alfred: the percent of read pairs in each 10 bp bin of insert size, tumor above and normal below.", NA,
+        "Plots", "GC bias",
+        str_c("QSee's COBALT plot for exome targets: Alfred's mean coverage of each target over the sample's ",
+              "median target coverage; the line is the median of that in each 1% bin of target GC (autosomes, ",
+              "bins of 100 or more targets). A curve that falls at low or high GC shows GC bias."),
+        NA,
+        "Plots", "Duplicate frequency",
+        str_c("fastp, before alignment: the percent of fragments with 1, 2, ... or 31 or more (31+) read pairs, ",
+              "on a log axis; zeros are not drawn. fastp follows one fragment per 12-base key of read 1, in each ",
+              "lane separately, and the lanes are summed here, so duplicates across lanes are not seen."),
+        NA,
         "Plots", "Genes most likely to miss a variant",
         glue("In the tumor, as in Hartwig's QSee: the chance that a clonal variant on one allele has fewer ",
              "than {MVLH_MIN_ALT} alt reads, averaged over the gene's coding bases. Allele fraction: FACETS ",
              "purity (the Purity row) / 2, or purity on X and Y in a male. Depth: each target's mean (Alfred, ",
              "rescaled to Picard's mean target coverage) for every coding base in it, so dips inside a target ",
              "are not seen. Genes: the {ctx$nOncokb} of the OncoKB cancer gene list with half or more of their ",
-             "coding bases in targets; the {PAIR_MVLH_TOP} highest are shown. Normals are not shown: Tempo is ",
-             "a somatic pipeline."),
+             "coding bases in targets; the {PAIR_MVLH_TOP} highest are shown, each over its box in the ",
+             "{ctx$nMvlh} QC background tumors with a FACETS purity (each at its own purity). Normals are not ",
+             "shown: Tempo is a somatic pipeline."),
         NA,
         "Plots", "Plot subtitle",
-        str_c("Only when the pair lacks something: no FACETS purity (the plot is not computed), or no ",
-              "OncoTree code or no IntOGen drivers for it (no * marks)."),
+        str_c("Only when something is missing: the pair's FACETS purity (the genes plot is not computed), its ",
+              "OncoTree code or IntOGen drivers for it (no * marks), or the QC background in this database ",
+              "version."),
         NA,
         "Not on these pages", "Not yet shown",
-        str_c("GC bias, duplicate set sizes, discordant read pairs, base-quality recalibration, microsatellite ",
-              "errors and tumor-in-normal contamination: the pipeline does not produce their data yet. The ",
-              "empty cells of the plot grid are kept for them, as in QSee."),
+        str_c("Discordant read pairs, base-quality recalibration, microsatellite errors and tumor-in-normal ",
+              "contamination: the pipeline does not produce their data yet. The space below the plots is kept ",
+              "for them, as in QSee."),
         NA
     ) |>
         mutate(text = as.character(text))

@@ -12,9 +12,11 @@
 #   right  QSee's grid of three columns, with QSee's panel shape (about
 #          2.2 wide to 1 high): target coverage and insert size (tumor
 #          up, normal down; the background's 5th-95th percentile as a
-#          band), and the tumor's genes most likely to miss a variant.
-#          The empty cells are for the panels still to come (GC bias,
-#          duplicate frequency, base-quality recalibration and others;
+#          band); GC bias and duplicate frequency (tumor and normal on
+#          one axis, with the same bands); and, over two rows, the
+#          tumor's genes most likely to miss a variant, each over the
+#          background tumors' box. The space below is for the panels
+#          still to come (base-quality recalibration and others;
 #          QC_REPORT_TODO.md in the project folder).
 #
 # After the pair pages: a table of every flag of each pair
@@ -105,7 +107,7 @@ PAIR_ROWS <- tribble(
     "Copy number (FACETS)",       "frac",    "FACETS_fga",                "Genome altered (FGA)",
     "Copy number (FACETS)",       "ploidy",  "FACETS_ploidy",             "Ploidy",
     "Copy number (FACETS)",       "count",   "FACETS_n_segs",             "Segments",
-    "Copy number (FACETS)",       "count",   "FACETS_n_homdels",          "Homdel segments",
+    "Copy number (FACETS)",       "count",   "FACETS_N_HOMDEL_GENES",     "Deleted genes",
     "Copy number (FACETS)",       "count",   "FACETS_facets_qc",          "FACETS QC",
     "Contamination and identity", "contam",  "CONPAIR_CONTAMINATION",     "Contamination",
     "Contamination and identity", "concord", "CONPAIR_CONCORDANCE",       "Concordance",
@@ -403,16 +405,33 @@ bin_fractions <- function(df, x, count, binWidth, xmax) {
         complete(SAMPLE, BIN = seq(binWidth / 2, xmax, by = binWidth), fill = list(FRAC = 0))
 }
 
-# Background band per type and bin: 5th and 95th percentile, median
-background_band <- function(binned, sampleTypes) {
+# Background band per type and bin: 5th and 95th percentile, median of
+# the column value
+background_band <- function(binned, sampleTypes, value = "FRAC") {
     binned |>
         inner_join(sampleTypes, by = "SAMPLE") |>
         summarize(
-            LO = quantile(FRAC, 0.05, names = FALSE),
-            MED = median(FRAC),
-            HI = quantile(FRAC, 0.95, names = FALSE),
+            LO = quantile(.data[[value]], 0.05, names = FALSE),
+            MED = median(.data[[value]]),
+            HI = quantile(.data[[value]], 0.95, names = FALSE),
             .by = c(TYPE, BIN)
         )
+}
+
+# GC-bias curves (dist$target_gc_bias) as BIN (GC bin middle), Y (median
+# coverage / the sample's median target coverage)
+gc_bias_bins <- function(curves) {
+    curves |> transmute(SAMPLE, BIN = GC_BIN, Y = MEDIAN_NORM_COV)
+}
+
+# fastp duplicate histograms (dist$fastp_dup_hist), lanes summed: per
+# sample, the fraction Y of the fragments fastp samples (about one per
+# 12-base key) seen BIN times; BIN 31 is 31 or more
+dup_fractions <- function(hist) {
+    hist |>
+        summarize(N = sum(N_SETS), .by = c(SAMPLE, DUP_LEVEL)) |>
+        mutate(Y = N / sum(N), .by = SAMPLE) |>
+        transmute(SAMPLE, BIN = DUP_LEVEL, Y)
 }
 
 # The value below which a fraction q of each sample's total lies; the
@@ -450,20 +469,79 @@ mirror_plot <- function(proj, band, medians, title, xlab, ylab, xmax) {
         theme(panel.grid.major.y = element_blank(), plot.margin = margin(4, 6, 4, 4))
 }
 
+# A panel with no plot: the title, "Not computed" and why (subtitle)
+not_computed_plot <- function(title, subtitle) {
+    ggplot() +
+        annotate("text", x = 0, y = 0, label = "Not computed", size = 3) +
+        labs(title = title, subtitle = subtitle) +
+        theme_void(base_size = 8) +
+        theme(plot.title = element_text(face = "bold", size = 9),
+              plot.subtitle = element_text(size = 6.8, colour = "grey30"))
+}
+
+#
+# A per-bin plot with the tumor and the normal on one axis: the
+# background band of each type, a reference line (refY, or none) and the
+# pair's lines, with a point per bin when points is TRUE. proj: TYPE,
+# BIN, Y; band: TYPE, BIN, LO, HI. Interior missing values break a line.
+#
+overlay_plot <- function(proj, band, title, xlab, ylab, subtitle = NULL, refY = NULL, points = FALSE) {
+    ggplot(mapping = aes(x = BIN)) +
+        geom_ribbon(data = band, aes(ymin = LO, ymax = HI, fill = TYPE), alpha = 0.22) +
+        (if (!is.null(refY)) geom_hline(yintercept = refY, colour = "grey50", linewidth = 0.3)) +
+        geom_line(data = proj, aes(y = Y, colour = TYPE), linewidth = 0.6, na.rm = TRUE) +
+        (if (points) geom_point(data = proj, aes(y = Y, colour = TYPE), size = 0.6, na.rm = TRUE)) +
+        scale_fill_manual(values = TN_COLORS, guide = "none") +
+        scale_colour_manual(values = TN_COLORS, guide = "none") +
+        labs(title = title, subtitle = subtitle, x = xlab, y = ylab) +
+        qc_theme(8, 9) +
+        theme(panel.grid.major.y = element_blank(), plot.subtitle = element_text(size = 6.8, colour = "grey30"),
+              plot.margin = margin(4, 6, 4, 4))
+}
+
+#
+# GC bias, the exome version of QSee's COBALT plot: each sample's median
+# target coverage per 1% bin of target GC, over its median target
+# coverage (dist$target_gc_bias)
+#
+gc_bias_plot <- function(proj, band, subtitle = NULL) {
+    if (nrow(proj) == 0) return(not_computed_plot("GC bias", subtitle))
+    overlay_plot(proj, band, "GC bias", "Target GC", "Coverage / median", subtitle, refY = 1) +
+        scale_x_continuous(labels = scales::label_percent(), expand = expansion(0))
+}
+
+#
+# Duplicate frequency (fastp): the percent of fragments seen 1, 2, ...
+# 31 or more times, on a log axis. Zeros are off the axis: a line breaks
+# there, and a band that reaches 0 runs off the bottom.
+#
+DUP_FLOOR <- 1e-7
+
+dup_freq_plot <- function(proj, band, subtitle = NULL) {
+    if (nrow(proj) == 0) return(not_computed_plot("Duplicate frequency", subtitle))
+    proj <- proj |> mutate(Y = if_else(Y > 0, Y, NA_real_))
+    band <- band |> mutate(across(c(LO, HI), \(y) pmax(y, DUP_FLOOR / 10)))
+    yBreaks <- 10^seq(-6, 0, 2)
+    overlay_plot(proj, band, "Duplicate frequency", "Read pairs per fragment", "Fragments", subtitle,
+                 points = TRUE) +
+        scale_x_continuous(breaks = c(1, 5, 10, 15, 20, 25, 31), labels = c(1, 5, 10, 15, 20, 25, "31+"),
+                           expand = expansion(mult = 0.02)) +
+        scale_y_log10(breaks = yBreaks, labels = pct_label_each(yBreaks), guide = log_ticks_guide()) +
+        coord_cartesian(ylim = c(DUP_FLOOR, 1))
+}
+
 #
 # Missed-variant likelihood: the PAIR_MVLH_TOP genes with the highest
-# value, as points on stems. Genes in drivers get a "*"; genes with
-# coding bases outside the targets (not counted) get a "#".
+# value, as points over the gene's box in the background tumors (bg:
+# SAMPLE, GENE, MVLH); on stems when there is no background. Genes in
+# drivers get a "*"; genes with coding bases outside the targets (not
+# counted) get a "#".
 #
 MVLH_PART_IN_TARGETS <- 0.95
 MVLH_AXIS_MIN <- 0.05
 
-mvlh_plot <- function(m, type, drivers, title, subtitle) {
-    if (is.null(m) || nrow(m) == 0) {
-        return(ggplot() + annotate("text", x = 0, y = 0, label = "Not computed", size = 3) +
-                   labs(title = title, subtitle = subtitle) + theme_void(base_size = 8) +
-                   theme(plot.title = element_text(face = "bold", size = 9)))
-    }
+mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
+    if (is.null(m) || nrow(m) == 0) return(not_computed_plot(title, subtitle))
     top <- m |>
         slice_max(MVLH, n = PAIR_MVLH_TOP, with_ties = FALSE) |>
         mutate(
@@ -471,12 +549,26 @@ mvlh_plot <- function(m, type, drivers, title, subtitle) {
                                if_else(FRAC_IN_TARGETS < MVLH_PART_IN_TARGETS, " #", "")),
             GENE_LABEL = fct_reorder(GENE_LABEL, MVLH)
         )
-    xmax <- max(MVLH_AXIS_MIN, max(top$MVLH) * 1.12)
+    bgTop <- bg |>
+        inner_join(top |> select(GENE, GENE_LABEL), by = "GENE")
+    # The axis covers the boxes' whiskers (1.5 IQR past the box, at most
+    # the largest value); the zoom does not change the boxes
+    whiskers <- bgTop |>
+        summarize(Q1 = quantile(MVLH, 0.25, names = FALSE), Q3 = quantile(MVLH, 0.75, names = FALSE),
+                  HI = min(max(MVLH), Q3 + 1.5 * (Q3 - Q1)), .by = GENE) |>
+        pull(HI)
+    xmax <- max(MVLH_AXIS_MIN, max(c(top$MVLH, whiskers)) * 1.12)
     ggplot(top, aes(x = MVLH, y = GENE_LABEL)) +
-        geom_segment(aes(x = 0, xend = MVLH, yend = GENE_LABEL), colour = "grey75", linewidth = 0.4) +
+        (if (nrow(bgTop) == 0) {
+            geom_segment(aes(x = 0, xend = MVLH, yend = GENE_LABEL), colour = "grey75", linewidth = 0.4)
+        } else {
+            geom_boxplot(data = bgTop, aes(group = GENE_LABEL), orientation = "y", width = 0.6,
+                         fill = TYPE_COLORS[[type]], alpha = 0.3, colour = "grey65", linewidth = 0.3,
+                         outliers = FALSE)
+        }) +
         geom_point(shape = 21, fill = TN_COLORS[[type]], colour = "black", stroke = 0.4, size = 1.7) +
-        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE), limits = c(0, xmax),
-                           expand = expansion(c(0, 0.02))) +
+        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE), expand = expansion(c(0, 0.02))) +
+        coord_cartesian(xlim = c(0, xmax)) +
         labs(title = title, subtitle = subtitle, x = "Missed-variant likelihood", y = NULL) +
         qc_theme(8, 9) +
         theme(
@@ -579,10 +671,12 @@ pair_page <- function(p, ctx) {
                            "Target coverage", "Coverage (x)", "Target bases", ctx$covMax)
     insPlot <- mirror_plot(insProj, ctx$insBand, at_median(ctx$insBinned, "ALFRED_MEDIANINSERTSIZE", ctx$insBin),
                            "Insert size", "Insert size (bp)", "Read pairs", ctx$insMax)
+    gcPlot <- gc_bias_plot(ctx$gcProj |> inner_join(sampleType, by = "SAMPLE"), ctx$gcBand, ctx$notes$gc)
+    dupPlot <- dup_freq_plot(ctx$dupProj |> inner_join(sampleType, by = "SAMPLE"), ctx$dupBand, ctx$notes$dup)
 
     # Missed-variant likelihood in the tumor. The plot has a subtitle
-    # only when this pair lacks something: no OncoTree code, no IntOGen
-    # drivers for it, or no purity
+    # only when something is missing: this pair's OncoTree code, IntOGen
+    # drivers for it or purity, or the QC background
     tMeta <- ctx$sampleMeta |> filter(SAMPLE == p$TUMOR_ID)
     nMeta <- ctx$sampleMeta |> filter(SAMPLE == p$NORMAL_ID)
     oncotree <- (tMeta$oncoTreeCode %||% NA_character_)[1]
@@ -592,9 +686,10 @@ pair_page <- function(p, ctx) {
     tNote <- c(
         if (!(len(purity) == 1 && is.finite(purity))) "No FACETS purity",
         if (is.na(oncotree)) "No OncoTree code: no * marks" else
-            if (len(drivers) == 0) glue("No IntOGen drivers for {oncotree}: no * marks")
+            if (len(drivers) == 0) glue("No IntOGen drivers for {oncotree}: no * marks"),
+        ctx$notes$mvlh
     )
-    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), "Tumor", drivers,
+    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), ctx$bgMvlh, "Tumor", drivers,
                           "Genes most likely to miss a variant",
                           if (len(tNote) > 0) str_c(tNote, collapse = "; "))
 
@@ -604,14 +699,16 @@ pair_page <- function(p, ctx) {
         worst_fail_line(hits, ctx$labels)
     )
 
-    # QSee's grid: coverage and insert size in the first row, the genes
-    # over two rows in the third column; # cells are left empty, and the
-    # last row is a spacer (patchwork drops a row with nothing in it).
-    # Heights are relative panel heights (inch units do not mix with the
-    # nested table), so the last row gets the rest of the body's height
+    # QSee's grid: coverage and insert size in the first row, GC bias and
+    # duplicate frequency in the second, the genes over both rows in the
+    # third column; the last row is a spacer (patchwork drops a row with
+    # nothing in it). Heights are relative panel heights (inch units do
+    # not mix with the nested table), so the last row gets the rest of
+    # the body's height
     bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
-    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = plot_spacer()),
-                     layout = "ABC\n##C\nDDD")
+    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = gcPlot, E = dupPlot,
+                                  F = plot_spacer()),
+                     layout = "ABC\nDEC\nFFF")
     top <- wrap_elements(full = header$grob)
     if (ctx$design) {
         plotGrid <- design_grid(plotGrid$cells, plotGrid$layout)
@@ -655,10 +752,14 @@ pair_flag_table <- function(hits, pairing, info) {
 }
 
 #
-# All pair pages. inputs: a list with pairing, projLong, bgLong,
-# bgSamples (SAMPLE, TYPE), hits, limLong, info, scanned, keyDrop,
-# pairExtra, pairDist, bgCoverage, bgInsertSize, genes (gene
-# resources), sexTbl, sampleMeta, and design (TRUE for design mode).
+# All pair pages. inputs: a list with pairing, projLong (with the pair
+# metrics: FACETS, Tempo, Manta), bgLong, bgSamples (SAMPLE, TYPE), hits,
+# limLong, info, scanned, keyDrop, pairDist (pair_distributions), dists
+# (project_sample_dists), mvlh (project_gene_mvlh), bgCoverage,
+# bgInsertSize, bgDupHist, bgGcBias, bgMvlh (the background's dist
+# tables; empty when the database has none), qcdbVersion,
+# genes (gene resources), sexTbl, sampleMeta, and design (TRUE for
+# design mode).
 #
 pair_report_pages <- function(inputs) {
     with(inputs, {
@@ -668,21 +769,16 @@ pair_report_pages <- function(inputs) {
         ) |>
             distinct()
 
-        # Values: the project's metrics, the depths Picard does not
-        # report, and the pair metrics (FACETS, Tempo, Manta)
+        # Values: the project's metrics, pair metrics included, and the
+        # depths Picard does not report
         depth <- target_depth_metrics(pairDist$coverage) |>
             inner_join(sampleTypes, by = "SAMPLE")
-        extraLong <- pairExtra |>
-            select(PAIR, any_of(PAIR_ROWS$METRIC)) |>
-            pivot_longer(-PAIR, names_to = "METRIC", values_to = "VALUE") |>
-            transmute(SAMPLE = PAIR, TYPE = "Pair", METRIC, VALUE)
         projRows <- projLong |>
             filter(METRIC %in% c(PAIR_ROWS$METRIC, "HSM_MEDIAN_TARGET_COVERAGE", "ALFRED_MEDIANINSERTSIZE")) |>
             select(SAMPLE, TYPE, METRIC, VALUE)
         vals <- bind_rows(
             projRows,
-            depth |> anti_join(projRows, by = c("SAMPLE", "METRIC")),
-            extraLong |> anti_join(projRows, by = c("SAMPLE", "METRIC"))
+            depth |> anti_join(projRows, by = c("SAMPLE", "METRIC"))
         ) |>
             left_join(hits |> select(SAMPLE, METRIC, LEVEL), by = c("SAMPLE", "METRIC")) |>
             # The project report does not flag FACETS QC; a fail is shaded
@@ -723,37 +819,28 @@ pair_report_pages <- function(inputs) {
         insBand <- bin_fractions(bgInsertSize, "InsertSize", "Count", insBin, insMax) |>
             background_band(bgSamples |> select(SAMPLE, TYPE))
 
-        # Missed-variant likelihood of each tumor, over the OncoKB genes.
-        # Normals are not shown: Tempo is a somatic pipeline
-        meanCov <- projLong |>
-            filter(METRIC == "HSM_MEAN_TARGET_COVERAGE") |>
-            select(SAMPLE, MEAN_COV = VALUE)
-        mvlh <- pairing |>
-            pmap(\(...) {
-                p <- list(...)
-                s <- p$TUMOR_ID
-                purity <- extraLong |> filter(SAMPLE == p$PAIR, METRIC == "FACETS_purity") |> pull(VALUE)
-                call <- sexTbl |> filter(PAIR == p$PAIR)
-                male <- nrow(call) == 1 && (call$CALL == "Male" || (call$CALL != "Female" &&
-                                                                    coalesce(call$REPORTED, "") == "Male"))
-                scale <- (meanCov |> filter(SAMPLE == s) |> pull(MEAN_COV)) /
-                    (pairDist$targetMean |> filter(SAMPLE == s) |> pull(ALFRED_TARGET_MEAN))
-                if (len(scale) != 1 || !is.finite(scale)) return(NULL)
-                # Coding bases outside the targets are left out: they are
-                # the same in every sample (the assay's design)
-                m <- gene_mvlh(pairDist$geneCov |> filter(SAMPLE == s) |> select(TARGET, COV), genes$targets,
-                               genes$genes |> filter(ONCOKB), purity[1] %||% NA_real_, male, scale,
-                               uncaptured = "drop")
-                if (is.null(m)) NULL else m |> mutate(SAMPLE = s, .before = 1)
-            }) |>
-            bind_rows()
+        # GC bias and duplicate frequency: the pair's curves, and the
+        # background's band per type
+        gcBand <- gc_bias_bins(bgGcBias) |> background_band(bgSamples |> select(SAMPLE, TYPE), "Y")
+        dupBand <- dup_fractions(bgDupHist) |> background_band(bgSamples |> select(SAMPLE, TYPE), "Y")
+        noBg <- glue("No QC background in database version {qcdbVersion}")
+        notes <- list(
+            gc = if (nrow(bgGcBias) == 0) glue("No GC table in QC database version {qcdbVersion}"),
+            dup = if (nrow(bgDupHist) == 0) noBg,
+            mvlh = if (nrow(bgMvlh) == 0) noBg
+        )
 
+        # Missed-variant likelihood: tumors only (Tempo is a somatic
+        # pipeline), over the OncoKB genes, from project_gene_mvlh
         labels <- info |> select(METRIC, LABEL, KIND)
         ctx <- list(
             bg = bg, vals = vals, lims = lims, hits = hits, labels = labels, genes = genes,
             covBinned = covBinned, insBinned = insBinned, covBand = covBand, insBand = insBand,
             covBin = covBin, insBin = insBin, covMax = covMax, insMax = insMax,
-            mvlh = mvlh, sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
+            gcProj = gc_bias_bins(dists$target_gc_bias), gcBand = gcBand,
+            dupProj = dup_fractions(dists$fastp_dup_hist), dupBand = dupBand, notes = notes,
+            mvlh = mvlh, bgMvlh = bgMvlh |> select(SAMPLE, GENE, MVLH),
+            sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
         )
         pages <- pairing |>
             pmap(\(...) pair_page(list(...), ctx))

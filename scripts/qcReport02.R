@@ -20,11 +20,12 @@
 #                                  normal pair, modeled on Hartwig's QSee
 #                                  report (rsrc/qc_pair_*.R): a table of
 #                                  QC metrics with the background, target
-#                                  coverage and insert size, and the
-#                                  tumor's genes most likely to miss a
-#                                  variant. Then a table of every flag of
-#                                  each pair, and a legend and glossary.
-#                                  Its flags are this report's.
+#                                  coverage, insert size, GC bias,
+#                                  duplicate frequency, and the tumor's
+#                                  genes most likely to miss a variant.
+#                                  Then a table of every flag of each
+#                                  pair, and a legend and glossary. Its
+#                                  flags are this report's.
 #   Proj_<no>_qcRpt02_design.pdf   with -d (design mode), instead of
 #                                  the samples PDF: only the pair pages,
 #                                  each element in a purple box with an
@@ -629,6 +630,19 @@ write_pdf(c(keyPages, concordPages, scanPages, hitPages, list(glossaryPage)), su
 if (!identical(opt$pairs, "no")) {
     message("Per-pair pages")
     genesRes <- read_gene_resources(opt$genes %||% QC_GENES_DIR, assay)
+    projSamples <- unique(sampleMap$SAMPLE)
+    # The project's duplicate histograms, GC-bias curves and
+    # missed-variant likelihood, computed as the database computes them
+    # (qcdb/rsrc/qcdb_project_metrics.R); the GC curves with the
+    # database's GC table
+    projDists <- project_sample_dists(outDir, projSamples, qcdb_target_gc(meta, ADAGIO), nCores)
+    projMvlh <- project_gene_mvlh(outDir, mvlh_tumors(pairing, projSample, projPair, sexTbl), genesRes, nCores)
+    # The background's tables, as empty tables for a database without
+    # them (versions before 261127); the missed-variant likelihood of
+    # the background pairs' tumors
+    bg_dist <- \(name, empty = NULL) (qcdb$dist[[name]] %||% empty) |> filter(SAMPLE %in% bgSamples$SAMPLE)
+    bgMvlh <- bg_dist("gene_mvlh", tibble(SAMPLE = character(), GENE = character(), MVLH = numeric())) |>
+        filter(SAMPLE %in% bgPairs$TUMOR_ID)
     pairReport <- pair_report_pages(list(
         pairing = pairing,
         projLong = projLong,
@@ -639,10 +653,17 @@ if (!identical(opt$pairs, "no")) {
         info = info,
         scanned = scanned,
         keyDrop = keyDrop,
-        pairExtra = project_pair_extra(outDir, pairing, nCores),
-        pairDist = pair_distributions(outDir, unique(sampleMap$SAMPLE), genesRes$targets, nCores = nCores),
-        bgCoverage = qcdb$dist$hsm_coverage |> filter(SAMPLE %in% bgSamples$SAMPLE),
-        bgInsertSize = qcdb$dist$alfred_insert_size |> filter(SAMPLE %in% bgSamples$SAMPLE),
+        pairDist = pair_distributions(outDir, projSamples, nCores = nCores),
+        dists = projDists,
+        mvlh = projMvlh,
+        bgCoverage = bg_dist("hsm_coverage"),
+        bgInsertSize = bg_dist("alfred_insert_size"),
+        bgDupHist = bg_dist("fastp_dup_hist", tibble(SAMPLE = character(), DUP_LEVEL = integer(),
+                                                     N_SETS = numeric())),
+        bgGcBias = bg_dist("target_gc_bias", tibble(SAMPLE = character(), GC_BIN = numeric(),
+                                                    MEDIAN_NORM_COV = numeric())),
+        bgMvlh = bgMvlh,
+        qcdbVersion = meta$version,
         genes = genesRes,
         sexTbl = sexTbl,
         sampleMeta = read_sample_meta("meta"),
@@ -652,7 +673,8 @@ if (!identical(opt$pairs, "no")) {
         filter(!is.na(CDS_BASES), CDS_BASES_IN_TARGETS >= MVLH_MIN_IN_TARGETS * CDS_BASES)
     glossaryCtx <- list(
         assay = meta$assay, version = meta$version, seqTech = seqTech,
-        nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+        nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs), nSelf = nSelf,
+        nMvlh = n_distinct(bgMvlh$SAMPLE),
         nOncokb = sum(mvlhGenes$ONCOKB),
         xlsxName = basename(xlsxFile), summaryName = basename(summaryFile)
     )
