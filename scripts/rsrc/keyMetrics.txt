@@ -1,0 +1,27 @@
+# Key QC metrics for the summary QC report (qcReport02.R), part A.
+# One QC database column name per line; the order here is the plot
+# order, four panels per page. Lines starting with # are ignored.
+#
+# A type after the name (Tumor or Normal) limits the metric to that type
+# in the summary report: its panel shows only that type and the table of
+# flagged samples lists only that type. 100X is the tumor depth target
+# and 20X the normal one.
+#
+# The Conpair metrics are drawn on the concordance and sex page, not in
+# this order.
+#
+# Coverage and capture
+HSM_MEAN_TARGET_COVERAGE
+HSM_PCT_TARGET_BASES_100X   Tumor
+HSM_PCT_TARGET_BASES_20X    Normal
+HSM_ZERO_CVG_TARGETS_PCT
+HSM_FOLD_ENRICHMENT
+# Reads, library and Conpair. ALFRED_DUPLICATEFRACTION stands in for
+# Picard MarkDuplicates PERCENT_DUPLICATION: Tempo does not keep the
+# MarkDuplicates metrics file. Alfred counts the duplicate flags that
+# Tempo's MarkDuplicates sets.
+HSM_TOTAL_READS
+ALFRED_DUPLICATEFRACTION
+ASM_PCT_CHIMERAS
+CONPAIR_CONTAMINATION
+CONPAIR_CONCORDANCE

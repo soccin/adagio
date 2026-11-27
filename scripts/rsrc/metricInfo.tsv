@@ -1,0 +1,94 @@
+# Display name and bad side of QC metrics for qcReport02.R.
+# METRIC: QC database column name. BAD: the side that counts as bad for
+# the 3 SD rule: low, high or both. LABEL: the name shown in the report.
+# Metrics not listed here are judged on both sides and get a name built
+# from the column name (scripts/rsrc/qc_metric_info.R).
+METRIC	BAD	LABEL
+HSM_MEAN_TARGET_COVERAGE	low	Mean Target Coverage
+HSM_MEDIAN_TARGET_COVERAGE	low	Median Target Coverage
+HSM_PCT_TARGET_BASES_1X	low	% Target Bases at 1X or More
+HSM_PCT_TARGET_BASES_2X	low	% Target Bases at 2X or More
+HSM_PCT_TARGET_BASES_10X	low	% Target Bases at 10X or More
+HSM_PCT_TARGET_BASES_20X	low	% Target Bases at 20X or More
+HSM_PCT_TARGET_BASES_30X	low	% Target Bases at 30X or More
+HSM_PCT_TARGET_BASES_40X	low	% Target Bases at 40X or More
+HSM_PCT_TARGET_BASES_50X	low	% Target Bases at 50X or More
+HSM_PCT_TARGET_BASES_100X	low	% Target Bases at 100X or More
+HSM_ZERO_CVG_TARGETS_PCT	high	% Targets with Zero Coverage
+HSM_PCT_USABLE_BASES_ON_TARGET	low	% Usable Bases On Target
+HSM_FOLD_80_BASE_PENALTY	high	Fold-80 Base Penalty
+HSM_FOLD_ENRICHMENT	low	Fold Enrichment
+HSM_PCT_EXC_DUPE	high	% Excluded from Duplicates
+HSM_PCT_EXC_MAPQ	high	% Excluded from Low Mapping Quality
+HSM_PCT_EXC_BASEQ	high	% Excluded from Low Base Quality
+HSM_PCT_EXC_OVERLAP	high	% Excluded from Read Overlap
+HSM_PCT_EXC_OFF_TARGET	high	% Excluded from Off Target
+HSM_TOTAL_READS	low	Total Reads in BAM
+HSM_PF_READS	low	Reads Passing Filter
+HSM_PF_UNIQUE_READS	low	Unique Reads
+HSM_PCT_PF_UQ_READS	low	% Unique Reads
+HSM_PCT_PF_UQ_READS_ALIGNED	low	% Unique Reads Aligned
+HSM_HS_PENALTY_10X	high	Hybrid Selection Penalty at 10X
+HSM_HS_PENALTY_20X	high	Hybrid Selection Penalty at 20X
+HSM_HS_PENALTY_30X	high	Hybrid Selection Penalty at 30X
+HSM_HS_PENALTY_40X	high	Hybrid Selection Penalty at 40X
+HSM_HS_PENALTY_50X	high	Hybrid Selection Penalty at 50X
+HSM_HS_PENALTY_100X	high	Hybrid Selection Penalty at 100X
+HSM_AT_DROPOUT	high	AT Dropout
+HSM_GC_DROPOUT	high	GC Dropout
+HSM_HET_SNP_SENSITIVITY	low	Het SNP Sensitivity
+HSM_HET_SNP_Q	low	Het SNP Sensitivity (Phred)
+ASM_PCT_CHIMERAS	high	% Chimeras
+ASM_PCT_PF_READS_ALIGNED	low	% Reads Aligned
+ASM_PCT_READS_ALIGNED_IN_PAIRS	low	% Aligned Reads with Mate Aligned
+ASM_PCT_PF_READS_IMPROPER_PAIRS	high	% Reads in Improper Pairs
+ASM_PF_MISMATCH_RATE	high	Mismatch Rate, Duplicates Included
+ASM_PF_HQ_ERROR_RATE	high	Mismatch Rate, Reads with MAPQ 20 or More
+ASM_PF_INDEL_RATE	high	Indel Rate
+ASM_PCT_ADAPTER	high	% Adapter Reads
+ASM_STRAND_BALANCE	both	Strand Balance, Fraction Forward Reads
+ASM_BAD_CYCLES	high	Bad Cycles
+TARGET_MEDIAN_COV	low	Median Target Coverage, Duplicates Included
+TARGET_FRAC_NORM_COV_LT_0.2	high	% Targets Below 0.2x Median Coverage
+TARGET_FRAC_NORM_COV_GT_2	high	% Targets Above 2x Median Coverage
+TARGET_IQR_NORM_COV	high	Target Coverage IQR, Relative to Median
+TARGET_FRAC_ZERO_COV	high	% Targets with Zero Coverage, Duplicates Included
+ALFRED_MEDIANINSERTSIZE	both	Median Insert Size
+ALFRED_MISMATCHRATE	high	Mismatch Rate
+ALFRED_ERRORRATE	high	Error Rate
+ALFRED_DELETIONRATE	high	Deletion Rate
+ALFRED_INSERTIONRATE	high	Insertion Rate
+ALFRED_SOFTCLIPRATE	high	Soft-Clip Rate
+ALFRED_MATCHRATE	low	Match Rate
+ALFRED_DUPLICATEFRACTION	high	% Duplicate Reads
+ALFRED_UNMAPPEDFRACTION	high	% Unmapped Reads
+ALFRED_MAPPEDFRACTION	low	% Mapped Reads
+ALFRED_MAPPEDPROPERFRACTION	low	% Reads Mapped in Proper Pairs
+ALFRED_MAPPEDPAIRSFRACTION	low	% Pairs with Both Reads Mapped
+ALFRED_MAPPEDSAMECHRFRACTION	low	% Pairs Mapped to the Same Chromosome
+ALFRED_SECONDARYALIGNMENTFRACTION	high	% Secondary Alignments
+ALFRED_SUPPLEMENTARYALIGNMENTFRACTION	high	% Supplementary Alignments
+ALFRED_QCFAILFRACTION	high	% Reads Failing QC
+ALFRED_MEDIANMAPQ	low	Median Mapping Quality
+ALFRED_ON_TARGET_EXT0	low	% Reads On Target
+ALFRED_ON_TARGET_EXT250	low	% Reads Within 250 bp of a Target
+ALFRED_FRACTIONINBED	low	% Aligned Bases in Targets
+ALFRED_ENRICHMENTOVERBED	low	Enrichment over Targets
+ALFRED_STRAND_LOG_RATIO	both	Strand Balance, log(Forward / Reverse Reads)
+ALFRED_CHRX_OBS_EXP	both	ChrX Reads, Observed/Expected
+ALFRED_CHRY_OBS_EXP	both	ChrY Reads, Observed/Expected
+FASTP_BEFORE_TOTAL_READS	low	Total Reads
+FASTP_AFTER_TOTAL_READS	low	Total Reads after Trimming
+FASTP_BEFORE_Q20_RATE	low	% Bases Q20 or Higher, Raw
+FASTP_BEFORE_Q30_RATE	low	% Bases Q30 or Higher, Raw
+FASTP_AFTER_Q20_RATE	low	% Bases Q20 or Higher
+FASTP_AFTER_Q30_RATE	low	% Bases Q30 or Higher
+FASTP_DUPLICATION_RATE	high	% Duplicate Reads before Alignment
+FASTP_PCT_READS_PASSED_FILTER	low	% Reads Passing Filter
+FASTP_PCT_ADAPTER_TRIMMED_READS	high	% Reads with Adapter Trimmed
+FASTP_INSERT_SIZE_PEAK	both	Insert Size Peak before Alignment
+QUALIMAP_MAPPING_QUALITY_MEAN_MAPPING_QUALITY	low	Mean Mapping Quality
+QUALIMAP_MISMATCHES_AND_INDELS_GENERAL_ERROR_RATE	high	General Error Rate
+QUALIMAP_COVERAGE_MEAN_COVERAGEDATA	low	Mean Genome Coverage
+CONPAIR_CONTAMINATION	high	Contamination
+CONPAIR_CONCORDANCE	low	Tumor/Normal Concordance

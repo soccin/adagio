@@ -1,13 +1,18 @@
 #!/bin/bash
 #
-# Submit Picard CollectHsMetrics, with a raised COVERAGE_CAP, for every
-# sample of a finished adagio WES run. Tempo runs it with Picard's
-# default cap of 200, which caps MEDIAN_TARGET_COVERAGE and the coverage
-# histogram at 200x. See README.md.
+# Submit the Picard QC tools that Tempo does not run, or runs with
+# settings we do not want, for every sample of a finished adagio WES
+# run:
+#   hs   CollectHsMetrics with a raised COVERAGE_CAP (Tempo uses Picard's
+#        default of 200, which caps MEDIAN_TARGET_COVERAGE and the
+#        coverage histogram at 200x)
+#   asm  CollectAlignmentSummaryMetrics (Tempo does not run it)
+# See README.md.
 #
 
 SDIR="$( cd "$( dirname "$0" )" && pwd )"
 
+TOOLS="hs,asm"
 CAP=1000
 PROJECT=""
 ODIR=""
@@ -21,13 +26,20 @@ DRYRUN=0
 usage() {
     cat <<EOF
 
-Usage: doHsMetrics.sh [-p PROJECT_ID] [-c CAP] [-o ODIR] [-s S1,S2,...]
-                      [-m MAXJOBS] [-i IMAGE] [-r FASTA] [-f] [-n]
+Usage: doPicardQC.sh [-p PROJECT_ID] [-t TOOLS] [-c CAP] [-o ODIR]
+                     [-s S1,S2,...] [-m MAXJOBS] [-i IMAGE] [-r FASTA]
+                     [-f] [-n]
 
-Run Picard CollectHsMetrics (GATK 4.1.0.0, as in Tempo) on the BAM of
-every sample of a finished adagio WES run, with COVERAGE_CAP raised from
-200 to CAP. Run from the project folder (the one that holds out/). It
-submits one SLURM array task per sample (runHsMetrics.sh) and returns.
+Run Picard QC tools (GATK 4.1.0.0, as in Tempo) on the BAM of every
+sample of a finished adagio WES run. Run from the project folder (the
+one that holds out/). It submits one SLURM array task per sample and
+tool (runPicardQC.sh) and returns.
+
+Tools:
+  hs   CollectHsMetrics with COVERAGE_CAP raised from 200 to CAP
+       -> ODIR/<SAMPLE>.hs_metrics.txt
+  asm  CollectAlignmentSummaryMetrics, Picard defaults, with the
+       reference FASTA -> ODIR/<SAMPLE>.asm.txt
 
 Inputs come from the run log out/<PROJECT_ID>/runlog/cmd.sh.log: the
 mapping file (sample and target), TARGETS_BASE (bait and target
@@ -35,25 +47,27 @@ intervals) and REFERENCE_BASE (GRCh37 FASTA). BAMs are read from
 out/<PROJECT_ID>/bams/<SAMPLE>/<SAMPLE>.bam, or from the BAM column of
 the mapping file.
 
-Output: ODIR/<SAMPLE>.hs_metrics.txt, the same format as Tempo's file.
-Samples that already have output are skipped unless -f is given.
+Each output that already exists is skipped unless -f is given, so a
+rerun submits only the missing sample and tool pairs.
 
 Options:
   -p PROJECT_ID  the run under out/ to use (needed only when out/ holds
               more than one run)
-  -c CAP      COVERAGE_CAP (default $CAP). Picard caps MEDIAN_TARGET_COVERAGE,
-              the coverage histogram and the FOLD_80_BASE_PENALTY percentile
-              at CAP. HET_SNP_SENSITIVITY only uses depths up to 1000, so a
-              CAP above 1000 lowers it slightly; raise CAP only for samples
-              whose median reaches it (the job log warns).
+  -t TOOLS    tools to run, comma separated: hs, asm (default $TOOLS)
+  -c CAP      CollectHsMetrics COVERAGE_CAP (default $CAP). Picard caps
+              MEDIAN_TARGET_COVERAGE, the coverage histogram and the
+              FOLD_80_BASE_PENALTY percentile at CAP. HET_SNP_SENSITIVITY
+              only uses depths up to 1000, so a CAP above 1000 lowers it
+              slightly; raise CAP only for samples whose median reaches
+              it (the job log warns).
   -o ODIR     output folder (default out/<PROJECT_ID>/post/qc)
   -s SAMPLES  only these samples, comma separated
   -m MAXJOBS  array tasks running at once (default $MAXJOBS)
   -i IMAGE    GATK Singularity image (default
               $IMAGE)
   -r FASTA    reference FASTA (default: GRCh37 under REFERENCE_BASE)
-  -f          redo samples that already have output
-  -n          dry run: list the samples and the sbatch command, write nothing
+  -f          redo outputs that already exist
+  -n          dry run: list the tasks and the sbatch command, write nothing
   -h          this help
 
 EOF
@@ -66,9 +80,10 @@ for arg in "$@"; do
     fi
 done
 
-while getopts "p:c:o:s:m:i:r:fnh" opt; do
+while getopts "p:t:c:o:s:m:i:r:fnh" opt; do
     case $opt in
         p) PROJECT=$OPTARG ;;
+        t) TOOLS=$OPTARG ;;
         c) CAP=$OPTARG ;;
         o) ODIR=$OPTARG ;;
         s) SAMPLES=$OPTARG ;;
@@ -94,6 +109,23 @@ die() {
     echo -e "\nERROR: $*\n" >&2
     exit 1
 }
+
+# Output file of each tool
+out_name() {
+    case $2 in
+        hs) echo "$1.hs_metrics.txt" ;;
+        asm) echo "$1.asm.txt" ;;
+    esac
+}
+
+IFS=',' read -ra TLIST <<< "$TOOLS"
+[ ${#TLIST[@]} -gt 0 ] || die "-t TOOLS is empty"
+for t in "${TLIST[@]}"; do
+    case $t in
+        hs|asm) ;;
+        *) die "unknown tool '$t' in -t (use hs, asm)" ;;
+    esac
+done
 
 [[ "$CAP" =~ ^[0-9]+$ ]] && [ "$CAP" -ge 1 ] || die "-c CAP must be a positive integer"
 [[ "$MAXJOBS" =~ ^[0-9]+$ ]] && [ "$MAXJOBS" -ge 1 ] || die "-m MAXJOBS must be a positive integer"
@@ -185,7 +217,7 @@ if [ -n "$SAMPLES" ]; then
 fi
 
 #
-# Sample sheet rows
+# Sample sheet rows: one per sample and tool
 #
 [ -n "$ODIR" ] || ODIR=$RUNDIR/post/qc
 ODIR_ABS=$(realpath -m "$ODIR")
@@ -202,10 +234,15 @@ while IFS=$'\t' read -r SAMPLE TARGET MAPBAM; do
         esac
     fi
 
-    if [ -e "$ODIR/$SAMPLE.hs_metrics.txt" ] && [ "$FORCE" -eq 0 ]; then
-        NDONE=$((NDONE + 1))
-        continue
-    fi
+    TODO=()
+    for t in "${TLIST[@]}"; do
+        if [ -e "$ODIR/$(out_name "$SAMPLE" "$t")" ] && [ "$FORCE" -eq 0 ]; then
+            NDONE=$((NDONE + 1))
+        else
+            TODO+=("$t")
+        fi
+    done
+    [ ${#TODO[@]} -gt 0 ] || continue
 
     BAM=$RUNDIR/bams/$SAMPLE/$SAMPLE.bam
     [ -e "$BAM" ] || BAM=$MAPBAM
@@ -225,9 +262,11 @@ while IFS=$'\t' read -r SAMPLE TARGET MAPBAM; do
 
     # Resolve links: Picard names BAIT_SET after the bait file, and the
     # real folders are the ones mounted in the container
-    ROWS+=$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' "$SAMPLE" "$(realpath "$BAM")" \
-        "$(realpath "$BAITS")" "$(realpath "$TARGETS")" "$(realpath "$FASTA")" \
-        "$CAP" "$(realpath "$IMAGE")" "$ODIR_ABS")$'\n'
+    for t in "${TODO[@]}"; do
+        ROWS+=$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' "$SAMPLE" "$t" "$(realpath "$BAM")" \
+            "$(realpath "$BAITS")" "$(realpath "$TARGETS")" "$(realpath "$FASTA")" \
+            "$CAP" "$(realpath "$IMAGE")" "$ODIR_ABS")$'\n'
+    done
 
 done <<< "$SAMPLE_TABLE"
 
@@ -240,9 +279,13 @@ echo "Mapping: $MAPPING"
 echo "Targets: $TARGETS_BASE"
 echo "FASTA: $FASTA"
 echo "Image: $IMAGE"
-echo "COVERAGE_CAP: $CAP"
+echo "Tools: $TOOLS"
+echo "COVERAGE_CAP (hs): $CAP"
 echo "Output: $ODIR_ABS"
-echo "Samples to run: $N (already done, skipped: $NDONE)"
+for t in "${TLIST[@]}"; do
+    echo "Tasks $t: $(awk -F'\t' -v t="$t" '$2 == t' <<< "$ROWS" | grep -c . || true)"
+done
+echo "Tasks to run: $N (outputs already done, skipped: $NDONE)"
 
 if [ "$N" -eq 0 ]; then
     echo "Nothing to run."
@@ -253,10 +296,10 @@ ARRAY="1-$N%$MAXJOBS"
 
 if [ "$DRYRUN" -eq 1 ]; then
     echo
-    awk -F'\t' 'NR <= 5 { print $1 "\t" $2 }' <<< "$ROWS"
-    [ "$N" -le 5 ] || echo "... ($N samples)"
+    awk -F'\t' 'NR <= 5 { print $1 "\t" $2 "\t" $3 }' <<< "$ROWS"
+    [ "$N" -le 5 ] || echo "... ($N tasks)"
     echo
-    echo "sbatch --parsable --array=$ARRAY $SDIR/runHsMetrics.sh $ODIR_ABS/runlog/samples_<timestamp>.tsv"
+    echo "sbatch --parsable --array=$ARRAY $SDIR/runPicardQC.sh $ODIR_ABS/runlog/samples_<timestamp>.tsv"
     exit 0
 fi
 
@@ -265,13 +308,13 @@ fi
 mkdir -p "$ODIR_ABS/runlog"
 SHEET=$ODIR_ABS/runlog/samples_$(date +%Y%m%d_%H%M%S).tsv
 {
-    printf 'SAMPLE\tBAM\tBAITS\tTARGETS\tFASTA\tCAP\tIMAGE\tODIR\n'
+    printf 'SAMPLE\tTOOL\tBAM\tBAITS\tTARGETS\tFASTA\tCAP\tIMAGE\tODIR\n'
     printf '%s' "$ROWS"
 } > "$SHEET"
 
 # cpushort accepts only QoS normal (docs/IRIS_SLURM.md section 5)
 unset SBATCH_QOS
-JOBID=$(sbatch --parsable --array="$ARRAY" "$SDIR/runHsMetrics.sh" "$SHEET")
+JOBID=$(sbatch --parsable --array="$ARRAY" "$SDIR/runPicardQC.sh" "$SHEET")
 
 echo "Sheet: $SHEET"
-echo "Submitted array job $JOBID ($ARRAY); logs in SLM/hsMetrics.${JOBID}_<task>.out"
+echo "Submitted array job $JOBID ($ARRAY); logs in SLM/picardQC.${JOBID}_<task>.out"

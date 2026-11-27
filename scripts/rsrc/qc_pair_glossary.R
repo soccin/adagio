@@ -1,0 +1,176 @@
+#
+# qc_pair_glossary.R
+#
+# Legend and glossary page (landscape legal) for the per-pair QC pages
+# of qcReport02.R (rsrc/qc_pair_page.R). Everything that is the same on
+# every pair page is here: the QC background (in the subtitle), the
+# marks, the header, the flagged metrics table, the table rows and the
+# plots. The layout is the
+# summary report's (rsrc/qc_glossary.R, GLOSSARY_LANDSCAPE). Needs
+# qc_glossary.R, qc_pair_page.R and qc_pair_data.R.
+#
+
+pair_glossary_keys <- function() {
+    base <- summary_glossary_keys()
+    cell <- \(level, x) grid::rectGrob(x = x, width = 0.38, height = 0.8,
+                                     gp = grid::gpar(fill = CELL_FILLS[[level]], col = NA))
+    band <- \(type, y) grid::rectGrob(y = y, height = 0.35, width = 0.9,
+                                    gp = grid::gpar(fill = scales::alpha(TN_COLORS[[type]], 0.22), col = NA))
+    line <- \(type, y) grid::segmentsGrob(0.05, y, 0.95, y, gp = grid::gpar(col = TN_COLORS[[type]], lwd = 0.6 * .pt))
+    list(
+        box = base$box,
+        circles = base$circles,
+        rings = base$rings,
+        limits = base$limits,
+        cells = grid::gTree(children = grid::gList(cell("WARN", 0.27), cell("FAIL", 0.73))),
+        bands = grid::gTree(children = grid::gList(band("Tumor", 0.72), band("Normal", 0.28))),
+        lines = grid::gTree(children = grid::gList(line("Tumor", 0.72), line("Normal", 0.28))),
+        median = grid::segmentsGrob(0.5, 0.05, 0.5, 0.95, gp = grid::gpar(col = TN_COLORS[["Tumor"]], lwd = 0.4 * .pt))
+    )
+}
+
+# The page subtitle: the QC background every box and band is drawn from
+pair_glossary_subtitle <- function(ctx) {
+    glue("QC background (boxes and bands): samples of earlier {ctx$assay} projects, QC database version ",
+         "{ctx$version}, {ctx$seqTech} only: {ctx$nTumor} tumors, {ctx$nNormal} normals, {ctx$nPair} pairs.")
+}
+
+#
+# Entries: section, term, text, key. The marks come first, as the
+# legend. ctx: assay, version, seqTech, nTumor, nNormal, nPair (the
+# background), nOncokb, xlsxName, summaryName.
+#
+pair_glossary_entries <- function(ctx) {
+    tribble(
+        ~section, ~term, ~text, ~key,
+        "Marks", "Box",
+        str_c("The QC background of one type (see above): the box holds the middle half of the values, the ",
+              "line is the median, whiskers reach 1.5 times the box width; outliers are not drawn."),
+        "box",
+        "Marks", "Circles",
+        "This pair: red tumor, blue normal, grey pair-level value. The table's values have the same colors.",
+        "circles",
+        "Marks", "Ring", "A flagged value: dark yellow WARN, dark red FAIL.", "rings",
+        "Marks", "Shaded cell",
+        "A flagged value in the table: yellow WARN, red FAIL. A FACETS QC fail is shaded red too.", "cells",
+        "Marks", "Dotted line", "A limit of a scanned metric on its bad side: dark yellow WARN, dark red FAIL.", "limits",
+        "Marks", "Band",
+        "The QC background's 5th to 95th percentile in each bin, tumors above the line, normals below.", "bands",
+        "Marks", "Line", "This pair's distribution: tumor above, normal below.", "lines",
+        "Marks", "Vertical line", "The sample's median: Picard's median target coverage, Alfred's median insert size.",
+        "median",
+        "Marks", "*",
+        str_c("After a gene: a driver gene in IntOGen (2024) for the tumor's OncoTree code (in the header) or a ",
+              "code above or below it, e.g. READ and COADREAD."),
+        NA,
+        "Marks", "#",
+        glue("After a gene: {100 * (1 - MVLH_PART_IN_TARGETS)}% or more of its coding bases are outside the ",
+             "targets. They are not counted: the assay misses them in every sample."),
+        NA,
+        "Header", "Title",
+        str_c("The tumor and the normal, and the pair's status: FAIL when the project report has a FAIL for the ",
+              "tumor, the normal or the pair; else WARN when it has a WARN; else PASS."),
+        NA,
+        "Header", "After the title",
+        glue("From meta/*_metadata_samples.csv: the patient, the tumor's OncoTree code, and each sample's ",
+             "preservation and origin. Then the sex called from the normal, with the problems the sex check ",
+             "finds, if any (the concordance and sex page of {ctx$summaryName})."),
+        NA,
+        "Header", "Worst FAIL",
+        str_c("The type and name of the pair's FAIL farthest from the background median (largest robust z); ",
+              "there is no such line when the pair has no FAIL. It may be a metric not in the table. Its value ",
+              "and limit, and every other FAIL and WARN, are in the table after the pair pages."),
+        NA,
+        "Header", "Flags",
+        glue("The project report's: WARN beyond the {pct_label(WARN_PCT)} percentile of the QC background of the ",
+             "same type on the bad side, FAIL beyond the {pct_label(FAIL_PCT)}; fixed limits for Conpair."),
+        NA,
+        "Flagged metrics table", "Rows",
+        glue("Every FAIL and WARN of each pair, under the page of the pair: FAIL first, then the farthest from ",
+             "the background median. A normal shared by two pairs is listed under both. The same flags as ",
+             "{ctx$summaryName}; {ctx$xlsxName} has them with metric IDs and unrounded values."),
+        NA,
+        "Flagged metrics table", "Median, Limit",
+        "The median of the QC background of the same type, and the limit the value crossed.", NA,
+        "Flagged metrics table", "Percentile",
+        "The percent of the QC background of the same type at or below the value.", NA,
+        "Table", "Rows without flags",
+        str_c("Rows of metrics the project report does not scan show where the pair sits in the background ",
+              "but are not flagged: coverage at depths other than the key ones (100x in tumors, 20x in normals), ",
+              "copy number and TMB. No SVs: exomes have almost none."),
+        NA,
+        "Table", "Shared axes",
+        str_c("Consecutive rows of one kind share an x axis below them. Percentages near 0% and 100% use a ",
+              "log-odds axis; contamination and TMB a log axis (TMB below 0.1 is drawn at 0.1); counts a log axis ",
+              "that starts at 0."),
+        NA,
+        "Table", "Log ticks",
+        str_c("As in QSee: labels at powers of 10; long ticks there, medium ticks at 5 times them, short at ",
+              "the other multiples. On a log-odds axis the ticks above 50% mirror those below: 90%, 99%, 99.9% ",
+              "are long, 95%, 99.5% medium."),
+        NA,
+        "Table", "Mean coverage",
+        "Picard: mean depth of the target bases, after duplicates, mapping quality below 20 and base quality below 20 are removed.",
+        NA,
+        "Table", "Coverage Nx+",
+        str_c("Picard: the percent of target bases with N or more high-quality reads. 60x and 250x are from ",
+              "Picard's coverage histogram, the counts its other depths use."),
+        NA,
+        "Table", "Reads aligned", "Picard: the percent of reads that aligned to the reference.", NA,
+        "Table", "Duplicate reads",
+        "Alfred: the percent of reads flagged as duplicates (Tempo does not keep the MarkDuplicates metrics).", NA,
+        "Table", "Low mapping quality",
+        "Picard: the percent of aligned bases left out because their read has mapping quality below 20.", NA,
+        "Table", "Low base quality",
+        "Picard: the percent of aligned bases left out because their quality is below 20.", NA,
+        "Table", "Purity, LOH, Ploidy",
+        str_c("FACETS (facets-suite QC table): the tumor's purity, the fraction of the genome with loss of ",
+              "heterozygosity, and the mean copy number."),
+        NA,
+        "Table", "Genome altered (FGA)",
+        str_c("FACETS (facets-suite QC table): the fraction of the genome not in segments with two copies, one ",
+              "of each allele (or four copies, two of each, when the genome is doubled). Chromosome X and the ",
+              "gaps between segments count."),
+        NA,
+        "Table", "Segments, Homdel segments",
+        "FACETS: the number of copy number segments, and of homozygously deleted ones.", NA,
+        "Table", "FACETS QC",
+        str_c("facets-suite's overall QC call. A fail means purity and copy number may be unreliable; it is ",
+              "shaded red, though the project report does not flag it."),
+        NA,
+        "Table", "Contamination",
+        glue("Conpair: the percent of a sample's DNA from another person. WARN from {100 * CONTAM_WARN}%, FAIL ",
+             "from {100 * CONTAM_FAIL}%. It does not see tumor DNA in the normal: both share one genotype."),
+        NA,
+        "Table", "Concordance",
+        glue("Conpair: the percent of markers homozygous in the normal where the tumor has the same genotype. ",
+             "FAIL below {CONCORD_FAIL}%."),
+        NA,
+        "Table", "TMB (per Mb)", "Tempo: somatic mutations per megabase of target.", NA,
+        "Plots", "Target coverage",
+        glue("Picard's coverage histogram: the percent of target bases in each 5x bin, tumor above the line ",
+             "and normal below. The x axis is the same on every page."),
+        NA,
+        "Plots", "Insert size",
+        "Alfred: the percent of read pairs in each 10 bp bin of insert size, tumor above and normal below.", NA,
+        "Plots", "Genes most likely to miss a variant",
+        glue("In the tumor, as in Hartwig's QSee: the chance that a clonal variant on one allele has fewer ",
+             "than {MVLH_MIN_ALT} alt reads, averaged over the gene's coding bases. Allele fraction: FACETS ",
+             "purity (the Purity row) / 2, or purity on X and Y in a male. Depth: each target's mean (Alfred, ",
+             "rescaled to Picard's mean target coverage) for every coding base in it, so dips inside a target ",
+             "are not seen. Genes: the {ctx$nOncokb} of the OncoKB cancer gene list with half or more of their ",
+             "coding bases in targets; the {PAIR_MVLH_TOP} highest are shown. Normals are not shown: Tempo is ",
+             "a somatic pipeline."),
+        NA,
+        "Plots", "Plot subtitle",
+        str_c("Only when the pair lacks something: no FACETS purity (the plot is not computed), or no ",
+              "OncoTree code or no IntOGen drivers for it (no * marks)."),
+        NA,
+        "Not on these pages", "Not yet shown",
+        str_c("GC bias, duplicate set sizes, discordant read pairs, base-quality recalibration, microsatellite ",
+              "errors and tumor-in-normal contamination: the pipeline does not produce their data yet. The ",
+              "empty cells of the plot grid are kept for them, as in QSee."),
+        NA
+    ) |>
+        mutate(text = as.character(text))
+}

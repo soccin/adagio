@@ -1,0 +1,19 @@
+# Metrics qcReport02.R drops from the background and the project before
+# anything is plotted or scanned. One regular expression per line,
+# matched against the QC database column name. Lines starting with #
+# are ignored.
+#
+# Picard HsMetrics computed from the bait intervals. Only the target
+# intervals are known to be correct, so these are not used. Exception:
+# HSM_FOLD_ENRICHMENT is used (a key metric) although it also depends
+# on the bait intervals.
+^HSM_BAIT_TERRITORY$
+^HSM_BAIT_DESIGN_EFFICIENCY$
+^HSM_(ON|NEAR|OFF)_BAIT_BASES$
+^HSM_PCT_SELECTED_BASES$
+^HSM_PCT_OFF_BAIT$
+^HSM_ON_BAIT_VS_SELECTED$
+^HSM_MEAN_BAIT_COVERAGE$
+^HSM_PCT_USABLE_BASES_ON_BAIT$
+# Molecules in the "selected" (on or near bait) part of the library
+^HSM_HS_LIBRARY_SIZE$
