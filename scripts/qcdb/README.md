@@ -91,7 +91,8 @@ Versions in the index:
 |---|---|---|
 | `261122` | Tempo's files, cap 200 | first draft; tumor median coverage capped |
 | `261123` | `post/qc`, cap 1000 | same 200 pairs |
-| `261123b` | `post/qc`, cap 1000 | current; adds `ASM_` (AlignmentSummaryMetrics) |
+| `261123b` | `post/qc`, cap 1000 | adds `ASM_` (AlignmentSummaryMetrics) |
+| `261127` | `post/qc`, cap 1000 | current; 276 pairs, 547 samples: the 200 pairs plus 76 NovaSeq X DMP pairs (`Version_261125`); adds `fastp_dup_hist`, `target_gc_bias`, `gene_mvlh`, `FACETS_N_HOMDEL_GENES`, `PROJECT_ID`, `SEQ_TECH` |
 
 ## Layout
 
