@@ -12,10 +12,13 @@
 #   right  QSee's grid of three columns, with QSee's panel shape (about
 #          2.2 wide to 1 high): target coverage and insert size (tumor
 #          up, normal down; the background's 5th-95th percentile as a
-#          band), and the tumor's genes most likely to miss a variant.
-#          The empty cells are for the panels still to come (GC bias,
-#          duplicate frequency, base-quality recalibration and others;
-#          QC_REPORT_TODO.md in the project folder).
+#          band); GC bias and duplicate frequency (tumor and normal on
+#          one axis, with the same bands); and, over two rows, the
+#          tumor's genes most likely to miss a variant, each over the
+#          background tumors' box. Below them, every flagged metric of
+#          the pair that is not a table row, drawn as a table row with
+#          its own axis (flag_panel), so every flag behind the pair's
+#          status is on the page.
 #
 # After the pair pages: a table of every flag of each pair
 # (pair_flag_table), then the legend and glossary. qcReport02.R writes
@@ -105,7 +108,7 @@ PAIR_ROWS <- tribble(
     "Copy number (FACETS)",       "frac",    "FACETS_fga",                "Genome altered (FGA)",
     "Copy number (FACETS)",       "ploidy",  "FACETS_ploidy",             "Ploidy",
     "Copy number (FACETS)",       "count",   "FACETS_n_segs",             "Segments",
-    "Copy number (FACETS)",       "count",   "FACETS_n_homdels",          "Homdel segments",
+    "Copy number (FACETS)",       "count",   "FACETS_N_HOMDEL_GENES",     "Deleted genes",
     "Copy number (FACETS)",       "count",   "FACETS_facets_qc",          "FACETS QC",
     "Contamination and identity", "contam",  "CONPAIR_CONTAMINATION",     "Contamination",
     "Contamination and identity", "concord", "CONPAIR_CONCORDANCE",       "Concordance",
@@ -243,21 +246,25 @@ place_rows <- function(df, rows) {
         mutate(Y = ROW_Y + TYPE_OFFSET[TYPE])
 }
 
-text_block <- function(rows, vals, title) {
+# vals may carry the cell text (TEXT); else format_cell gives it.
+# textX: text positions as TEXT_X; cellW: width of a sample's shaded
+# cell (0-1 across the column)
+text_block <- function(rows, vals, title, textX = TEXT_X, cellW = 0.2) {
     rows <- block_rows(rows)
     n <- nrow(rows)
+    hasText <- "TEXT" %in% names(vals)
     cells <- vals |>
         inner_join(rows |> select(METRIC, ROW_Y, AXIS), by = "METRIC") |>
         mutate(
-            X = TEXT_X[TYPE],
-            W = if_else(TYPE == "Pair", 0.42, 0.2),
-            TEXT = format_cell(METRIC, AXIS, VALUE)
+            X = textX[TYPE],
+            W = if_else(TYPE == "Pair", 0.42, cellW),
+            TEXT = if (hasText) TEXT else format_cell(METRIC, AXIS, VALUE)
         )
     ggplot() +
         geom_hline(yintercept = seq_len(n - 1) + 0.5, colour = "grey90", linewidth = 0.3) +
         geom_tile(data = cells |> filter(!is.na(LEVEL)), aes(x = X, y = ROW_Y, width = W, fill = LEVEL),
                   height = 0.86) +
-        geom_text(data = rows, aes(x = TEXT_X[["LABEL"]], y = ROW_Y, label = LABEL), hjust = 0,
+        geom_text(data = rows, aes(x = textX[["LABEL"]], y = ROW_Y, label = LABEL), hjust = 0,
                   size = TABLE_TEXT_SIZE) +
         geom_text(data = cells, aes(x = X, y = ROW_Y, label = TEXT, colour = TYPE), size = TABLE_TEXT_SIZE) +
         scale_fill_manual(values = CELL_FILLS, guide = "none") +
@@ -269,7 +276,9 @@ text_block <- function(rows, vals, title) {
         theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
 }
 
-box_block <- function(rows, bg, vals, lims) {
+# axisFn: the axis (tx, scale, lim) for the values it must show; by
+# default the block's AXIS (pair_axis)
+box_block <- function(rows, bg, vals, lims, axisFn = \(v) pair_axis(rows$AXIS[1], v)) {
     rows <- block_rows(rows)
     n <- nrow(rows)
     plotRows <- rows |> filter(!METRIC %in% TEXT_ROWS)
@@ -280,7 +289,7 @@ box_block <- function(rows, bg, vals, lims) {
         bg |> reframe(Q = quantile(VALUE, c(0.01, 0.99), names = FALSE), .by = c(METRIC, TYPE)) |> pull(Q),
         vals$VALUE, lims$LIMIT
     )
-    ax <- pair_axis(rows$AXIS[1], rangeValues)
+    ax <- axisFn(rangeValues)
     bg <- bg |> mutate(X = ax$tx(VALUE))
     vals <- vals |> mutate(X = ax$tx(VALUE))
     lims <- lims |> mutate(X = ax$tx(LIMIT), LINE = LEVEL_COLORS[LEVEL])
@@ -330,19 +339,20 @@ table_header <- function() {
 # the page gets a purple box and an ID in its top right corner. H the
 # header; T0, T1, ... the table's text column and B0, B1, ... its box
 # column (0 the column heads, then one per block); P1, P2, ... the cells
-# of the plot grid, by rows, empty cells included. The marks do not move
+# of the plot grid, by rows, empty cells included; FT1, FB1, ... the text
+# and box cells of the flagged metrics below the plots. The marks do not move
 # anything: the ID is drawn over the element, and the elements that
 # stand in for a spacer or an empty cell have the same margins.
 #
 DESIGN_COLOR <- "purple"
 
-design_mark <- function(x, id) {
+design_mark <- function(x, id, position = "topright") {
     # patchwork draws only the background of a spacer, not its tag
     if (inherits(x, "spacer")) x <- wrap_elements(full = grid::nullGrob())
     x + labs(tag = id) + theme(
         plot.background = element_rect(colour = DESIGN_COLOR, fill = NA, linewidth = 1),
         plot.tag = element_text(colour = DESIGN_COLOR, face = "bold", size = 9, margin = margin(2, 3, 2, 3)),
-        plot.tag.position = "topright",
+        plot.tag.position = position,
         plot.tag.location = "plot"
     )
 }
@@ -390,6 +400,138 @@ consolidate_blocks <- function(group, axis) {
 }
 
 #
+# Flagged metrics not in the table, below the plots: every scanned
+# metric with a FAIL or WARN in this pair that is not a table row, worst
+# first, each drawn as a table row with its own axis. FLAG_SLOTS rows at
+# most (the rest are in the flag table after the pair pages); unused
+# slots are blank, so a row is as tall as a table row whatever the count.
+#
+FLAG_SLOTS <- 10
+# A wider text column than the table's, with the values further right:
+# metric names run to about 40 characters
+FLAG_WIDTHS <- c(3.4, PAIR_PLOTS_WIDTH - 3.4)
+FLAG_TEXT_X <- c(LABEL = 0.02, Tumor = 0.76, Normal = 0.92, Pair = 0.84)
+FLAG_CELL_W <- 0.15
+FLAG_TITLE <- "Flagged metrics not in the table"
+ODDS_BREAKS <- c(1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999)
+
+# Cell text by the metric's kind (metric_info): percentages to 3
+# significant digits, read counts as 175.7M, coverage as 74x, other
+# numbers to 4 (as the flag table)
+flag_text <- function(value, kind, scaleBy) {
+    kind <- rep(kind, len(value))
+    scaleBy <- rep(scaleBy, len(value))
+    case_when(
+        is.na(value) ~ "-",
+        kind %in% PERCENT_KINDS ~ format_value(value, kind, scaleBy),
+        kind == "count" ~ scales::label_number(accuracy = 0.1, scale_cut = scales::cut_short_scale())(value),
+        kind == "cov" ~ sprintf("%.0fx", value),
+        kind == "bp" ~ sprintf("%.0f bp", value),
+        .default = format_num(value)
+    )
+}
+
+#
+# The axis of one flagged metric: the type the summary report's panel
+# for the metric has (axis_spec in qc_plots.R), with the table's ticks:
+# log axes labeled at powers of 10 only, log-odds axes at ODDS_BREAKS. A
+# log-odds axis over values that all lie between 5% and 95% is linear.
+# infoRow: the metric's row of metric_info(); dataValues: all its
+# background and pair values; rangeValues: what the axis must show.
+#
+flag_axis <- function(infoRow, bg, dataValues, rangeValues) {
+    ax <- axis_spec(infoRow, bg, dataValues, rangeValues)
+    scaleBy <- infoRow$SCALE_BY
+    r <- rangeValues[is.finite(rangeValues)]
+    p <- r / scaleBy
+    if (ax$type == "logodds" && all(p > 0.05 & p < 0.95)) {
+        return(list(tx = \(x) x / scaleBy, scale = scale_x_continuous(labels = scales::label_percent()),
+                    lim = frac_range(p)))
+    }
+    switch(ax$type,
+        logodds = {
+            a <- odds_axis(p, ODDS_BREAKS)
+            list(tx = \(x) a$tx(x / scaleBy), scale = a$scale, lim = a$lim)
+        },
+        log = {
+            x <- ax$tx(r)
+            decades <- log10(range(x[x > 0]))
+            k <- floor(decades[1]):ceiling(decades[2])
+            list(tx = ax$tx,
+                 scale = scale_x_log10(breaks = 10^k, labels = ax$scale$labels, guide = log_ticks_guide()),
+                 lim = 10^range(k))
+        },
+        {
+            x <- ax$tx(r)
+            list(tx = ax$tx, scale = ax$scale, lim = ax$xlim %||% (range(x) + c(-1, 1) * 0.05 * diff(range(x))))
+        }
+    )
+}
+
+# An unused slot: a blank text cell (with the title in the first slot)
+# and a box cell with an invisible axis as tall as a real one
+blank_flag_slot <- function(title = NULL) {
+    text <- ggplot() +
+        labs(title = title) +
+        theme_void(base_size = 8) +
+        theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
+    box <- ggplot() +
+        scale_x_continuous(limits = c(0, 1), breaks = 0.5, labels = "0") +
+        qc_theme(7, 8) +
+        theme(
+            panel.border = element_blank(),
+            panel.grid = element_blank(),
+            axis.text.x = element_text(size = 6, colour = NA),
+            axis.ticks.x = element_line(colour = NA),
+            axis.ticks.length.x = unit(TABLE_TICK_PT, "pt"),
+            plot.margin = margin(0, 4, 2, 2)
+        )
+    list(text, box)
+}
+
+#
+# The block below the plots. metrics: the flagged metrics not in the
+# table, worst first. bg: TYPE, METRIC, VALUE; vals: SAMPLE, TYPE, METRIC,
+# VALUE, LEVEL of the pair; lims: as for the table; info: metric_info().
+# One element (wrap_elements), so the page grid treats it as one cell.
+#
+flag_panel <- function(metrics, bg, vals, lims, info, design = FALSE) {
+    shown <- head(metrics, FLAG_SLOTS)
+    title <- case_when(
+        len(metrics) == 0 ~ str_c(FLAG_TITLE, ": none"),
+        len(metrics) > FLAG_SLOTS ~ str_c(FLAG_TITLE, glue(" (the {FLAG_SLOTS} worst of {len(metrics)})")),
+        .default = FLAG_TITLE
+    )
+    cells <- shown |>
+        imap(\(m, i) {
+            infoRow <- info |> filter(METRIC == m) |> slice_head(n = 1)
+            rows <- tibble(GROUP = FLAG_TITLE, AXIS = "flag", METRIC = m, LABEL = infoRow$LABEL)
+            v <- vals |>
+                filter(METRIC == m) |>
+                mutate(TEXT = flag_text(VALUE, infoRow$KIND, infoRow$SCALE_BY))
+            b <- bg |> filter(METRIC == m)
+            list(
+                text_block(rows, v, if (i == 1) title, FLAG_TEXT_X, FLAG_CELL_W),
+                box_block(rows, b, v, lims |> filter(METRIC == m),
+                          axisFn = \(r) flag_axis(infoRow, b, c(b$VALUE, v$VALUE), r))
+            )
+        }) |>
+        list_flatten()
+    blanks <- seq_len(FLAG_SLOTS - len(shown)) |>
+        map(\(i) blank_flag_slot(if (len(shown) == 0 && i == 1) title)) |>
+        list_flatten()
+    cells <- c(cells, blanks)
+    # In design mode the row IDs go bottom right; the block's own ID (P6)
+    # is top right
+    if (design) {
+        cells <- map2(cells, str_c(rep(c("FT", "FB"), FLAG_SLOTS), rep(seq_len(FLAG_SLOTS), each = 2)),
+                      \(x, id) design_mark(x, id, "bottomright"))
+    }
+    wrap_elements(full = wrap_plots(cells, ncol = 2, widths = FLAG_WIDTHS,
+                                    heights = rep(1 + 2 * ROW_PAD, FLAG_SLOTS)))
+}
+
+#
 # Distributions binned for the plots: per sample, the fraction of the
 # total in each bin of width binWidth (BIN: bin middle), up to xmax
 #
@@ -403,16 +545,33 @@ bin_fractions <- function(df, x, count, binWidth, xmax) {
         complete(SAMPLE, BIN = seq(binWidth / 2, xmax, by = binWidth), fill = list(FRAC = 0))
 }
 
-# Background band per type and bin: 5th and 95th percentile, median
-background_band <- function(binned, sampleTypes) {
+# Background band per type and bin: 5th and 95th percentile, median of
+# the column value
+background_band <- function(binned, sampleTypes, value = "FRAC") {
     binned |>
         inner_join(sampleTypes, by = "SAMPLE") |>
         summarize(
-            LO = quantile(FRAC, 0.05, names = FALSE),
-            MED = median(FRAC),
-            HI = quantile(FRAC, 0.95, names = FALSE),
+            LO = quantile(.data[[value]], 0.05, names = FALSE),
+            MED = median(.data[[value]]),
+            HI = quantile(.data[[value]], 0.95, names = FALSE),
             .by = c(TYPE, BIN)
         )
+}
+
+# GC-bias curves (dist$target_gc_bias) as BIN (GC bin middle), Y (median
+# coverage / the sample's median target coverage)
+gc_bias_bins <- function(curves) {
+    curves |> transmute(SAMPLE, BIN = GC_BIN, Y = MEDIAN_NORM_COV)
+}
+
+# fastp duplicate histograms (dist$fastp_dup_hist), lanes summed: per
+# sample, the fraction Y of the fragments fastp samples (about one per
+# 12-base key) seen BIN times; BIN 31 is 31 or more
+dup_fractions <- function(hist) {
+    hist |>
+        summarize(N = sum(N_SETS), .by = c(SAMPLE, DUP_LEVEL)) |>
+        mutate(Y = N / sum(N), .by = SAMPLE) |>
+        transmute(SAMPLE, BIN = DUP_LEVEL, Y)
 }
 
 # The value below which a fraction q of each sample's total lies; the
@@ -450,20 +609,79 @@ mirror_plot <- function(proj, band, medians, title, xlab, ylab, xmax) {
         theme(panel.grid.major.y = element_blank(), plot.margin = margin(4, 6, 4, 4))
 }
 
+# A panel with no plot: the title, "Not computed" and why (subtitle)
+not_computed_plot <- function(title, subtitle) {
+    ggplot() +
+        annotate("text", x = 0, y = 0, label = "Not computed", size = 3) +
+        labs(title = title, subtitle = subtitle) +
+        theme_void(base_size = 8) +
+        theme(plot.title = element_text(face = "bold", size = 9),
+              plot.subtitle = element_text(size = 6.8, colour = "grey30"))
+}
+
+#
+# A per-bin plot with the tumor and the normal on one axis: the
+# background band of each type, a reference line (refY, or none) and the
+# pair's lines, with a point per bin when points is TRUE. proj: TYPE,
+# BIN, Y; band: TYPE, BIN, LO, HI. Interior missing values break a line.
+#
+overlay_plot <- function(proj, band, title, xlab, ylab, subtitle = NULL, refY = NULL, points = FALSE) {
+    ggplot(mapping = aes(x = BIN)) +
+        geom_ribbon(data = band, aes(ymin = LO, ymax = HI, fill = TYPE), alpha = 0.22) +
+        (if (!is.null(refY)) geom_hline(yintercept = refY, colour = "grey50", linewidth = 0.3)) +
+        geom_line(data = proj, aes(y = Y, colour = TYPE), linewidth = 0.6, na.rm = TRUE) +
+        (if (points) geom_point(data = proj, aes(y = Y, colour = TYPE), size = 0.6, na.rm = TRUE)) +
+        scale_fill_manual(values = TN_COLORS, guide = "none") +
+        scale_colour_manual(values = TN_COLORS, guide = "none") +
+        labs(title = title, subtitle = subtitle, x = xlab, y = ylab) +
+        qc_theme(8, 9) +
+        theme(panel.grid.major.y = element_blank(), plot.subtitle = element_text(size = 6.8, colour = "grey30"),
+              plot.margin = margin(4, 6, 4, 4))
+}
+
+#
+# GC bias, the exome version of QSee's COBALT plot: each sample's median
+# target coverage per 1% bin of target GC, over its median target
+# coverage (dist$target_gc_bias)
+#
+gc_bias_plot <- function(proj, band, subtitle = NULL) {
+    if (nrow(proj) == 0) return(not_computed_plot("GC bias", subtitle))
+    overlay_plot(proj, band, "GC bias", "Target GC", "Coverage / median", subtitle, refY = 1) +
+        scale_x_continuous(labels = scales::label_percent(), expand = expansion(0))
+}
+
+#
+# Duplicate frequency (fastp): the percent of fragments seen 1, 2, ...
+# 31 or more times, on a log axis. Zeros are off the axis: a line breaks
+# there, and a band that reaches 0 runs off the bottom.
+#
+DUP_FLOOR <- 1e-7
+
+dup_freq_plot <- function(proj, band, subtitle = NULL) {
+    if (nrow(proj) == 0) return(not_computed_plot("Duplicate frequency", subtitle))
+    proj <- proj |> mutate(Y = if_else(Y > 0, Y, NA_real_))
+    band <- band |> mutate(across(c(LO, HI), \(y) pmax(y, DUP_FLOOR / 10)))
+    yBreaks <- 10^seq(-6, 0, 2)
+    overlay_plot(proj, band, "Duplicate frequency", "Read pairs per fragment", "Fragments", subtitle,
+                 points = TRUE) +
+        scale_x_continuous(breaks = c(1, 5, 10, 15, 20, 25, 31), labels = c(1, 5, 10, 15, 20, 25, "31+"),
+                           expand = expansion(mult = 0.02)) +
+        scale_y_log10(breaks = yBreaks, labels = pct_label_each(yBreaks), guide = log_ticks_guide()) +
+        coord_cartesian(ylim = c(DUP_FLOOR, 1))
+}
+
 #
 # Missed-variant likelihood: the PAIR_MVLH_TOP genes with the highest
-# value, as points on stems. Genes in drivers get a "*"; genes with
-# coding bases outside the targets (not counted) get a "#".
+# value, as points over the gene's box in the background tumors (bg:
+# SAMPLE, GENE, MVLH); on stems when there is no background. Genes in
+# drivers get a "*"; genes with coding bases outside the targets (not
+# counted) get a "#".
 #
 MVLH_PART_IN_TARGETS <- 0.95
 MVLH_AXIS_MIN <- 0.05
 
-mvlh_plot <- function(m, type, drivers, title, subtitle) {
-    if (is.null(m) || nrow(m) == 0) {
-        return(ggplot() + annotate("text", x = 0, y = 0, label = "Not computed", size = 3) +
-                   labs(title = title, subtitle = subtitle) + theme_void(base_size = 8) +
-                   theme(plot.title = element_text(face = "bold", size = 9)))
-    }
+mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
+    if (is.null(m) || nrow(m) == 0) return(not_computed_plot(title, subtitle))
     top <- m |>
         slice_max(MVLH, n = PAIR_MVLH_TOP, with_ties = FALSE) |>
         mutate(
@@ -471,12 +689,26 @@ mvlh_plot <- function(m, type, drivers, title, subtitle) {
                                if_else(FRAC_IN_TARGETS < MVLH_PART_IN_TARGETS, " #", "")),
             GENE_LABEL = fct_reorder(GENE_LABEL, MVLH)
         )
-    xmax <- max(MVLH_AXIS_MIN, max(top$MVLH) * 1.12)
+    bgTop <- bg |>
+        inner_join(top |> select(GENE, GENE_LABEL), by = "GENE")
+    # The axis covers the boxes' whiskers (1.5 IQR past the box, at most
+    # the largest value); the zoom does not change the boxes
+    whiskers <- bgTop |>
+        summarize(Q1 = quantile(MVLH, 0.25, names = FALSE), Q3 = quantile(MVLH, 0.75, names = FALSE),
+                  HI = min(max(MVLH), Q3 + 1.5 * (Q3 - Q1)), .by = GENE) |>
+        pull(HI)
+    xmax <- max(MVLH_AXIS_MIN, max(c(top$MVLH, whiskers)) * 1.12)
     ggplot(top, aes(x = MVLH, y = GENE_LABEL)) +
-        geom_segment(aes(x = 0, xend = MVLH, yend = GENE_LABEL), colour = "grey75", linewidth = 0.4) +
+        (if (nrow(bgTop) == 0) {
+            geom_segment(aes(x = 0, xend = MVLH, yend = GENE_LABEL), colour = "grey75", linewidth = 0.4)
+        } else {
+            geom_boxplot(data = bgTop, aes(group = GENE_LABEL), orientation = "y", width = 0.6,
+                         fill = TYPE_COLORS[[type]], alpha = 0.3, colour = "grey65", linewidth = 0.3,
+                         outliers = FALSE)
+        }) +
         geom_point(shape = 21, fill = TN_COLORS[[type]], colour = "black", stroke = 0.4, size = 1.7) +
-        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE), limits = c(0, xmax),
-                           expand = expansion(c(0, 0.02))) +
+        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE), expand = expansion(c(0, 0.02))) +
+        coord_cartesian(xlim = c(0, xmax)) +
         labs(title = title, subtitle = subtitle, x = "Missed-variant likelihood", y = NULL) +
         qc_theme(8, 9) +
         theme(
@@ -488,24 +720,23 @@ mvlh_plot <- function(m, type, drivers, title, subtitle) {
 }
 
 #
-# The pair's status, and its worst FAIL for the header: the first FAIL in
-# the project report's order (FAIL first, then by robust z), by name
-# only, e.g. "Worst FAIL: tumor Total Reads in BAM". Values, limits and
-# every other flag are in the table after the pair pages. hits: the
-# project report's flagged rows of this pair, in its order; labels:
-# METRIC, LABEL.
+# The pair's status, and its worst flag for the header: the first flag
+# in the project report's order (FAIL first, then by robust z), by name
+# only, e.g. "Worst FAIL: tumor Total Reads in BAM", or "Worst WARN: ..."
+# when the pair has no FAIL. Every flag is drawn on the page, in the
+# table or below the plots. hits: the project report's flagged rows of
+# this pair, in its order; labels: METRIC, LABEL.
 #
 pair_status <- function(hits) {
     if (any(hits$LEVEL == "FAIL")) "FAIL" else if (nrow(hits) > 0) "WARN" else "PASS"
 }
 
-worst_fail_line <- function(hits, labels) {
+worst_flag_line <- function(hits, labels) {
     worst <- hits |>
-        filter(LEVEL == "FAIL") |>
         slice_head(n = 1) |>
         left_join(labels |> select(METRIC, METRIC_LABEL = LABEL), by = "METRIC")
     if (nrow(worst) == 0) return(character())
-    glue("Worst FAIL: {str_to_lower(worst$TYPE)} {worst$METRIC_LABEL}")
+    glue("Worst {worst$LEVEL}: {str_to_lower(worst$TYPE)} {worst$METRIC_LABEL}")
 }
 
 # The pair's metadata for the title line: patient, tumor OncoTree code,
@@ -579,10 +810,12 @@ pair_page <- function(p, ctx) {
                            "Target coverage", "Coverage (x)", "Target bases", ctx$covMax)
     insPlot <- mirror_plot(insProj, ctx$insBand, at_median(ctx$insBinned, "ALFRED_MEDIANINSERTSIZE", ctx$insBin),
                            "Insert size", "Insert size (bp)", "Read pairs", ctx$insMax)
+    gcPlot <- gc_bias_plot(ctx$gcProj |> inner_join(sampleType, by = "SAMPLE"), ctx$gcBand, ctx$notes$gc)
+    dupPlot <- dup_freq_plot(ctx$dupProj |> inner_join(sampleType, by = "SAMPLE"), ctx$dupBand, ctx$notes$dup)
 
     # Missed-variant likelihood in the tumor. The plot has a subtitle
-    # only when this pair lacks something: no OncoTree code, no IntOGen
-    # drivers for it, or no purity
+    # only when something is missing: this pair's OncoTree code, IntOGen
+    # drivers for it or purity, or the QC background
     tMeta <- ctx$sampleMeta |> filter(SAMPLE == p$TUMOR_ID)
     nMeta <- ctx$sampleMeta |> filter(SAMPLE == p$NORMAL_ID)
     oncotree <- (tMeta$oncoTreeCode %||% NA_character_)[1]
@@ -592,26 +825,34 @@ pair_page <- function(p, ctx) {
     tNote <- c(
         if (!(len(purity) == 1 && is.finite(purity))) "No FACETS purity",
         if (is.na(oncotree)) "No OncoTree code: no * marks" else
-            if (len(drivers) == 0) glue("No IntOGen drivers for {oncotree}: no * marks")
+            if (len(drivers) == 0) glue("No IntOGen drivers for {oncotree}: no * marks"),
+        ctx$notes$mvlh
     )
-    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), "Tumor", drivers,
+    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), ctx$bgMvlh, "Tumor", drivers,
                           "Genes most likely to miss a variant",
                           if (len(tNote) > 0) str_c(tNote, collapse = "; "))
 
     header <- pair_header(
         glue("{p$TUMOR_ID} / {p$NORMAL_ID}: {status}"),
         pair_meta_text(tMeta, nMeta, ctx$sexTbl |> filter(PAIR == p$PAIR)),
-        worst_fail_line(hits, ctx$labels)
+        worst_flag_line(hits, ctx$labels)
     )
 
-    # QSee's grid: coverage and insert size in the first row, the genes
-    # over two rows in the third column; # cells are left empty, and the
-    # last row is a spacer (patchwork drops a row with nothing in it).
-    # Heights are relative panel heights (inch units do not mix with the
-    # nested table), so the last row gets the rest of the body's height
+    # Flags of metrics that are not table rows, below the plots
+    flagPanel <- flag_panel(
+        hits |> filter(!METRIC %in% PAIR_ROWS$METRIC) |> distinct(METRIC) |> pull(METRIC),
+        ctx$flagBg, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
+    )
+
+    # QSee's grid: coverage and insert size in the first row, GC bias and
+    # duplicate frequency in the second, the genes over both rows in the
+    # third column; the flagged metrics not in the table below. Heights
+    # are relative panel heights (inch units do not mix with the nested
+    # table), so the last row gets the rest of the body's height
     bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
-    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = plot_spacer()),
-                     layout = "ABC\n##C\nDDD")
+    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = gcPlot, E = dupPlot,
+                                  F = flagPanel),
+                     layout = "ABC\nDEC\nFFF")
     top <- wrap_elements(full = header$grob)
     if (ctx$design) {
         plotGrid <- design_grid(plotGrid$cells, plotGrid$layout)
@@ -655,10 +896,14 @@ pair_flag_table <- function(hits, pairing, info) {
 }
 
 #
-# All pair pages. inputs: a list with pairing, projLong, bgLong,
-# bgSamples (SAMPLE, TYPE), hits, limLong, info, scanned, keyDrop,
-# pairExtra, pairDist, bgCoverage, bgInsertSize, genes (gene
-# resources), sexTbl, sampleMeta, and design (TRUE for design mode).
+# All pair pages. inputs: a list with pairing, projLong (with the pair
+# metrics: FACETS, Tempo, Manta), bgLong, bgSamples (SAMPLE, TYPE), hits,
+# limLong, info, scanned, keyDrop, pairDist (pair_distributions), dists
+# (project_sample_dists), mvlh (project_gene_mvlh), bgCoverage,
+# bgInsertSize, bgDupHist, bgGcBias, bgMvlh (the background's dist
+# tables; empty when the database has none), qcdbVersion,
+# genes (gene resources), sexTbl, sampleMeta, and design (TRUE for
+# design mode).
 #
 pair_report_pages <- function(inputs) {
     with(inputs, {
@@ -668,21 +913,16 @@ pair_report_pages <- function(inputs) {
         ) |>
             distinct()
 
-        # Values: the project's metrics, the depths Picard does not
-        # report, and the pair metrics (FACETS, Tempo, Manta)
+        # Values: the project's metrics, pair metrics included, and the
+        # depths Picard does not report
         depth <- target_depth_metrics(pairDist$coverage) |>
             inner_join(sampleTypes, by = "SAMPLE")
-        extraLong <- pairExtra |>
-            select(PAIR, any_of(PAIR_ROWS$METRIC)) |>
-            pivot_longer(-PAIR, names_to = "METRIC", values_to = "VALUE") |>
-            transmute(SAMPLE = PAIR, TYPE = "Pair", METRIC, VALUE)
         projRows <- projLong |>
             filter(METRIC %in% c(PAIR_ROWS$METRIC, "HSM_MEDIAN_TARGET_COVERAGE", "ALFRED_MEDIANINSERTSIZE")) |>
             select(SAMPLE, TYPE, METRIC, VALUE)
         vals <- bind_rows(
             projRows,
-            depth |> anti_join(projRows, by = c("SAMPLE", "METRIC")),
-            extraLong |> anti_join(projRows, by = c("SAMPLE", "METRIC"))
+            depth |> anti_join(projRows, by = c("SAMPLE", "METRIC"))
         ) |>
             left_join(hits |> select(SAMPLE, METRIC, LEVEL), by = c("SAMPLE", "METRIC")) |>
             # The project report does not flag FACETS QC; a fail is shaded
@@ -705,6 +945,22 @@ pair_report_pages <- function(inputs) {
             filter(METRIC %in% PAIR_ROWS$METRIC, METRIC %in% scanned) |>
             anti_join(keyDrop, by = c("METRIC", "TYPE"))
 
+        # The flagged metrics that are not table rows (drawn below the
+        # plots): the project's values with their flags, the background
+        # and the limits
+        flagMetrics <- setdiff(unique(hits$METRIC), PAIR_ROWS$METRIC)
+        flagVals <- projLong |>
+            filter(METRIC %in% flagMetrics) |>
+            distinct(SAMPLE, TYPE, METRIC, .keep_all = TRUE) |>
+            select(SAMPLE, TYPE, METRIC, VALUE) |>
+            left_join(hits |> distinct(SAMPLE, METRIC, LEVEL), by = c("SAMPLE", "METRIC"))
+        flagBg <- bgLong |>
+            filter(METRIC %in% flagMetrics) |>
+            select(TYPE, METRIC, VALUE)
+        flagLims <- limLong |>
+            filter(METRIC %in% flagMetrics, METRIC %in% scanned) |>
+            anti_join(keyDrop, by = c("METRIC", "TYPE"))
+
         covBin <- 5
         insBin <- 10
         bgCovSamples <- bgCoverage |> distinct(SAMPLE)
@@ -723,37 +979,29 @@ pair_report_pages <- function(inputs) {
         insBand <- bin_fractions(bgInsertSize, "InsertSize", "Count", insBin, insMax) |>
             background_band(bgSamples |> select(SAMPLE, TYPE))
 
-        # Missed-variant likelihood of each tumor, over the OncoKB genes.
-        # Normals are not shown: Tempo is a somatic pipeline
-        meanCov <- projLong |>
-            filter(METRIC == "HSM_MEAN_TARGET_COVERAGE") |>
-            select(SAMPLE, MEAN_COV = VALUE)
-        mvlh <- pairing |>
-            pmap(\(...) {
-                p <- list(...)
-                s <- p$TUMOR_ID
-                purity <- extraLong |> filter(SAMPLE == p$PAIR, METRIC == "FACETS_purity") |> pull(VALUE)
-                call <- sexTbl |> filter(PAIR == p$PAIR)
-                male <- nrow(call) == 1 && (call$CALL == "Male" || (call$CALL != "Female" &&
-                                                                    coalesce(call$REPORTED, "") == "Male"))
-                scale <- (meanCov |> filter(SAMPLE == s) |> pull(MEAN_COV)) /
-                    (pairDist$targetMean |> filter(SAMPLE == s) |> pull(ALFRED_TARGET_MEAN))
-                if (len(scale) != 1 || !is.finite(scale)) return(NULL)
-                # Coding bases outside the targets are left out: they are
-                # the same in every sample (the assay's design)
-                m <- gene_mvlh(pairDist$geneCov |> filter(SAMPLE == s) |> select(TARGET, COV), genes$targets,
-                               genes$genes |> filter(ONCOKB), purity[1] %||% NA_real_, male, scale,
-                               uncaptured = "drop")
-                if (is.null(m)) NULL else m |> mutate(SAMPLE = s, .before = 1)
-            }) |>
-            bind_rows()
+        # GC bias and duplicate frequency: the pair's curves, and the
+        # background's band per type
+        gcBand <- gc_bias_bins(bgGcBias) |> background_band(bgSamples |> select(SAMPLE, TYPE), "Y")
+        dupBand <- dup_fractions(bgDupHist) |> background_band(bgSamples |> select(SAMPLE, TYPE), "Y")
+        noBg <- glue("No QC background in database version {qcdbVersion}")
+        notes <- list(
+            gc = if (nrow(bgGcBias) == 0) glue("No GC table in QC database version {qcdbVersion}"),
+            dup = if (nrow(bgDupHist) == 0) noBg,
+            mvlh = if (nrow(bgMvlh) == 0) noBg
+        )
 
+        # Missed-variant likelihood: tumors only (Tempo is a somatic
+        # pipeline), over the OncoKB genes, from project_gene_mvlh
         labels <- info |> select(METRIC, LABEL, KIND)
         ctx <- list(
             bg = bg, vals = vals, lims = lims, hits = hits, labels = labels, genes = genes,
             covBinned = covBinned, insBinned = insBinned, covBand = covBand, insBand = insBand,
             covBin = covBin, insBin = insBin, covMax = covMax, insMax = insMax,
-            mvlh = mvlh, sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
+            gcProj = gc_bias_bins(dists$target_gc_bias), gcBand = gcBand,
+            dupProj = dup_fractions(dists$fastp_dup_hist), dupBand = dupBand, notes = notes,
+            mvlh = mvlh, bgMvlh = bgMvlh |> select(SAMPLE, GENE, MVLH),
+            flagVals = flagVals, flagBg = flagBg, flagLims = flagLims, info = info,
+            sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
         )
         pages <- pairing |>
             pmap(\(...) pair_page(list(...), ctx))

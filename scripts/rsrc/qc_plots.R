@@ -104,8 +104,8 @@ frac_range <- function(v, minWidth = MIN_PCT_AXIS) {
 
 #
 # Axis for one metric: a transform applied to the values before
-# plotting, the x scale, a suffix for the panel title, and which limit
-# values can be drawn on it. dataValues: all background and project
+# plotting, the x scale, a suffix for the panel title, its type
+# (logodds, log or linear), and which limit values can be drawn on it. dataValues: all background and project
 # values, used to choose the axis type. rangeValues: what the axis must
 # show (box whisker ends, project values and the limits).
 #
@@ -148,6 +148,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
                 },
                 scale = scale_x_log10(breaks = pp / (1 - pp), labels = pct_label_each(pp)),
                 suffix = " (log-odds axis)",
+                type = "logodds",
                 valid = always
             ))
         }
@@ -161,6 +162,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
                 tx = \(x) pmax(x / scaleBy, floorV),
                 scale = scale_x_log10(breaks = log_breaks(lo, max(v)), labels = pctLabels),
                 suffix = " (log scale)",
+                type = "log",
                 valid = \(x) x / scaleBy >= floorV
             ))
         }
@@ -169,6 +171,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             scale = scale_x_continuous(labels = pctLabels),
             xlim = frac_range(v),
             suffix = "",
+            type = "linear",
             valid = always
         ))
     }
@@ -184,6 +187,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             tx = identityTx,
             scale = scale_x_log10(breaks = log_breaks(min(v), max(v)), labels = labels),
             suffix = " (log scale)",
+            type = "log",
             valid = positive
         ))
     }
@@ -193,10 +197,11 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             scale = scale_x_continuous(labels = labels),
             xlim = c(0, max(v) * 1.05),
             suffix = "",
+            type = "linear",
             valid = always
         ))
     }
-    list(tx = identityTx, scale = scale_x_continuous(labels = labels), suffix = "", valid = always)
+    list(tx = identityTx, scale = scale_x_continuous(labels = labels), suffix = "", type = "linear", valid = always)
 }
 
 #

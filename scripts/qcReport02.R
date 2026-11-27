@@ -20,11 +20,12 @@
 #                                  normal pair, modeled on Hartwig's QSee
 #                                  report (rsrc/qc_pair_*.R): a table of
 #                                  QC metrics with the background, target
-#                                  coverage and insert size, and the
-#                                  tumor's genes most likely to miss a
-#                                  variant. Then a table of every flag of
-#                                  each pair, and a legend and glossary.
-#                                  Its flags are this report's.
+#                                  coverage, insert size, GC bias,
+#                                  duplicate frequency, and the tumor's
+#                                  genes most likely to miss a variant.
+#                                  Then a table of every flag of each
+#                                  pair, and a legend and glossary. Its
+#                                  flags are this report's.
 #   Proj_<no>_qcRpt02_design.pdf   with -d (design mode), instead of
 #                                  the samples PDF: only the pair pages,
 #                                  each element in a purple box with an
@@ -64,6 +65,8 @@
 # technology (NovaSeq 6000 or NovaSeq X, from the instrument ID in the
 # fastp file names; qcdb/rsrc/qcdb_seq_tech.R), and only the pairs whose
 # tumor and normal both are. Many metrics differ between technologies.
+# The project's own samples are left out of the background when the
+# database has them, so no sample is compared with itself.
 # A project with samples from more than one technology, or from an
 # unknown one, or from one with no samples in the background, gets no
 # report: the script writes a one-page Proj_<no>_qcRpt02_ERROR.pdf that
@@ -247,18 +250,21 @@ if (identical(techs, "Unknown")) {
 seqTech <- techs
 
 #
-# Background: the samples of the project's technology, and the pairs
-# whose tumor and normal both are
+# Background: the samples of the project's technology, less the
+# project's own, and the pairs whose tumor and normal both are left
 #
 bgSamples <- qcdb$samples |>
     distinct(SAMPLE, TYPE) |>
     semi_join(sample_seq_tech(qcdb$dist$fastp_lanes) |> filter(SEQ_TECH == seqTech), by = "SAMPLE")
+nSelf <- sum(bgSamples$SAMPLE %in% sampleMap$SAMPLE)
+bgSamples <- bgSamples |> filter(!SAMPLE %in% sampleMap$SAMPLE)
 bgPairs <- qcdb$pairs |>
     filter(TUMOR_ID %in% bgSamples$SAMPLE, NORMAL_ID %in% bgSamples$SAMPLE)
 nBgTumor <- sum(bgSamples$TYPE == "Tumor")
 nBgNormal <- sum(bgSamples$TYPE == "Normal")
-message(glue("QC background, {seqTech} only: {nBgTumor} tumors, {nBgNormal} normals, {nrow(bgPairs)} pairs ",
-             "(of {n_distinct(qcdb$samples$SAMPLE)} samples, {nrow(qcdb$pairs)} pairs)"))
+selfText <- if (nSelf > 0) glue(", without the {nSelf} of this project") else ""
+message(glue("QC background, {seqTech} only{selfText}: {nBgTumor} tumors, {nBgNormal} normals, ",
+             "{nrow(bgPairs)} pairs (of {n_distinct(qcdb$samples$SAMPLE)} samples, {nrow(qcdb$pairs)} pairs)"))
 if (nBgTumor == 0 || nBgNormal == 0) {
     tech_error(glue("no {seqTech} background"),
                glue("QC background version {qcdb$meta$version} has no {seqTech} tumors or no {seqTech} normals."))
@@ -393,10 +399,15 @@ if (nrow(hits) > 0) {
 #
 meta <- qcdb$meta
 nProj <- n_distinct(sampleMap$SAMPLE)
+selfNote <- case_when(
+    nSelf == 0 ~ "",
+    nSelf == nProj ~ ", left out of the background",
+    .default = as.character(glue(", {nSelf} of them left out of the background"))
+)
 boxText <- str_c(
     glue("Boxes: QC background {meta$assay} version {meta$version}, {seqTech} samples only: {nBgTumor} tumors, ",
          "{nBgNormal} normals and {nrow(bgPairs)} pairs;"),
-    glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech})."),
+    glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech}){selfNote}."),
     sep = "\n"
 )
 subtitle <- str_c(
@@ -592,7 +603,7 @@ hitPages <- if (nrow(hits) == 0) {
 #
 glossaryCtx <- list(
     assay = meta$assay, version = meta$version, seqTech = seqTech,
-    nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+    nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs), nSelf = nSelf,
     typeLimited = keySpec |>
         filter(!is.na(TYPE), METRIC %in% keyMetrics) |>
         left_join(info |> select(METRIC, LABEL), by = "METRIC") |>
@@ -619,6 +630,19 @@ write_pdf(c(keyPages, concordPages, scanPages, hitPages, list(glossaryPage)), su
 if (!identical(opt$pairs, "no")) {
     message("Per-pair pages")
     genesRes <- read_gene_resources(opt$genes %||% QC_GENES_DIR, assay)
+    projSamples <- unique(sampleMap$SAMPLE)
+    # The project's duplicate histograms, GC-bias curves and
+    # missed-variant likelihood, computed as the database computes them
+    # (qcdb/rsrc/qcdb_project_metrics.R); the GC curves with the
+    # database's GC table
+    projDists <- project_sample_dists(outDir, projSamples, qcdb_target_gc(meta, ADAGIO), nCores)
+    projMvlh <- project_gene_mvlh(outDir, mvlh_tumors(pairing, projSample, projPair, sexTbl), genesRes, nCores)
+    # The background's tables, as empty tables for a database without
+    # them (versions before 261127); the missed-variant likelihood of
+    # the background pairs' tumors
+    bg_dist <- \(name, empty = NULL) (qcdb$dist[[name]] %||% empty) |> filter(SAMPLE %in% bgSamples$SAMPLE)
+    bgMvlh <- bg_dist("gene_mvlh", tibble(SAMPLE = character(), GENE = character(), MVLH = numeric())) |>
+        filter(SAMPLE %in% bgPairs$TUMOR_ID)
     pairReport <- pair_report_pages(list(
         pairing = pairing,
         projLong = projLong,
@@ -629,10 +653,17 @@ if (!identical(opt$pairs, "no")) {
         info = info,
         scanned = scanned,
         keyDrop = keyDrop,
-        pairExtra = project_pair_extra(outDir, pairing, nCores),
-        pairDist = pair_distributions(outDir, unique(sampleMap$SAMPLE), genesRes$targets, nCores = nCores),
-        bgCoverage = qcdb$dist$hsm_coverage |> filter(SAMPLE %in% bgSamples$SAMPLE),
-        bgInsertSize = qcdb$dist$alfred_insert_size |> filter(SAMPLE %in% bgSamples$SAMPLE),
+        pairDist = pair_distributions(outDir, projSamples, nCores = nCores),
+        dists = projDists,
+        mvlh = projMvlh,
+        bgCoverage = bg_dist("hsm_coverage"),
+        bgInsertSize = bg_dist("alfred_insert_size"),
+        bgDupHist = bg_dist("fastp_dup_hist", tibble(SAMPLE = character(), DUP_LEVEL = integer(),
+                                                     N_SETS = numeric())),
+        bgGcBias = bg_dist("target_gc_bias", tibble(SAMPLE = character(), GC_BIN = numeric(),
+                                                    MEDIAN_NORM_COV = numeric())),
+        bgMvlh = bgMvlh,
+        qcdbVersion = meta$version,
         genes = genesRes,
         sexTbl = sexTbl,
         sampleMeta = read_sample_meta("meta"),
@@ -642,7 +673,8 @@ if (!identical(opt$pairs, "no")) {
         filter(!is.na(CDS_BASES), CDS_BASES_IN_TARGETS >= MVLH_MIN_IN_TARGETS * CDS_BASES)
     glossaryCtx <- list(
         assay = meta$assay, version = meta$version, seqTech = seqTech,
-        nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+        nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs), nSelf = nSelf,
+        nMvlh = n_distinct(bgMvlh$SAMPLE),
         nOncokb = sum(mvlhGenes$ONCOKB),
         xlsxName = basename(xlsxFile), summaryName = basename(summaryFile)
     )
