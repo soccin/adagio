@@ -29,6 +29,9 @@
 # gene lists) is on the legend and glossary page (qc_pair_glossary.R),
 # not on the pair pages.
 #
+# Design mode (qcReport02.R --design) boxes and names every element of
+# the page, for layout work (design_mark).
+#
 # Needs qc_metric_info.R, qc_plots.R and qc_pair_data.R.
 #
 
@@ -322,9 +325,46 @@ table_header <- function() {
     list(text, plot_spacer())
 }
 
+#
+# Design mode (qcReport02.R --design), for layout work: every element of
+# the page gets a purple box and an ID in its top right corner. H the
+# header; T0, T1, ... the table's text column and B0, B1, ... its box
+# column (0 the column heads, then one per block); P1, P2, ... the cells
+# of the plot grid, by rows, empty cells included. The marks do not move
+# anything: the ID is drawn over the element, and the elements that
+# stand in for a spacer or an empty cell have the same margins.
+#
+DESIGN_COLOR <- "purple"
+
+design_mark <- function(x, id) {
+    # patchwork draws only the background of a spacer, not its tag
+    if (inherits(x, "spacer")) x <- wrap_elements(full = grid::nullGrob())
+    x + labs(tag = id) + theme(
+        plot.background = element_rect(colour = DESIGN_COLOR, fill = NA, linewidth = 1),
+        plot.tag = element_text(colour = DESIGN_COLOR, face = "bold", size = 9, margin = margin(2, 3, 2, 3)),
+        plot.tag.position = "topright",
+        plot.tag.location = "plot"
+    )
+}
+
+# The plot grid with each empty cell (#) its own element, as patchwork
+# fills it (no margins), and every cell marked P1, P2, ... by rows.
+# cells: named list of the grid's plots; layout: patchwork design.
+design_grid <- function(cells, layout) {
+    chars <- str_split_1(layout, "")
+    holes <- which(chars == "#")
+    chars[holes] <- setdiff(LETTERS, chars)[seq_along(holes)]
+    order <- unique(str_subset(chars, "^[A-Z]$"))
+    empty <- setdiff(order, names(cells))
+    cells <- c(cells, map(set_names(empty), \(l) wrap_elements(full = grid::nullGrob()) +
+                                                theme(plot.margin = margin(0))))
+    list(cells = map2(cells[order], str_c("P", seq_along(order)), design_mark),
+         layout = str_c(chars, collapse = ""))
+}
+
 # The whole table: a header row, then one text and one box plot per
 # block, aligned by patchwork
-pair_table <- function(bg, vals, lims) {
+pair_table <- function(bg, vals, lims, design = FALSE) {
     blocks <- PAIR_ROWS |>
         mutate(BLOCK = consolidate_blocks(GROUP, AXIS), FIRST_IN_GROUP = !duplicated(GROUP))
     plots <- blocks |>
@@ -336,7 +376,11 @@ pair_table <- function(bg, vals, lims) {
         )) |>
         list_flatten()
     heights <- c(0.5, blocks |> count(BLOCK) |> pull(n) + 2 * ROW_PAD)
-    wrap_plots(c(table_header(), plots), ncol = 2, widths = PAIR_TABLE_WIDTHS, heights = heights)
+    cells <- c(table_header(), plots)
+    if (design) {
+        cells <- map2(cells, str_c(rep(c("T", "B"), len(heights)), rep(seq_along(heights) - 1, each = 2)), design_mark)
+    }
+    wrap_plots(cells, ncol = 2, widths = PAIR_TABLE_WIDTHS, heights = heights)
 }
 
 # Block number of each row: a new block where the group or axis changes
@@ -521,7 +565,7 @@ pair_page <- function(p, ctx) {
     hits <- ctx$hits |> filter(SAMPLE %in% ids)
     status <- pair_status(hits)
 
-    table <- pair_table(ctx$bg, vals, ctx$lims)
+    table <- pair_table(ctx$bg, vals, ctx$lims, ctx$design)
 
     sampleType <- tibble(SAMPLE = c(p$TUMOR_ID, p$NORMAL_ID), TYPE = c("Tumor", "Normal"))
     covProj <- ctx$covBinned |> inner_join(sampleType, by = "SAMPLE")
@@ -566,12 +610,18 @@ pair_page <- function(p, ctx) {
     # Heights are relative panel heights (inch units do not mix with the
     # nested table), so the last row gets the rest of the body's height
     bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
-    right <- wrap_plots(A = covPlot, B = insPlot, C = mvlhPlot, D = plot_spacer(), design = "ABC\n##C\nDDD",
+    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = plot_spacer()),
+                     layout = "ABC\n##C\nDDD")
+    top <- wrap_elements(full = header$grob)
+    if (ctx$design) {
+        plotGrid <- design_grid(plotGrid$cells, plotGrid$layout)
+        top <- design_mark(top, "H")
+    }
+    right <- wrap_plots(plotGrid$cells, design = plotGrid$layout,
                         heights = c(PAIR_PLOT_ROW_IN, PAIR_PLOT_ROW_IN,
                                     bodyIn - PAIR_PLOT_DECOR_IN - 2 * PAIR_PLOT_ROW_IN))
     body <- wrap_plots(table, right, widths = c(sum(PAIR_TABLE_WIDTHS), PAIR_PLOTS_WIDTH))
-    wrap_plots(wrap_elements(full = header$grob), body, ncol = 1,
-               heights = grid::unit(c(header$height, 1), c("in", "null")))
+    wrap_plots(top, body, ncol = 1, heights = grid::unit(c(header$height, 1), c("in", "null")))
 }
 
 #
@@ -608,7 +658,7 @@ pair_flag_table <- function(hits, pairing, info) {
 # All pair pages. inputs: a list with pairing, projLong, bgLong,
 # bgSamples (SAMPLE, TYPE), hits, limLong, info, scanned, keyDrop,
 # pairExtra, pairDist, bgCoverage, bgInsertSize, genes (gene
-# resources), sexTbl, sampleMeta.
+# resources), sexTbl, sampleMeta, and design (TRUE for design mode).
 #
 pair_report_pages <- function(inputs) {
     with(inputs, {
@@ -703,7 +753,7 @@ pair_report_pages <- function(inputs) {
             bg = bg, vals = vals, lims = lims, hits = hits, labels = labels, genes = genes,
             covBinned = covBinned, insBinned = insBinned, covBand = covBand, insBand = insBand,
             covBin = covBin, insBin = insBin, covMax = covMax, insMax = insMax,
-            mvlh = mvlh, sexTbl = sexTbl, sampleMeta = sampleMeta
+            mvlh = mvlh, sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
         )
         pages <- pairing |>
             pmap(\(...) pair_page(list(...), ctx))

@@ -25,6 +25,10 @@
 #                                  variant. Then a table of every flag of
 #                                  each pair, and a legend and glossary.
 #                                  Its flags are this report's.
+#   Proj_<no>_qcRpt02_design.pdf   with -d (design mode), instead of
+#                                  the samples PDF: only the pair pages,
+#                                  each element in a purple box with an
+#                                  ID, for layout work
 #
 # The concordance and sex page holds the Conpair panels (concordance,
 # contamination), ChrY against ChrX (Alfred) for the background and the
@@ -86,6 +90,9 @@ Options:
   --genes=DIR     gene resources for the per-pair pages (default:
                   QC_GENES_DIR in rsrc/qc_pair_data.R; see
                   scripts/qcgenes/README.md)
+  -d, --design    design mode, for layout work: a purple box and an
+                  ID on every element of the per-pair pages; writes
+                  only those pages, to Proj_<no>_qcRpt02_design.pdf
   -h, --help      show this help
 ")
 }
@@ -95,6 +102,8 @@ if (any(args %in% c("-h", "--help"))) {
     usage()
     quit(status = 0)
 }
+design <- any(args %in% c("-d", "--design"))
+args <- args[!args %in% c("-d", "--design")]
 
 bad <- args[!grepl("^--[A-Za-z-]+=", args)]
 if (length(bad) > 0) {
@@ -626,7 +635,8 @@ if (!identical(opt$pairs, "no")) {
         bgInsertSize = qcdb$dist$alfred_insert_size |> filter(SAMPLE %in% bgSamples$SAMPLE),
         genes = genesRes,
         sexTbl = sexTbl,
-        sampleMeta = read_sample_meta("meta")
+        sampleMeta = read_sample_meta("meta"),
+        design = design
     ))
     mvlhGenes <- genesRes$genes |>
         filter(!is.na(CDS_BASES), CDS_BASES_IN_TARGETS >= MVLH_MIN_IN_TARGETS * CDS_BASES)
@@ -651,6 +661,12 @@ if (!identical(opt$pairs, "no")) {
         pair_glossary_subtitle(glossaryCtx),
         dims = GLOSSARY_LANDSCAPE
     )
-    write_pdf(c(pairReport$pages, pairTablePages, list(pairGlossary)),
-              file.path(rDir, glue("{projNo}_qcRpt02_samples.pdf")), width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT)
+    if (design) {
+        write_pdf(pairReport$pages, file.path(rDir, glue("{projNo}_qcRpt02_design.pdf")),
+                  width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT)
+    } else {
+        write_pdf(c(pairReport$pages, pairTablePages, list(pairGlossary)),
+                  file.path(rDir, glue("{projNo}_qcRpt02_samples.pdf")),
+                  width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT)
+    }
 }
