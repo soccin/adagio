@@ -15,9 +15,10 @@
 #          band); GC bias and duplicate frequency (tumor and normal on
 #          one axis, with the same bands); and, over two rows, the
 #          tumor's genes most likely to miss a variant, each over the
-#          background tumors' box. The space below is for the panels
-#          still to come (base-quality recalibration and others;
-#          QC_REPORT_TODO.md in the project folder).
+#          background tumors' box. Below them, every flagged metric of
+#          the pair that is not a table row, drawn as a table row with
+#          its own axis (flag_panel), so every flag behind the pair's
+#          status is on the page.
 #
 # After the pair pages: a table of every flag of each pair
 # (pair_flag_table), then the legend and glossary. qcReport02.R writes
@@ -245,21 +246,25 @@ place_rows <- function(df, rows) {
         mutate(Y = ROW_Y + TYPE_OFFSET[TYPE])
 }
 
-text_block <- function(rows, vals, title) {
+# vals may carry the cell text (TEXT); else format_cell gives it.
+# textX: text positions as TEXT_X; cellW: width of a sample's shaded
+# cell (0-1 across the column)
+text_block <- function(rows, vals, title, textX = TEXT_X, cellW = 0.2) {
     rows <- block_rows(rows)
     n <- nrow(rows)
+    hasText <- "TEXT" %in% names(vals)
     cells <- vals |>
         inner_join(rows |> select(METRIC, ROW_Y, AXIS), by = "METRIC") |>
         mutate(
-            X = TEXT_X[TYPE],
-            W = if_else(TYPE == "Pair", 0.42, 0.2),
-            TEXT = format_cell(METRIC, AXIS, VALUE)
+            X = textX[TYPE],
+            W = if_else(TYPE == "Pair", 0.42, cellW),
+            TEXT = if (hasText) TEXT else format_cell(METRIC, AXIS, VALUE)
         )
     ggplot() +
         geom_hline(yintercept = seq_len(n - 1) + 0.5, colour = "grey90", linewidth = 0.3) +
         geom_tile(data = cells |> filter(!is.na(LEVEL)), aes(x = X, y = ROW_Y, width = W, fill = LEVEL),
                   height = 0.86) +
-        geom_text(data = rows, aes(x = TEXT_X[["LABEL"]], y = ROW_Y, label = LABEL), hjust = 0,
+        geom_text(data = rows, aes(x = textX[["LABEL"]], y = ROW_Y, label = LABEL), hjust = 0,
                   size = TABLE_TEXT_SIZE) +
         geom_text(data = cells, aes(x = X, y = ROW_Y, label = TEXT, colour = TYPE), size = TABLE_TEXT_SIZE) +
         scale_fill_manual(values = CELL_FILLS, guide = "none") +
@@ -271,7 +276,9 @@ text_block <- function(rows, vals, title) {
         theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
 }
 
-box_block <- function(rows, bg, vals, lims) {
+# axisFn: the axis (tx, scale, lim) for the values it must show; by
+# default the block's AXIS (pair_axis)
+box_block <- function(rows, bg, vals, lims, axisFn = \(v) pair_axis(rows$AXIS[1], v)) {
     rows <- block_rows(rows)
     n <- nrow(rows)
     plotRows <- rows |> filter(!METRIC %in% TEXT_ROWS)
@@ -282,7 +289,7 @@ box_block <- function(rows, bg, vals, lims) {
         bg |> reframe(Q = quantile(VALUE, c(0.01, 0.99), names = FALSE), .by = c(METRIC, TYPE)) |> pull(Q),
         vals$VALUE, lims$LIMIT
     )
-    ax <- pair_axis(rows$AXIS[1], rangeValues)
+    ax <- axisFn(rangeValues)
     bg <- bg |> mutate(X = ax$tx(VALUE))
     vals <- vals |> mutate(X = ax$tx(VALUE))
     lims <- lims |> mutate(X = ax$tx(LIMIT), LINE = LEVEL_COLORS[LEVEL])
@@ -332,19 +339,20 @@ table_header <- function() {
 # the page gets a purple box and an ID in its top right corner. H the
 # header; T0, T1, ... the table's text column and B0, B1, ... its box
 # column (0 the column heads, then one per block); P1, P2, ... the cells
-# of the plot grid, by rows, empty cells included. The marks do not move
+# of the plot grid, by rows, empty cells included; FT1, FB1, ... the text
+# and box cells of the flagged metrics below the plots. The marks do not move
 # anything: the ID is drawn over the element, and the elements that
 # stand in for a spacer or an empty cell have the same margins.
 #
 DESIGN_COLOR <- "purple"
 
-design_mark <- function(x, id) {
+design_mark <- function(x, id, position = "topright") {
     # patchwork draws only the background of a spacer, not its tag
     if (inherits(x, "spacer")) x <- wrap_elements(full = grid::nullGrob())
     x + labs(tag = id) + theme(
         plot.background = element_rect(colour = DESIGN_COLOR, fill = NA, linewidth = 1),
         plot.tag = element_text(colour = DESIGN_COLOR, face = "bold", size = 9, margin = margin(2, 3, 2, 3)),
-        plot.tag.position = "topright",
+        plot.tag.position = position,
         plot.tag.location = "plot"
     )
 }
@@ -389,6 +397,138 @@ pair_table <- function(bg, vals, lims, design = FALSE) {
 consolidate_blocks <- function(group, axis) {
     key <- str_c(group, "|", axis)
     cumsum(key != lag(key, default = ""))
+}
+
+#
+# Flagged metrics not in the table, below the plots: every scanned
+# metric with a FAIL or WARN in this pair that is not a table row, worst
+# first, each drawn as a table row with its own axis. FLAG_SLOTS rows at
+# most (the rest are in the flag table after the pair pages); unused
+# slots are blank, so a row is as tall as a table row whatever the count.
+#
+FLAG_SLOTS <- 10
+# A wider text column than the table's, with the values further right:
+# metric names run to about 40 characters
+FLAG_WIDTHS <- c(3.4, PAIR_PLOTS_WIDTH - 3.4)
+FLAG_TEXT_X <- c(LABEL = 0.02, Tumor = 0.76, Normal = 0.92, Pair = 0.84)
+FLAG_CELL_W <- 0.15
+FLAG_TITLE <- "Flagged metrics not in the table"
+ODDS_BREAKS <- c(1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999)
+
+# Cell text by the metric's kind (metric_info): percentages to 3
+# significant digits, read counts as 175.7M, coverage as 74x, other
+# numbers to 4 (as the flag table)
+flag_text <- function(value, kind, scaleBy) {
+    kind <- rep(kind, len(value))
+    scaleBy <- rep(scaleBy, len(value))
+    case_when(
+        is.na(value) ~ "-",
+        kind %in% PERCENT_KINDS ~ format_value(value, kind, scaleBy),
+        kind == "count" ~ scales::label_number(accuracy = 0.1, scale_cut = scales::cut_short_scale())(value),
+        kind == "cov" ~ sprintf("%.0fx", value),
+        kind == "bp" ~ sprintf("%.0f bp", value),
+        .default = format_num(value)
+    )
+}
+
+#
+# The axis of one flagged metric: the type the summary report's panel
+# for the metric has (axis_spec in qc_plots.R), with the table's ticks:
+# log axes labeled at powers of 10 only, log-odds axes at ODDS_BREAKS. A
+# log-odds axis over values that all lie between 5% and 95% is linear.
+# infoRow: the metric's row of metric_info(); dataValues: all its
+# background and pair values; rangeValues: what the axis must show.
+#
+flag_axis <- function(infoRow, bg, dataValues, rangeValues) {
+    ax <- axis_spec(infoRow, bg, dataValues, rangeValues)
+    scaleBy <- infoRow$SCALE_BY
+    r <- rangeValues[is.finite(rangeValues)]
+    p <- r / scaleBy
+    if (ax$type == "logodds" && all(p > 0.05 & p < 0.95)) {
+        return(list(tx = \(x) x / scaleBy, scale = scale_x_continuous(labels = scales::label_percent()),
+                    lim = frac_range(p)))
+    }
+    switch(ax$type,
+        logodds = {
+            a <- odds_axis(p, ODDS_BREAKS)
+            list(tx = \(x) a$tx(x / scaleBy), scale = a$scale, lim = a$lim)
+        },
+        log = {
+            x <- ax$tx(r)
+            decades <- log10(range(x[x > 0]))
+            k <- floor(decades[1]):ceiling(decades[2])
+            list(tx = ax$tx,
+                 scale = scale_x_log10(breaks = 10^k, labels = ax$scale$labels, guide = log_ticks_guide()),
+                 lim = 10^range(k))
+        },
+        {
+            x <- ax$tx(r)
+            list(tx = ax$tx, scale = ax$scale, lim = ax$xlim %||% (range(x) + c(-1, 1) * 0.05 * diff(range(x))))
+        }
+    )
+}
+
+# An unused slot: a blank text cell (with the title in the first slot)
+# and a box cell with an invisible axis as tall as a real one
+blank_flag_slot <- function(title = NULL) {
+    text <- ggplot() +
+        labs(title = title) +
+        theme_void(base_size = 8) +
+        theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
+    box <- ggplot() +
+        scale_x_continuous(limits = c(0, 1), breaks = 0.5, labels = "0") +
+        qc_theme(7, 8) +
+        theme(
+            panel.border = element_blank(),
+            panel.grid = element_blank(),
+            axis.text.x = element_text(size = 6, colour = NA),
+            axis.ticks.x = element_line(colour = NA),
+            axis.ticks.length.x = unit(TABLE_TICK_PT, "pt"),
+            plot.margin = margin(0, 4, 2, 2)
+        )
+    list(text, box)
+}
+
+#
+# The block below the plots. metrics: the flagged metrics not in the
+# table, worst first. bg: TYPE, METRIC, VALUE; vals: SAMPLE, TYPE, METRIC,
+# VALUE, LEVEL of the pair; lims: as for the table; info: metric_info().
+# One element (wrap_elements), so the page grid treats it as one cell.
+#
+flag_panel <- function(metrics, bg, vals, lims, info, design = FALSE) {
+    shown <- head(metrics, FLAG_SLOTS)
+    title <- case_when(
+        len(metrics) == 0 ~ str_c(FLAG_TITLE, ": none"),
+        len(metrics) > FLAG_SLOTS ~ str_c(FLAG_TITLE, glue(" (the {FLAG_SLOTS} worst of {len(metrics)})")),
+        .default = FLAG_TITLE
+    )
+    cells <- shown |>
+        imap(\(m, i) {
+            infoRow <- info |> filter(METRIC == m) |> slice_head(n = 1)
+            rows <- tibble(GROUP = FLAG_TITLE, AXIS = "flag", METRIC = m, LABEL = infoRow$LABEL)
+            v <- vals |>
+                filter(METRIC == m) |>
+                mutate(TEXT = flag_text(VALUE, infoRow$KIND, infoRow$SCALE_BY))
+            b <- bg |> filter(METRIC == m)
+            list(
+                text_block(rows, v, if (i == 1) title, FLAG_TEXT_X, FLAG_CELL_W),
+                box_block(rows, b, v, lims |> filter(METRIC == m),
+                          axisFn = \(r) flag_axis(infoRow, b, c(b$VALUE, v$VALUE), r))
+            )
+        }) |>
+        list_flatten()
+    blanks <- seq_len(FLAG_SLOTS - len(shown)) |>
+        map(\(i) blank_flag_slot(if (len(shown) == 0 && i == 1) title)) |>
+        list_flatten()
+    cells <- c(cells, blanks)
+    # In design mode the row IDs go bottom right; the block's own ID (P6)
+    # is top right
+    if (design) {
+        cells <- map2(cells, str_c(rep(c("FT", "FB"), FLAG_SLOTS), rep(seq_len(FLAG_SLOTS), each = 2)),
+                      \(x, id) design_mark(x, id, "bottomright"))
+    }
+    wrap_elements(full = wrap_plots(cells, ncol = 2, widths = FLAG_WIDTHS,
+                                    heights = rep(1 + 2 * ROW_PAD, FLAG_SLOTS)))
 }
 
 #
@@ -580,24 +720,23 @@ mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
 }
 
 #
-# The pair's status, and its worst FAIL for the header: the first FAIL in
-# the project report's order (FAIL first, then by robust z), by name
-# only, e.g. "Worst FAIL: tumor Total Reads in BAM". Values, limits and
-# every other flag are in the table after the pair pages. hits: the
-# project report's flagged rows of this pair, in its order; labels:
-# METRIC, LABEL.
+# The pair's status, and its worst flag for the header: the first flag
+# in the project report's order (FAIL first, then by robust z), by name
+# only, e.g. "Worst FAIL: tumor Total Reads in BAM", or "Worst WARN: ..."
+# when the pair has no FAIL. Every flag is drawn on the page, in the
+# table or below the plots. hits: the project report's flagged rows of
+# this pair, in its order; labels: METRIC, LABEL.
 #
 pair_status <- function(hits) {
     if (any(hits$LEVEL == "FAIL")) "FAIL" else if (nrow(hits) > 0) "WARN" else "PASS"
 }
 
-worst_fail_line <- function(hits, labels) {
+worst_flag_line <- function(hits, labels) {
     worst <- hits |>
-        filter(LEVEL == "FAIL") |>
         slice_head(n = 1) |>
         left_join(labels |> select(METRIC, METRIC_LABEL = LABEL), by = "METRIC")
     if (nrow(worst) == 0) return(character())
-    glue("Worst FAIL: {str_to_lower(worst$TYPE)} {worst$METRIC_LABEL}")
+    glue("Worst {worst$LEVEL}: {str_to_lower(worst$TYPE)} {worst$METRIC_LABEL}")
 }
 
 # The pair's metadata for the title line: patient, tumor OncoTree code,
@@ -696,18 +835,23 @@ pair_page <- function(p, ctx) {
     header <- pair_header(
         glue("{p$TUMOR_ID} / {p$NORMAL_ID}: {status}"),
         pair_meta_text(tMeta, nMeta, ctx$sexTbl |> filter(PAIR == p$PAIR)),
-        worst_fail_line(hits, ctx$labels)
+        worst_flag_line(hits, ctx$labels)
+    )
+
+    # Flags of metrics that are not table rows, below the plots
+    flagPanel <- flag_panel(
+        hits |> filter(!METRIC %in% PAIR_ROWS$METRIC) |> distinct(METRIC) |> pull(METRIC),
+        ctx$flagBg, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
     )
 
     # QSee's grid: coverage and insert size in the first row, GC bias and
     # duplicate frequency in the second, the genes over both rows in the
-    # third column; the last row is a spacer (patchwork drops a row with
-    # nothing in it). Heights are relative panel heights (inch units do
-    # not mix with the nested table), so the last row gets the rest of
-    # the body's height
+    # third column; the flagged metrics not in the table below. Heights
+    # are relative panel heights (inch units do not mix with the nested
+    # table), so the last row gets the rest of the body's height
     bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
     plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = gcPlot, E = dupPlot,
-                                  F = plot_spacer()),
+                                  F = flagPanel),
                      layout = "ABC\nDEC\nFFF")
     top <- wrap_elements(full = header$grob)
     if (ctx$design) {
@@ -801,6 +945,22 @@ pair_report_pages <- function(inputs) {
             filter(METRIC %in% PAIR_ROWS$METRIC, METRIC %in% scanned) |>
             anti_join(keyDrop, by = c("METRIC", "TYPE"))
 
+        # The flagged metrics that are not table rows (drawn below the
+        # plots): the project's values with their flags, the background
+        # and the limits
+        flagMetrics <- setdiff(unique(hits$METRIC), PAIR_ROWS$METRIC)
+        flagVals <- projLong |>
+            filter(METRIC %in% flagMetrics) |>
+            distinct(SAMPLE, TYPE, METRIC, .keep_all = TRUE) |>
+            select(SAMPLE, TYPE, METRIC, VALUE) |>
+            left_join(hits |> distinct(SAMPLE, METRIC, LEVEL), by = c("SAMPLE", "METRIC"))
+        flagBg <- bgLong |>
+            filter(METRIC %in% flagMetrics) |>
+            select(TYPE, METRIC, VALUE)
+        flagLims <- limLong |>
+            filter(METRIC %in% flagMetrics, METRIC %in% scanned) |>
+            anti_join(keyDrop, by = c("METRIC", "TYPE"))
+
         covBin <- 5
         insBin <- 10
         bgCovSamples <- bgCoverage |> distinct(SAMPLE)
@@ -840,6 +1000,7 @@ pair_report_pages <- function(inputs) {
             gcProj = gc_bias_bins(dists$target_gc_bias), gcBand = gcBand,
             dupProj = dup_fractions(dists$fastp_dup_hist), dupBand = dupBand, notes = notes,
             mvlh = mvlh, bgMvlh = bgMvlh |> select(SAMPLE, GENE, MVLH),
+            flagVals = flagVals, flagBg = flagBg, flagLims = flagLims, info = info,
             sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
         )
         pages <- pairing |>
