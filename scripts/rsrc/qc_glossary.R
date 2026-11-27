@@ -102,12 +102,19 @@ summary_glossary_keys <- function() {
     )
 }
 
+# The sentence on the project's samples left out of the background
+# (none when n is 0 or NULL), with a leading space
+self_text <- function(n) {
+    if (is.null(n) || n == 0) return("")
+    glue(" The {n} samples of this project that are in the database are left out.")
+}
+
 #
 # The entries of the summary report's glossary: section, term, text, key
 # (a name in summary_glossary_keys(), or NA). ctx: assay, version,
-# seqTech, nTumor, nNormal, nPair (the background), typeLimited (key
-# metrics judged in one type, e.g. "% Target Bases at 100X: tumors"),
-# nScanned, xlsxName.
+# seqTech, nTumor, nNormal, nPair, nSelf (the background, and the
+# project's samples left out of it), typeLimited (key metrics judged in
+# one type, e.g. "% Target Bases at 100X: tumors"), nScanned, xlsxName.
 #
 summary_glossary_entries <- function(ctx) {
     central <- \(p) str_c(100 * (1 - p) / 2, "-", 100 * (1 + p) / 2, "%")
@@ -151,7 +158,7 @@ summary_glossary_entries <- function(ctx) {
             "QC background", "QC background",
             glue("Samples of earlier {ctx$assay} projects, QC database version {ctx$version}. Only the ",
                  "{ctx$seqTech} samples are used: {ctx$nTumor} tumors, {ctx$nNormal} normals, and the ",
-                 "{ctx$nPair} pairs whose tumor and normal both are {ctx$seqTech}."),
+                 "{ctx$nPair} pairs whose tumor and normal both are {ctx$seqTech}.{self_text(ctx$nSelf)}"),
             NA,
             "QC background", "Sequencer technology",
             glue("From the instrument ID in the fastp file names ({seq_tech_rules()}). Many metrics ",

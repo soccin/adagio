@@ -64,6 +64,8 @@
 # technology (NovaSeq 6000 or NovaSeq X, from the instrument ID in the
 # fastp file names; qcdb/rsrc/qcdb_seq_tech.R), and only the pairs whose
 # tumor and normal both are. Many metrics differ between technologies.
+# The project's own samples are left out of the background when the
+# database has them, so no sample is compared with itself.
 # A project with samples from more than one technology, or from an
 # unknown one, or from one with no samples in the background, gets no
 # report: the script writes a one-page Proj_<no>_qcRpt02_ERROR.pdf that
@@ -247,18 +249,21 @@ if (identical(techs, "Unknown")) {
 seqTech <- techs
 
 #
-# Background: the samples of the project's technology, and the pairs
-# whose tumor and normal both are
+# Background: the samples of the project's technology, less the
+# project's own, and the pairs whose tumor and normal both are left
 #
 bgSamples <- qcdb$samples |>
     distinct(SAMPLE, TYPE) |>
     semi_join(sample_seq_tech(qcdb$dist$fastp_lanes) |> filter(SEQ_TECH == seqTech), by = "SAMPLE")
+nSelf <- sum(bgSamples$SAMPLE %in% sampleMap$SAMPLE)
+bgSamples <- bgSamples |> filter(!SAMPLE %in% sampleMap$SAMPLE)
 bgPairs <- qcdb$pairs |>
     filter(TUMOR_ID %in% bgSamples$SAMPLE, NORMAL_ID %in% bgSamples$SAMPLE)
 nBgTumor <- sum(bgSamples$TYPE == "Tumor")
 nBgNormal <- sum(bgSamples$TYPE == "Normal")
-message(glue("QC background, {seqTech} only: {nBgTumor} tumors, {nBgNormal} normals, {nrow(bgPairs)} pairs ",
-             "(of {n_distinct(qcdb$samples$SAMPLE)} samples, {nrow(qcdb$pairs)} pairs)"))
+selfText <- if (nSelf > 0) glue(", without the {nSelf} of this project") else ""
+message(glue("QC background, {seqTech} only{selfText}: {nBgTumor} tumors, {nBgNormal} normals, ",
+             "{nrow(bgPairs)} pairs (of {n_distinct(qcdb$samples$SAMPLE)} samples, {nrow(qcdb$pairs)} pairs)"))
 if (nBgTumor == 0 || nBgNormal == 0) {
     tech_error(glue("no {seqTech} background"),
                glue("QC background version {qcdb$meta$version} has no {seqTech} tumors or no {seqTech} normals."))
@@ -393,10 +398,15 @@ if (nrow(hits) > 0) {
 #
 meta <- qcdb$meta
 nProj <- n_distinct(sampleMap$SAMPLE)
+selfNote <- case_when(
+    nSelf == 0 ~ "",
+    nSelf == nProj ~ ", left out of the background",
+    .default = as.character(glue(", {nSelf} of them left out of the background"))
+)
 boxText <- str_c(
     glue("Boxes: QC background {meta$assay} version {meta$version}, {seqTech} samples only: {nBgTumor} tumors, ",
          "{nBgNormal} normals and {nrow(bgPairs)} pairs;"),
-    glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech})."),
+    glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech}){selfNote}."),
     sep = "\n"
 )
 subtitle <- str_c(
@@ -592,7 +602,7 @@ hitPages <- if (nrow(hits) == 0) {
 #
 glossaryCtx <- list(
     assay = meta$assay, version = meta$version, seqTech = seqTech,
-    nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs),
+    nTumor = nBgTumor, nNormal = nBgNormal, nPair = nrow(bgPairs), nSelf = nSelf,
     typeLimited = keySpec |>
         filter(!is.na(TYPE), METRIC %in% keyMetrics) |>
         left_join(info |> select(METRIC, LABEL), by = "METRIC") |>
