@@ -431,10 +431,13 @@ flag_text <- function(value, kind, scaleBy) {
 #
 # The axis of one flagged metric: the type the summary report's panel
 # for the metric has (axis_spec in qc_plots.R), with the table's ticks:
-# log axes labeled at powers of 10 only, log-odds axes at ODDS_BREAKS. A
-# log-odds axis over values that all lie between 5% and 95% is linear.
-# infoRow: the metric's row of metric_info(); dataValues: all its
-# background and pair values; rangeValues: what the axis must show.
+# log-odds axes labeled at ODDS_BREAKS. A log-odds axis over values that
+# all lie between 5% and 95% is linear, and so is a log axis over values
+# that span less than a factor of 10. A log axis spans the values plus a
+# margin (as odds_axis), labeled at the powers of 10 in it, or at 1-2-5
+# steps (log_breaks) when it holds fewer than two. infoRow: the metric's
+# row of metric_info(); dataValues: all its background and pair values;
+# rangeValues: what the axis must show.
 #
 flag_axis <- function(infoRow, bg, dataValues, rangeValues) {
     ax <- axis_spec(infoRow, bg, dataValues, rangeValues)
@@ -445,18 +448,27 @@ flag_axis <- function(infoRow, bg, dataValues, rangeValues) {
         return(list(tx = \(x) x / scaleBy, scale = scale_x_continuous(labels = scales::label_percent()),
                     lim = frac_range(p)))
     }
+    if (ax$type == "log") {
+        x <- ax$tx(r)
+        x <- x[x > 0]
+        if (max(x) / min(x) < 10) {
+            return(list(tx = \(v) v / scaleBy, scale = scale_x_continuous(labels = ax$scale$labels),
+                        lim = range(p) + c(-1, 1) * 0.05 * diff(range(p))))
+        }
+    }
     switch(ax$type,
         logodds = {
             a <- odds_axis(p, ODDS_BREAKS)
             list(tx = \(x) a$tx(x / scaleBy), scale = a$scale, lim = a$lim)
         },
         log = {
-            x <- ax$tx(r)
-            decades <- log10(range(x[x > 0]))
-            k <- floor(decades[1]):ceiling(decades[2])
+            decades <- log10(range(x))
+            decades <- decades + c(-1, 1) * 0.08 * max(diff(decades), 0.5)
+            k <- ceiling(decades[1]):floor(decades[2])
+            breaks <- if (len(k) >= 2) 10^k else log_breaks(10^decades[1], 10^decades[2])
             list(tx = ax$tx,
-                 scale = scale_x_log10(breaks = 10^k, labels = ax$scale$labels, guide = log_ticks_guide()),
-                 lim = 10^range(k))
+                 scale = scale_x_log10(breaks = breaks, labels = ax$scale$labels, guide = log_ticks_guide()),
+                 lim = 10^decades)
         },
         {
             x <- ax$tx(r)
