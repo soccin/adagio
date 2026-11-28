@@ -30,6 +30,8 @@
 #                                  the samples PDF: only the pair pages,
 #                                  each element in a purple box with an
 #                                  ID, for layout work
+#   Proj_<no>_qcRpt02_design_boxes.xlsx  with -d: the position and size
+#                                  (in) of every box on every page
 #
 # The concordance and sex page holds the Conpair panels (concordance,
 # contamination), ChrY against ChrX (Alfred) for the background and the
@@ -97,7 +99,9 @@ Options:
                   scripts/qcgenes/README.md)
   -d, --design    design mode, for layout work: a purple box and an
                   ID on every element of the per-pair pages; writes
-                  only those pages, to Proj_<no>_qcRpt02_design.pdf
+                  only those pages, to Proj_<no>_qcRpt02_design.pdf,
+                  and the size and position of every box (inches) to
+                  Proj_<no>_qcRpt02_design_boxes.xlsx
   -h, --help      show this help
 ")
 }
@@ -192,12 +196,18 @@ rDir <- "post/reports"
 # A page that is a function is built with the device open (the glossary
 # measures its text). Cairo, not pdf(): pdf() maps "-" to a minus sign
 # in every encoding, so IDs copied from the PDF would not match.
-write_pdf <- function(pages, file, width = 8.5, height = 11) {
+# after: a function called with the page number once each page is
+# drawn; its results are returned as a list.
+write_pdf <- function(pages, file, width = 8.5, height = 11, after = NULL) {
     fs::dir_create(dirname(file))
     cairo_pdf(file, width = width, height = height, onefile = TRUE)
-    walk(pages, \(p) print(if (is.function(p)) p() else p))
+    out <- imap(pages, \(p, i) {
+        print(if (is.function(p)) p() else p)
+        if (!is.null(after)) after(i)
+    })
     invisible(dev.off())
     message(glue("Wrote {file} ({len(pages)} pages)"))
+    invisible(out)
 }
 
 #
@@ -695,8 +705,25 @@ if (!identical(opt$pairs, "no")) {
         dims = GLOSSARY_LANDSCAPE
     )
     if (design) {
-        write_pdf(pairReport$pages, file.path(rDir, glue("{projNo}_qcRpt02_design.pdf")),
-                  width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT)
+        # The box of every element of every page (design_boxes), in inches
+        boxes <- write_pdf(pairReport$pages, file.path(rDir, glue("{projNo}_qcRpt02_design.pdf")),
+                           width = PAIR_PAGE_WIDTH, height = PAIR_PAGE_HEIGHT,
+                           after = \(i) design_boxes() |> mutate(PAGE = i, .before = 1)) |>
+            bind_rows() |>
+            left_join(pairing |> transmute(PAGE = row_number(), PAIR = str_c(TUMOR_ID, " / ", NORMAL_ID)),
+                      by = "PAGE") |>
+            transmute(Page = PAGE, Pair = PAIR, ID, Left = LEFT, Top = TOP, Right = RIGHT, Bottom = BOTTOM,
+                      Width = WIDTH, Height = HEIGHT)
+        boxFile <- file.path(rDir, glue("{projNo}_qcRpt02_design_boxes.xlsx"))
+        openxlsx2::wb_workbook() |>
+            add_report_sheet("Boxes (in)", boxes) |>
+            openxlsx2::wb_add_filter(rows = 1, cols = seq_along(boxes)) |>
+            openxlsx2::wb_set_bookview(
+                x_window = XLSX_WINDOW$x, y_window = XLSX_WINDOW$y,
+                window_width = XLSX_WINDOW$width, window_height = XLSX_WINDOW$height
+            ) |>
+            openxlsx2::wb_save(boxFile, overwrite = TRUE)
+        message(glue("Wrote {boxFile} ({nrow(boxes)} rows)"))
     } else {
         write_pdf(c(pairReport$pages, pairTablePages, list(pairGlossary)),
                   file.path(rDir, glue("{projNo}_qcRpt02_samples.pdf")),

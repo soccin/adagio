@@ -336,7 +336,7 @@ table_header <- function() {
 # the page gets a purple box and an ID in its top right corner. H the
 # header; T0, T1, ... the table's text column and B0, B1, ... its box
 # column (0 the column heads, then one per block); P1, P2, ... the cells
-# of the plot grid, by rows, empty cells included; FT1, FB1, ... the text
+# of the plot grid (design_grid), empty cells included; FT1, FB1, ... the text
 # and box cells of the flagged metrics below the plots. The marks do not move
 # anything: the ID is drawn over the element, and the elements that
 # stand in for a spacer or an empty cell have the same margins.
@@ -354,14 +354,65 @@ design_mark <- function(x, id, position = "topright") {
     )
 }
 
+#
+# Design mode: the purple box of every marked element of the page just
+# drawn on the open device, as ID, LEFT, TOP, RIGHT, BOTTOM (from the
+# top left corner of the page), WIDTH and HEIGHT, in inches. Patchwork
+# puts each element of a table in cells named by its index K: its tag
+# (the ID) in tag-K.* and its background (the box) in background-K.*,
+# both in the table's viewport. The box is that background viewport.
+#
+design_boxes <- function() {
+    grid::grid.force()
+    ls <- grid::grid.ls(viewports = TRUE, print = FALSE)
+    tbl <- tibble(NAME = ls$name, GPATH = ls$gPath, VPPATH = ls$vpPath, TYPE = ls$type)
+    tags <- tbl |>
+        filter(TYPE == "grobListing", str_detect(GPATH, "(^|::)tag-\\d+\\.")) |>
+        transmute(
+            KEY = str_match(GPATH, "(?:^|::)tag-(\\d+)\\.")[, 2],
+            PARENT = str_remove(VPPATH, "::[^:]+$"),
+            ID = map2_chr(GPATH, NAME, \(g, n) {
+                grid::grid.get(grid::gPath(c(str_split_1(g, "::"), n)), strict = TRUE)$label
+            })
+        )
+    boxes <- tbl |>
+        filter(TYPE == "vpListing", str_detect(NAME, "^background-\\d+\\.")) |>
+        transmute(KEY = str_match(NAME, "^background-(\\d+)\\.")[, 2], PARENT = VPPATH,
+                  VP = str_c(VPPATH, "::", NAME))
+    pageHeight <- grDevices::dev.size("in")[2]
+    corner <- \(vp, x, y) {
+        grid::upViewport(0)
+        path <- str_split_1(vp, "::") |> discard(\(s) s == "ROOT")
+        grid::downViewport(do.call(grid::vpPath, as.list(path)), strict = TRUE)
+        loc <- grid::deviceLoc(grid::unit(x, "npc"), grid::unit(y, "npc"), valueOnly = TRUE)
+        grid::upViewport(0)
+        c(loc$x, pageHeight - loc$y)
+    }
+    tags |>
+        inner_join(boxes, by = c("PARENT", "KEY")) |>
+        mutate(
+            TOP_LEFT = map(VP, \(vp) corner(vp, 0, 1)),
+            BOTTOM_RIGHT = map(VP, \(vp) corner(vp, 1, 0)),
+            LEFT = map_dbl(TOP_LEFT, 1),
+            TOP = map_dbl(TOP_LEFT, 2),
+            RIGHT = map_dbl(BOTTOM_RIGHT, 1),
+            BOTTOM = map_dbl(BOTTOM_RIGHT, 2),
+            WIDTH = RIGHT - LEFT,
+            HEIGHT = BOTTOM - TOP
+        ) |>
+        select(ID, LEFT, TOP, RIGHT, BOTTOM, WIDTH, HEIGHT)
+}
+
 # The plot grid with each empty cell (#) its own element, as patchwork
-# fills it (no margins), and every cell marked P1, P2, ... by rows.
-# cells: named list of the grid's plots; layout: patchwork design.
+# fills it (no margins), and every cell marked P1, P2, ... by its letter
+# (A is P1), so the IDs stay when the layout moves the cells; empty
+# cells come last. cells: named list of the grid's plots; layout:
+# patchwork design.
 design_grid <- function(cells, layout) {
     chars <- str_split_1(layout, "")
     holes <- which(chars == "#")
     chars[holes] <- setdiff(LETTERS, chars)[seq_along(holes)]
-    order <- unique(str_subset(chars, "^[A-Z]$"))
+    order <- sort(unique(str_subset(chars, "^[A-Z]$")))
     empty <- setdiff(order, names(cells))
     cells <- c(cells, map(set_names(empty), \(l) wrap_elements(full = grid::nullGrob()) +
                                                 theme(plot.margin = margin(0))))
