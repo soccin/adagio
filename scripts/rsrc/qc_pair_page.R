@@ -45,19 +45,29 @@ PAIR_MVLH_TOP <- 20
 # Layout, as the boxes of design mode measure it (in): the table's text
 # column 1.97 wide and its box column 4.55; right of it the coverage and
 # insert size plots over the GC bias and duplicate plots (3.7 and 3.6
-# wide, 1.79 and 1.62 high); under them, to the bottom of the page, the
-# genes plot (2.7 wide) beside the flagged metrics (text 1.6 wide, boxes
-# the rest). Patchwork sizes are relative and the axes take fixed space,
-# so the weights below are tuned to give those sizes; check a change
-# with --design.
+# wide, 1.79 and 1.62 high); under them, at the left, the flagged
+# metrics (text 2.13 wide, boxes 2.89; a row of 0.53 for each metric
+# drawn, up to FLAG_SLOTS), and right under those, to the bottom of the
+# page, the genes plot (3.72 wide, as the coverage plot). Right of the
+# flagged metrics and the genes plot the page is empty.
+# Patchwork sizes are relative and the axes take fixed space, so the
+# weights below are tuned to give those sizes; check a change with
+# --design.
 #
 # Relative widths of the table's text and box columns, and of the table
 # and the plots
 PAIR_TABLE_WIDTHS <- c(2, 4.64)
 PAIR_PLOTS_WIDTH <- 7.1
-# The plot grid (pair_page): its three columns (the genes plot is the
-# first; the coverage and GC bias plots span the first two)
-PAIR_GRID_WIDTHS <- c(2.22, 0.896, 2.994)
+# The plot grid (pair_page): its four columns. The coverage, GC bias and
+# genes plots span the first two, the flagged metrics the first three,
+# the insert size and duplicate plots the last two
+PAIR_GRID_WIDTHS <- c(2.22, 1.010, 0.770, 2.111)
+# Measured with --design (in): the top of the flagged metrics below the
+# top of the page, less the header's height, and the page margin under
+# the genes plot. The genes plot's height is what is left below the
+# flagged metrics; re-measure FLAG_TOP_IN when the plots above change
+FLAG_TOP_IN <- 3.609
+PAGE_MARGIN_IN <- 0.076
 # Panel heights (in) of the two rows of plots; with the panel width they
 # set the panel shape (QSee's panels are 2.96 x 1.36 in). Titles and axes
 # add about 1 in to the two rows. The first row's titles take less room
@@ -469,21 +479,32 @@ consolidate_blocks <- function(group, axis) {
 }
 
 #
-# Flagged metrics not in the table, bottom right: every scanned metric
-# with a FAIL or WARN in this pair that is not a table row, worst first,
-# each drawn as a table row with its own axis. FLAG_SLOTS rows at most
-# (the rest are in the flag table after the pair pages); the slots share
-# the block's height, and unused slots are blank, so a row's height does
-# not depend on the count.
+# Flagged metrics not in the table, under the GC bias plot: every
+# scanned metric with a FAIL or WARN in this pair that is not a table
+# row, worst first, each drawn as a table row with its own axis.
+# FLAG_SLOTS rows at most (the rest are in the flag table after the pair
+# pages). The block is only as tall as its rows (flag_rows), or its
+# title alone when there are none, and the genes plot starts right
+# under it.
 #
-FLAG_SLOTS <- 8
-# Text and box columns (relative widths). The text column is narrow
-# (1.6 in), so metric names wrap at FLAG_LABEL_WRAP characters, onto two
-# lines at most for most names
-FLAG_WIDTHS <- c(1.6, 2.81)
-FLAG_TEXT_X <- c(LABEL = 0.02, Tumor = 0.64, Normal = 0.875, Pair = 0.755)
-FLAG_CELL_W <- 0.225
-FLAG_LABEL_WRAP <- 16
+FLAG_SLOTS <- 5
+# Height of the block as drawn (in): FLAG_ROW_IN a row, plus the title
+# and the margins (FLAG_HEAD_IN); and the relative weights in the grid
+# that give those sizes (tuned with --design), with the weight of the
+# title alone when no metric is flagged
+FLAG_ROW_IN <- 0.53
+FLAG_HEAD_IN <- 0.29
+FLAG_ROW_WEIGHT <- 0.548
+FLAG_HEAD_WEIGHT <- 0.288
+FLAG_NONE_WEIGHT <- 0.164
+# Text and box columns (relative widths; 2.13 and 2.89 in). The values
+# sit as far from the text column's right edge as in the 1.6 in column
+# it replaced, in cells as wide, so the extra width goes to the metric
+# names, which wrap at FLAG_LABEL_WRAP characters
+FLAG_WIDTHS <- c(2.13, 2.81)
+FLAG_TEXT_X <- c(LABEL = 0.015, Tumor = 0.73, Normal = 0.906, Pair = 0.816)
+FLAG_CELL_W <- 0.169
+FLAG_LABEL_WRAP <- 26
 FLAG_TITLE <- "Flagged metrics not in the table"
 ODDS_BREAKS <- c(1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999)
 
@@ -552,33 +573,16 @@ flag_axis <- function(infoRow, bg, dataValues, rangeValues) {
     )
 }
 
-# An unused slot: a blank text cell (with the title in the first slot)
-# and a box cell with an invisible axis as tall as a real one
-blank_flag_slot <- function(title = NULL) {
-    text <- ggplot() +
-        labs(title = title) +
-        theme_void(base_size = 8) +
-        theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
-    box <- ggplot() +
-        scale_x_continuous(limits = c(0, 1), breaks = 0.5, labels = "0") +
-        qc_theme(7, 8) +
-        theme(
-            panel.border = element_blank(),
-            panel.grid = element_blank(),
-            axis.text.x = element_text(size = 6, colour = NA),
-            axis.ticks.x = element_line(colour = NA),
-            axis.ticks.length.x = unit(TABLE_TICK_PT, "pt"),
-            plot.margin = margin(0, 4, 2, 2)
-        )
-    list(text, box)
-}
+# The number of rows the block draws for these flagged metrics
+flag_rows <- function(metrics) min(len(metrics), FLAG_SLOTS)
 
 #
-# The block below the plots. metrics: the flagged metrics not in the
+# The block under the GC bias plot. metrics: the flagged metrics not in the
 # table, worst first. bg: TYPE, METRIC, VALUE; boxes: background_boxes()
 # of bg; vals: SAMPLE, TYPE, METRIC, VALUE, LEVEL of the pair; lims: as
 # for the table; info: metric_info(). One element (wrap_elements), so
-# the page grid treats it as one cell.
+# the page grid treats it as one cell; its rows share the cell's height,
+# which pair_page sets from flag_rows().
 #
 flag_panel <- function(metrics, bg, boxes, vals, lims, info, design = FALSE) {
     shown <- head(metrics, FLAG_SLOTS)
@@ -587,6 +591,13 @@ flag_panel <- function(metrics, bg, boxes, vals, lims, info, design = FALSE) {
         len(metrics) > FLAG_SLOTS ~ str_c(FLAG_TITLE, glue(" (the {FLAG_SLOTS} worst of {len(metrics)})")),
         .default = FLAG_TITLE
     )
+    if (len(shown) == 0) {
+        none <- ggplot() +
+            labs(title = title) +
+            theme_void(base_size = 8) +
+            theme(plot.title = element_text(size = 8.5, face = "bold", margin = margin(b = 2)))
+        return(wrap_elements(full = none))
+    }
     cells <- shown |>
         imap(\(m, i) {
             infoRow <- info |> filter(METRIC == m) |> slice_head(n = 1)
@@ -603,18 +614,14 @@ flag_panel <- function(metrics, bg, boxes, vals, lims, info, design = FALSE) {
             )
         }) |>
         list_flatten()
-    blanks <- seq_len(FLAG_SLOTS - len(shown)) |>
-        map(\(i) blank_flag_slot(if (len(shown) == 0 && i == 1) title)) |>
-        list_flatten()
-    cells <- c(cells, blanks)
     # In design mode the row IDs go bottom right; the block's own ID (P6)
     # is top right
     if (design) {
-        cells <- map2(cells, str_c(rep(c("FT", "FB"), FLAG_SLOTS), rep(seq_len(FLAG_SLOTS), each = 2)),
+        cells <- map2(cells, str_c(rep(c("FT", "FB"), len(shown)), rep(seq_along(shown), each = 2)),
                       \(x, id) design_mark(x, id, "bottomright"))
     }
     wrap_elements(full = wrap_plots(cells, ncol = 2, widths = FLAG_WIDTHS,
-                                    heights = rep(1 + 2 * ROW_PAD, FLAG_SLOTS)))
+                                    heights = rep(1 + 2 * ROW_PAD, len(shown))))
 }
 
 #
@@ -768,21 +775,39 @@ dup_freq_plot <- function(proj, band, subtitle = NULL) {
 MVLH_PART_IN_TARGETS <- 0.95
 MVLH_AXIS_MIN <- 0.05
 MVLH_SHOW_MIN <- 0.01
-# 20 rows (PAIR_MVLH_TOP) must fit the cell: about 3.75 in under the
-# title and over the axis
 MVLH_ROW_IN <- 0.17
 MVLH_EMPTY_IN <- 0.3
+# What the plot takes besides its rows (in): the title, the axis, the
+# margins and those of its cell; a subtitle adds MVLH_SUBTITLE_IN.
+# mvlh_rows() uses them to fit the rows to the cell
+MVLH_DECOR_IN <- 0.75
+MVLH_SUBTITLE_IN <- 0.15
+
+# The number of gene rows that fit a cell cellIn inches high (the panel
+# is 1.2 rows taller than its genes; see mvlh_plot)
+mvlh_rows <- function(cellIn, hasSubtitle) {
+    max(1, floor((cellIn - MVLH_DECOR_IN - if (hasSubtitle) MVLH_SUBTITLE_IN else 0) / MVLH_ROW_IN - 1.2))
+}
 
 # A plot at the top of its cell, its panel panelIn inches high
 top_of_cell <- function(p, panelIn) {
     wrap_plots(p, plot_spacer(), ncol = 1, heights = unit(c(panelIn, 1), c("in", "null")))
 }
 
-mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
+# maxRows: the most gene rows the cell holds (mvlh_rows); when more
+# genes are above MVLH_SHOW_MIN, the axis title says how many are shown
+mvlh_plot <- function(m, bg, type, drivers, title, subtitle, maxRows = PAIR_MVLH_TOP) {
     if (is.null(m) || nrow(m) == 0) return(top_of_cell(not_computed_plot(title, subtitle), MVLH_EMPTY_IN))
+    nAbove <- sum(m$MVLH > MVLH_SHOW_MIN)
+    nShown <- min(nAbove, PAIR_MVLH_TOP, maxRows)
+    xTitle <- if (nShown < nAbove) {
+        glue("Missed variant likelihood (>{100 * MVLH_SHOW_MIN}%; top {nShown} of {nAbove})")
+    } else {
+        glue("Missed variant likelihood (>{100 * MVLH_SHOW_MIN}%)")
+    }
     top <- m |>
         filter(MVLH > MVLH_SHOW_MIN) |>
-        slice_max(MVLH, n = PAIR_MVLH_TOP, with_ties = FALSE) |>
+        slice_max(MVLH, n = nShown, with_ties = FALSE) |>
         mutate(
             GENE_LABEL = str_c(GENE, if_else(GENE %in% drivers, " *", ""),
                                if_else(FRAC_IN_TARGETS < MVLH_PART_IN_TARGETS, " #", "")),
@@ -817,8 +842,7 @@ mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
         scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE),
                            expand = expansion(mult = c(0.04, 0.02))) +
         coord_cartesian(xlim = c(0, xmax)) +
-        labs(title = title, subtitle = subtitle, x = glue("Missed variant likelihood (>{100 * MVLH_SHOW_MIN}%)"),
-             y = NULL) +
+        labs(title = title, subtitle = subtitle, x = xTitle, y = NULL) +
         qc_theme(8, 9) +
         theme(
             panel.grid.major.x = element_line(colour = "grey90", linewidth = 0.3),
@@ -941,41 +965,53 @@ pair_page <- function(p, ctx) {
             if (len(drivers) == 0) glue("No IntOGen drivers for {oncotree}: no * marks"),
         ctx$notes$mvlh
     )
-    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), ctx$bgMvlh, "Tumor", drivers,
-                          "Genes with potential missed variants",
-                          if (len(tNote) > 0) str_c(tNote, collapse = "; "))
-
     header <- pair_header(
         glue("{p$TUMOR_ID} / {p$NORMAL_ID}: {status}"),
         pair_meta_text(tMeta, nMeta, ctx$sexTbl |> filter(PAIR == p$PAIR)),
         worst_flag_line(hits, ctx$labels)
     )
 
+    # Heights (relative panel heights; see the grid below): the flagged
+    # metrics take as many rows as they draw (none: the title alone), the
+    # genes plot the rest down to the bottom of the page, with as many
+    # genes as fit its height in inches
+    flagMetrics <- hits |> filter(!METRIC %in% PAIR_ROWS$METRIC) |> distinct(METRIC) |> pull(METRIC)
+    nFlagRows <- flag_rows(flagMetrics)
+    bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
+    restIn <- bodyIn - PAIR_PLOT_DECOR_IN - sum(PAIR_PLOT_ROWS_IN)
+    flagIn <- if (nFlagRows == 0) FLAG_NONE_WEIGHT else nFlagRows * FLAG_ROW_WEIGHT + FLAG_HEAD_WEIGHT
+    mvlhIn <- restIn - flagIn
+    mvlhCellIn <- PAIR_PAGE_HEIGHT - PAGE_MARGIN_IN - FLAG_TOP_IN - header$height -
+        (nFlagRows * FLAG_ROW_IN + FLAG_HEAD_IN)
+    mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), ctx$bgMvlh, "Tumor", drivers,
+                          "Genes with potential missed variants",
+                          if (len(tNote) > 0) str_c(tNote, collapse = "; "),
+                          maxRows = mvlh_rows(mvlhCellIn, len(tNote) > 0))
+
     # Flags of metrics that are not table rows, below the plots
     flagPanel <- flag_panel(
-        hits |> filter(!METRIC %in% PAIR_ROWS$METRIC) |> distinct(METRIC) |> pull(METRIC),
+        flagMetrics,
         ctx$flagBg, ctx$flagBoxes, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
     )
 
     # The grid: coverage and insert size in the first row, GC bias and
-    # duplicate frequency in the second; below them the genes plot beside
-    # the flagged metrics not in the table. The genes plot is one element
-    # (wrap_elements), so its gene names do not widen the axes of the
-    # plots above it. Heights are relative panel heights (inch units do
-    # not mix with the nested table), so the last row gets the rest of the
-    # body's height
-    bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
-    restIn <- bodyIn - PAIR_PLOT_DECOR_IN - sum(PAIR_PLOT_ROWS_IN)
+    # duplicate frequency in the second; under them, at the left, the
+    # flagged metrics not in the table, and right under those the genes
+    # plot, as wide as the coverage plot; the rest (#) is empty. The genes
+    # plot is one element (wrap_elements), so its gene names do not widen
+    # the axes of the plots above it. Heights are relative panel heights
+    # (inch units do not mix with the nested table), so the last row gets
+    # the rest of the body's height
     plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = wrap_elements(full = mvlhPlot), D = gcPlot,
                                   E = dupPlot, F = flagPanel),
-                     layout = "AAB\nDDE\nCFF")
+                     layout = "AABB\nDDEE\nFFF#\nCC##")
     top <- wrap_elements(full = header$grob)
     if (ctx$design) {
         plotGrid <- design_grid(plotGrid$cells, plotGrid$layout)
         top <- design_mark(top, "H")
     }
     right <- wrap_plots(plotGrid$cells, design = plotGrid$layout, widths = PAIR_GRID_WIDTHS,
-                        heights = c(PAIR_PLOT_ROWS_IN, restIn))
+                        heights = c(PAIR_PLOT_ROWS_IN, flagIn, mvlhIn))
     body <- wrap_plots(table, right, widths = c(sum(PAIR_TABLE_WIDTHS), PAIR_PLOTS_WIDTH))
     wrap_plots(top, body, ncol = 1, heights = grid::unit(c(header$height, 1), c("in", "null")))
 }
