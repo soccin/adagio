@@ -757,24 +757,45 @@ dup_freq_plot <- function(proj, band, subtitle = NULL) {
 }
 
 #
-# Missed-variant likelihood: the PAIR_MVLH_TOP genes with the highest
-# value, as points over the gene's box in the background tumors (bg:
-# SAMPLE, GENE, MVLH); on stems when there is no background. Genes in
-# drivers get a "*"; genes with coding bases outside the targets (not
-# counted) get a "#".
+# Missed-variant likelihood: the genes above MVLH_SHOW_MIN (the
+# PAIR_MVLH_TOP highest at most), as points over the gene's box in the
+# background tumors (bg: SAMPLE, GENE, MVLH); on stems when there is no
+# background. The panel is only as tall as its genes (MVLH_ROW_IN a
+# row) and sits at the top of its cell; the space below stays empty.
+# Genes in drivers get a "*"; genes with coding bases outside the
+# targets (not counted) get a "#".
 #
 MVLH_PART_IN_TARGETS <- 0.95
 MVLH_AXIS_MIN <- 0.05
+MVLH_SHOW_MIN <- 0.01
+# 20 rows (PAIR_MVLH_TOP) must fit the cell: about 3.75 in under the
+# title and over the axis
+MVLH_ROW_IN <- 0.17
+MVLH_EMPTY_IN <- 0.3
+
+# A plot at the top of its cell, its panel panelIn inches high
+top_of_cell <- function(p, panelIn) {
+    wrap_plots(p, plot_spacer(), ncol = 1, heights = unit(c(panelIn, 1), c("in", "null")))
+}
 
 mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
-    if (is.null(m) || nrow(m) == 0) return(not_computed_plot(title, subtitle))
+    if (is.null(m) || nrow(m) == 0) return(top_of_cell(not_computed_plot(title, subtitle), MVLH_EMPTY_IN))
     top <- m |>
+        filter(MVLH > MVLH_SHOW_MIN) |>
         slice_max(MVLH, n = PAIR_MVLH_TOP, with_ties = FALSE) |>
         mutate(
             GENE_LABEL = str_c(GENE, if_else(GENE %in% drivers, " *", ""),
                                if_else(FRAC_IN_TARGETS < MVLH_PART_IN_TARGETS, " #", "")),
             GENE_LABEL = fct_reorder(GENE_LABEL, MVLH)
         )
+    if (nrow(top) == 0) {
+        none <- ggplot() +
+            labs(title = glue("{title}: none above {100 * MVLH_SHOW_MIN}%"), subtitle = subtitle) +
+            theme_void(base_size = 8) +
+            theme(plot.title = element_text(face = "bold", size = 9),
+                  plot.subtitle = element_text(size = 6.8, colour = "grey30"))
+        return(top_of_cell(none, 0))
+    }
     bgTop <- bg |>
         inner_join(top |> select(GENE, GENE_LABEL), by = "GENE")
     # The axis covers the boxes' whiskers (1.5 IQR past the box, at most
@@ -784,25 +805,31 @@ mvlh_plot <- function(m, bg, type, drivers, title, subtitle) {
                   HI = min(max(MVLH), Q3 + 1.5 * (Q3 - Q1)), .by = GENE) |>
         pull(HI)
     xmax <- max(MVLH_AXIS_MIN, max(c(top$MVLH, whiskers)) * 1.12)
-    ggplot(top, aes(x = MVLH, y = GENE_LABEL)) +
+    p <- ggplot(top, aes(x = MVLH, y = GENE_LABEL)) +
         (if (nrow(bgTop) == 0) {
             geom_segment(aes(x = 0, xend = MVLH, yend = GENE_LABEL), colour = "grey75", linewidth = 0.4)
         } else {
-            geom_boxplot(data = bgTop, aes(group = GENE_LABEL), orientation = "y", width = 0.6,
+            geom_boxplot(data = bgTop, aes(group = GENE_LABEL), orientation = "y", width = 0.4,
                          fill = TYPE_COLORS[[type]], alpha = 0.3, colour = "grey65", linewidth = 0.3,
                          outliers = FALSE)
         }) +
-        geom_point(shape = 21, fill = TN_COLORS[[type]], colour = "black", stroke = 0.4, size = 1.7) +
-        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE), expand = expansion(c(0, 0.02))) +
+        geom_point(shape = 21, fill = TN_COLORS[[type]], colour = "black", stroke = 0.4, size = 2.2) +
+        scale_x_continuous(labels = scales::label_percent(drop0trailing = TRUE),
+                           expand = expansion(mult = c(0.04, 0.02))) +
         coord_cartesian(xlim = c(0, xmax)) +
-        labs(title = title, subtitle = subtitle, x = "Missed-variant likelihood", y = NULL) +
+        labs(title = title, subtitle = subtitle, x = glue("Missed variant likelihood (>{100 * MVLH_SHOW_MIN}%)"),
+             y = NULL) +
         qc_theme(8, 9) +
         theme(
-            axis.text.y = element_text(size = 6.2),
-            axis.ticks.y = element_blank(),
+            panel.grid.major.x = element_line(colour = "grey90", linewidth = 0.3),
+            panel.grid.major.y = element_blank(),
+            axis.text.y = element_text(size = 7),
+            axis.ticks.y = element_line(colour = "black", linewidth = 0.4),
             plot.subtitle = element_text(size = 6.8, colour = "grey30"),
             plot.margin = margin(4, 6, 4, 4)
         )
+    # discrete axes pad 0.6 rows a side
+    top_of_cell(p, (nrow(top) + 1.2) * MVLH_ROW_IN)
 }
 
 #
@@ -915,7 +942,7 @@ pair_page <- function(p, ctx) {
         ctx$notes$mvlh
     )
     mvlhPlot <- mvlh_plot(ctx$mvlh |> filter(SAMPLE == p$TUMOR_ID), ctx$bgMvlh, "Tumor", drivers,
-                          "Genes most likely to miss a variant",
+                          "Genes with potential missed variants",
                           if (len(tNote) > 0) str_c(tNote, collapse = "; "))
 
     header <- pair_header(
