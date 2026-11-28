@@ -3,7 +3,8 @@
 #
 # Stacked horizontal box plots of QC metrics: the QC background as one
 # box per type (Tumor, Normal, or Pair) and the project's samples as
-# points over the box of their type. Used by qcReport02.R; needs
+# points over the box of their type. Pair metrics of the tumor are drawn
+# as tumor values (draw_type). Used by qcReport02.R; needs
 # qc_metric_info.R.
 #
 # Plot style: colors, marks, theme and axis rules follow the tumor/normal
@@ -17,6 +18,20 @@ suppressPackageStartupMessages({
 
 TN_COLORS <- c(Tumor = "#C0392B", Normal = "#4F81BD")
 TYPE_COLORS <- c(TN_COLORS, Pair = "grey60")
+
+#
+# The type a value is drawn as. Pair metrics (TYPE "Pair": one value per
+# tumor/normal pair) other than PAIR_COMPARE_METRICS describe the tumor
+# (FACETS, Tempo's purity, mutations and TMB, Manta's SV counts), so they
+# are drawn as tumor values, in the tumor's color. Only the metrics that
+# compare the two samples are drawn as pairs, in grey. The data keep
+# TYPE "Pair".
+#
+PAIR_COMPARE_METRICS <- "CONPAIR_CONCORDANCE"
+
+draw_type <- function(metric, type) {
+    if_else(type == "Pair" & !metric %in% PAIR_COMPARE_METRICS, "Tumor", type)
+}
 # Rings and limit lines: dark yellow WARN, dark red FAIL
 LEVEL_COLORS <- c(WARN = "#C79A00", FAIL = "#9B1B1B")
 LIMIT_BASE_COLOR <- "grey80"
@@ -104,8 +119,8 @@ frac_range <- function(v, minWidth = MIN_PCT_AXIS) {
 
 #
 # Axis for one metric: a transform applied to the values before
-# plotting, the x scale, a suffix for the panel title, and which limit
-# values can be drawn on it. dataValues: all background and project
+# plotting, the x scale, a suffix for the panel title, its type
+# (logodds, log or linear), and which limit values can be drawn on it. dataValues: all background and project
 # values, used to choose the axis type. rangeValues: what the axis must
 # show (box whisker ends, project values and the limits).
 #
@@ -148,6 +163,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
                 },
                 scale = scale_x_log10(breaks = pp / (1 - pp), labels = pct_label_each(pp)),
                 suffix = " (log-odds axis)",
+                type = "logodds",
                 valid = always
             ))
         }
@@ -161,6 +177,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
                 tx = \(x) pmax(x / scaleBy, floorV),
                 scale = scale_x_log10(breaks = log_breaks(lo, max(v)), labels = pctLabels),
                 suffix = " (log scale)",
+                type = "log",
                 valid = \(x) x / scaleBy >= floorV
             ))
         }
@@ -169,6 +186,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             scale = scale_x_continuous(labels = pctLabels),
             xlim = frac_range(v),
             suffix = "",
+            type = "linear",
             valid = always
         ))
     }
@@ -184,6 +202,7 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             tx = identityTx,
             scale = scale_x_log10(breaks = log_breaks(min(v), max(v)), labels = labels),
             suffix = " (log scale)",
+            type = "log",
             valid = positive
         ))
     }
@@ -193,10 +212,21 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
             scale = scale_x_continuous(labels = labels),
             xlim = c(0, max(v) * 1.05),
             suffix = "",
+            type = "linear",
             valid = always
         ))
     }
-    list(tx = identityTx, scale = scale_x_continuous(labels = labels), suffix = "", valid = always)
+    list(tx = identityTx, scale = scale_x_continuous(labels = labels), suffix = "", type = "linear", valid = always)
+}
+
+#
+# Aesthetics of a background box drawn from background_boxes() (with Y,
+# and the columns already through the axis transform), for
+# geom_boxplot(stat = "identity", orientation = "y")
+#
+box_aes <- function() {
+    aes(xmin = WMIN, xlower = LOWER, xmiddle = MIDDLE, xupper = UPPER, xmax = WMAX, y = Y,
+        group = interaction(METRIC, TYPE), fill = TYPE)
 }
 
 #
@@ -210,21 +240,21 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
 # label.
 #
 qc_panel <- function(info, bg, proj, lims, fillTypes) {
+    bg <- bg |> mutate(TYPE = draw_type(info$METRIC, TYPE))
+    proj <- proj |> mutate(TYPE = draw_type(info$METRIC, TYPE))
+    lims <- lims |> mutate(TYPE = draw_type(info$METRIC, TYPE))
     # One row for pairs, or for a metric limited to one type
     rows <- if (any(bg$TYPE == "Pair")) "Pair" else intersect(c("Normal", "Tumor"), bg$TYPE)
     yLimits <- if (len(rows) == 1) c(0, 2) else c(0.5, len(rows) + 0.5)
     lims <- lims |> filter(TYPE %in% rows)
     # Background outliers are not drawn, so the axis covers only the
-    # whisker ends of each box (1.5 IQR, as geom_boxplot)
-    whiskers <- bg |>
-        filter(TYPE %in% rows) |>
-        reframe(VALUE = boxplot.stats(VALUE)$stats[c(1, 5)], .by = TYPE) |>
-        pull(VALUE)
-    ax <- axis_spec(info, bg, c(bg$VALUE, proj$VALUE), c(whiskers, proj$VALUE, lims$LIMIT))
+    # whisker ends of each box (background_boxes: they end at or before
+    # the WARN limits)
+    boxes <- background_boxes(bg |> filter(TYPE %in% rows) |> mutate(METRIC = info$METRIC), info)
+    ax <- axis_spec(info, bg, c(bg$VALUE, proj$VALUE), c(boxes$WMIN, boxes$WMAX, proj$VALUE, lims$LIMIT))
 
-    bg <- bg |>
-        filter(TYPE %in% rows) |>
-        mutate(X = ax$tx(VALUE), Y = match(TYPE, rows))
+    boxes <- boxes |>
+        mutate(across(c(LOWER, MIDDLE, UPPER, WMIN, WMAX), ax$tx), Y = match(TYPE, rows))
     lims <- lims |>
         filter(ax$valid(LIMIT)) |>
         mutate(X = ax$tx(LIMIT), Y = match(TYPE, rows))
@@ -256,16 +286,17 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
         geom_segment(data = lims, limitSegment, colour = LIMIT_BASE_COLOR, linewidth = LIMIT_WIDTH) +
         geom_segment(data = lims, aes(x = X, xend = X, y = Y - halfHeight, yend = Y + halfHeight, colour = LINE),
                      linetype = "11", linewidth = LIMIT_WIDTH) +
+        # background outliers are neither drawn nor counted in the axis range
         geom_boxplot(
-            data = bg,
-            aes(group = TYPE, fill = TYPE),
+            data = boxes,
+            box_aes(),
+            stat = "identity",
+            inherit.aes = FALSE,
             orientation = "y",
             width = 0.22,
             alpha = 0.3,
             colour = "grey65",
             linewidth = 0.4,
-            # background outliers are neither drawn nor counted in the axis range
-            outliers = FALSE,
             show.legend = FALSE
         ) +
         # show.legend = TRUE draws every type in the legend, so pair and
@@ -320,6 +351,8 @@ qc_pages <- function(metrics, info, bgLong, projLong, limLong, title, subtitle, 
     imap(unname(chunks), function(chunk, i) {
         pageTypes <- bgLong |>
             filter(METRIC %in% chunk) |>
+            distinct(METRIC, TYPE) |>
+            mutate(TYPE = draw_type(METRIC, TYPE)) |>
             distinct(TYPE) |>
             pull(TYPE)
         fillTypes <- intersect(c("Tumor", "Normal", "Pair"), pageTypes)

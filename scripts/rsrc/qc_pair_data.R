@@ -4,13 +4,19 @@
 # Data for the per-pair QC pages of qcReport02.R (one landscape page per
 # tumor/normal pair, modeled on Hartwig's QSee report):
 #
-#   - pair metrics the project side does not read yet (FACETS, Tempo
-#     TMB), read with the readers buildQCDb.R uses
 #   - target coverage and insert-size distributions of each sample
 #   - % target bases at depths Picard does not report (60x, 250x), from
 #     Picard's coverage histogram
-#   - the missed-variant likelihood of cancer genes (see gene_mvlh)
+#   - the missed-variant likelihood of cancer genes (see gene_mvlh),
+#     which buildQCDb.R also calls for the QC background
+#   - the inputs of the project's missed-variant likelihood (mvlh_tumors)
+#     and the per-target GC table of the QC database (qcdb_target_gc)
 #   - sample metadata from meta/*_metadata_samples.csv
+#
+# The project's pair metrics (FACETS, Tempo, Manta), duplicate
+# histograms, GC-bias curves and missed-variant likelihood come from
+# qcdb/rsrc/qcdb_project_metrics.R, which computes them as buildQCDb.R
+# does for the background.
 #
 # Needs qcdb_readers.R and qcdb_project_metrics.R.
 #
@@ -27,31 +33,6 @@ MVLH_MIN_ALT <- 3
 # Genes with less of their coding sequence in targets are left out: the
 # assay does not capture them, so they would top every sample's list
 MVLH_MIN_IN_TARGETS <- 0.5
-
-empty_pair <- function(df) if (nrow(df) == 0) tibble(PAIR = character()) else df
-
-#
-# FACETS QC row (purity, LOH, FGA, ...) and Tempo sample_data (TMB) of
-# each pair, with the background's column names. Manta SVs are not read:
-# exomes have almost none.
-#
-project_pair_extra <- function(outDir, pairing, nCores = 1) {
-    somDir <- file.path(outDir, "somatic")
-    facets <- find_qc_files(somDir, "/facets/[^/]+/[^/]+\\.facets_qc\\.txt$") |>
-        map_qc_files(read_facets_qc, nCores) |>
-        bind_rows() |>
-        convert_facets_qc() |>
-        rename_with(\(x) str_c("FACETS_", x), -PAIR) |>
-        empty_pair()
-    sampleData <- find_qc_files(somDir, "\\.sample_data\\.txt$") |>
-        map_qc_files(read_sample_data, nCores) |>
-        bind_rows() |>
-        empty_pair()
-    pairing |>
-        select(PAIR) |>
-        left_join(facets, by = "PAIR") |>
-        left_join(sampleData, by = "PAIR")
-}
 
 #
 # % of target bases at each depth or more, from Picard's high-quality
@@ -70,46 +51,60 @@ target_depth_metrics <- function(hist, depths = PAIR_DEPTHS) {
 
 #
 # Per-sample distributions for the plots: Picard's target coverage
-# histogram and Alfred's insert sizes; and, for the missed-variant
-# likelihood, the Alfred coverage of the targets of the genes in
-# geneTargets, with the length-weighted mean coverage of all targets.
-# Only the genes' targets are kept, so large projects fit in memory.
+# histogram and Alfred's insert sizes
 #
-pair_distributions <- function(outDir, samples, geneTargets, hsmDir = file.path(outDir, "post", "qc"),
-                               nCores = 1) {
+pair_distributions <- function(outDir, samples, hsmDir = file.path(outDir, "post", "qc"), nCores = 1) {
     hsmFiles <- find_qc_files(hsmDir, "\\.hs_metrics\\.txt$")
     hsmFiles <- hsmFiles[sample_from_path(hsmFiles, "\\.hs_metrics\\.txt$") %in% samples]
-    coverage <- hsmFiles |>
-        map_qc_files(\(f) read_hs_metrics(f)$hist, nCores) |>
-        bind_rows()
-
     alfredFiles <- find_qc_files(file.path(outDir, "bams"), "/alfred/[^/]+\\.alfred\\.tsv\\.gz$")
     alfredFiles <- alfredFiles[sample_from_path(alfredFiles, "\\.alfred\\.tsv\\.gz$") %in% samples]
-    geneTargetIds <- unique(geneTargets$TARGET)
-    alfred <- alfredFiles |>
-        map_qc_files(\(f) {
-            a <- read_alfred(f)
-            # The target BED lists some targets twice; count each once
-            tc <- tibble(TARGET = a$targetCov$id, COV = a$targetCov$cov) |>
-                distinct(TARGET, .keep_all = TRUE) |>
-                mutate(LENGTH = as.numeric(str_extract(TARGET, "\\d+$")) -
-                           as.numeric(str_extract(TARGET, "(?<=:)\\d+")))
-            list(
-                insertSize = a$insertSize,
-                targetMean = tibble(SAMPLE = a$metrics$SAMPLE[1],
-                                    ALFRED_TARGET_MEAN = sum(tc$COV * tc$LENGTH) / sum(tc$LENGTH)),
-                geneCov = tc |>
-                    filter(TARGET %in% geneTargetIds) |>
-                    select(TARGET, COV) |>
-                    mutate(SAMPLE = a$metrics$SAMPLE[1], .before = 1)
-            )
-        }, nCores)
     list(
-        coverage = coverage,
-        insertSize = map(alfred, "insertSize") |> bind_rows(),
-        targetMean = map(alfred, "targetMean") |> bind_rows(),
-        geneCov = map(alfred, "geneCov") |> bind_rows()
+        coverage = hsmFiles |>
+            map_qc_files(\(f) read_hs_metrics(f)$hist, nCores) |>
+            bind_rows(),
+        insertSize = alfredFiles |>
+            map_qc_files(\(f) read_alfred(f)$insertSize, nCores) |>
+            bind_rows()
     )
+}
+
+#
+# One row per tumor, the input of project_gene_mvlh(): SAMPLE, PAIR,
+# HSM_MEAN_TARGET_COVERAGE, PURITY (the pair's FACETS purity, NA without
+# FACETS) and MALE (mvlh_male() of the normal's sex call and the
+# reported sex). projSample, projPair: project_sample_metrics() and
+# project_pair_metrics(); sexTbl: sex_table() (qc_sex.R).
+#
+mvlh_tumors <- function(pairing, projSample, projPair, sexTbl) {
+    meanCov <- projSample |>
+        distinct(SAMPLE, .keep_all = TRUE) |>
+        select(SAMPLE, HSM_MEAN_TARGET_COVERAGE)
+    purity <- projPair |>
+        transmute(PAIR, PURITY = if ("FACETS_purity" %in% names(projPair)) FACETS_purity else NA_real_)
+    pairing |>
+        transmute(SAMPLE = TUMOR_ID, PAIR) |>
+        left_join(meanCov, by = "SAMPLE") |>
+        left_join(purity, by = "PAIR") |>
+        left_join(sexTbl |> select(PAIR, CALL, REPORTED), by = "PAIR") |>
+        mutate(MALE = mvlh_male(CALL, REPORTED)) |>
+        select(-CALL, -REPORTED)
+}
+
+#
+# The per-target GC table the QC database's GC-bias curves were made
+# with (meta$target_gc_file), or the file of that name in this adagio's
+# assets/qcdb when the path is gone. A database without GC-bias curves
+# (versions before 261127) gets an empty table, so target_gc_curve()
+# gives no curve.
+#
+qcdb_target_gc <- function(meta, adagio) {
+    file <- meta$target_gc_file
+    if (is.null(file)) {
+        return(tibble(TARGET = character(), CHROM = character(), START = integer(), END = integer(),
+                      LENGTH = integer(), GC = numeric()))
+    }
+    if (!fs::file_exists(file)) file <- file.path(adagio, "assets", "qcdb", basename(file))
+    read_target_gc(file)
 }
 
 #
