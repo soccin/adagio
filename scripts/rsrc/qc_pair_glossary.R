@@ -193,7 +193,7 @@ pair_glossary_entries <- function(ctx) {
               "version."),
         NA,
         "Plots", "Flagged metrics not in the table",
-        glue("Below the plots: every scanned metric with a FAIL or WARN in this pair that is not a table row, ",
+        glue("Bottom right: every scanned metric with a FAIL or WARN in this pair that is not a table row, ",
              "worst first, drawn as a table row with its own axis, the axis type of its panel in ",
              "{ctx$summaryName}. Up to {FLAG_SLOTS}; all are in the flagged metrics table."),
         NA,

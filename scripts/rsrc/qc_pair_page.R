@@ -9,16 +9,15 @@
 #          blue, pair-level grey) and, in each row, the QC background of
 #          each type as a box with the pair's values as circles. Rows in
 #          one block share an x axis.
-#   right  QSee's grid of three columns, with QSee's panel shape (about
-#          2.2 wide to 1 high): target coverage and insert size (tumor
-#          up, normal down; the background's 5th-95th percentile as a
-#          band); GC bias and duplicate frequency (tumor and normal on
-#          one axis, with the same bands); and, over two rows, the
-#          tumor's genes most likely to miss a variant, each over the
-#          background tumors' box. Below them, every flagged metric of
-#          the pair that is not a table row, drawn as a table row with
-#          its own axis (flag_panel), so every flag behind the pair's
-#          status is on the page.
+#   right  two rows of two plots: target coverage and insert size
+#          (tumor up, normal down; the background's 5th-95th percentile
+#          as a band); GC bias and duplicate frequency (tumor and normal
+#          on one axis, with the same bands). Below them, the tumor's
+#          genes most likely to miss a variant, each over the background
+#          tumors' box, and beside it every flagged metric of the pair
+#          that is not a table row, drawn as a table row with its own
+#          axis (flag_panel), so every flag behind the pair's status is
+#          on the page.
 #
 # After the pair pages: a table of every flag of each pair
 # (pair_flag_table), then the legend and glossary. qcReport02.R writes
@@ -41,14 +40,32 @@
 PAIR_PAGE_WIDTH <- 14
 PAIR_PAGE_HEIGHT <- 8.5
 PAIR_MVLH_TOP <- 20
-# Widths (in) of the table's text and box columns, and of the plots
-PAIR_TABLE_WIDTHS <- c(2, 3)
-PAIR_PLOTS_WIDTH <- 8.7
-# Panel height (in) of one row of plots; with the panel width (about
-# 2.4 in) it sets the panel shape (QSee's panels are 2.96 x 1.36 in).
-# Titles and axes add about 1 in to the two rows.
-PAIR_PLOT_ROW_IN <- 1.16
+#
+# Layout, as the boxes of design mode measure it (in): the table's text
+# column 1.97 wide and its box column 4.55; right of it the coverage and
+# insert size plots over the GC bias and duplicate plots (3.7 and 3.6
+# wide, 1.79 and 1.62 high); under them, to the bottom of the page, the
+# genes plot (2.7 wide) beside the flagged metrics (text 1.6 wide, boxes
+# the rest). Patchwork sizes are relative and the axes take fixed space,
+# so the weights below are tuned to give those sizes; check a change
+# with --design.
+#
+# Relative widths of the table's text and box columns, and of the table
+# and the plots
+PAIR_TABLE_WIDTHS <- c(2, 4.64)
+PAIR_PLOTS_WIDTH <- 7.1
+# The plot grid (pair_page): its three columns (the genes plot is the
+# first; the coverage and GC bias plots span the first two)
+PAIR_GRID_WIDTHS <- c(2.22, 0.896, 2.994)
+# Panel heights (in) of the two rows of plots; with the panel width they
+# set the panel shape (QSee's panels are 2.96 x 1.36 in). Titles and axes
+# add about 1 in to the two rows. The first row's titles take less room
+# than the second row's axes, so its panels are taller.
+PAIR_PLOT_ROWS_IN <- c(1.29, 1.16)
 PAIR_PLOT_DECOR_IN <- 1
+# Relative height of the table's column heads (the table's rows are 1
+# each)
+PAIR_TABLE_HEAD <- 1.21
 # Rows per page of the flag table after the pair pages
 PAIR_TABLE_ROWS <- 30
 
@@ -433,7 +450,7 @@ pair_table <- function(boxes, vals, lims, design = FALSE) {
                       lims |> filter(METRIC %in% rows$METRIC))
         )) |>
         list_flatten()
-    heights <- c(0.5, blocks |> count(BLOCK) |> pull(n) + 2 * ROW_PAD)
+    heights <- c(PAIR_TABLE_HEAD, blocks |> count(BLOCK) |> pull(n) + 2 * ROW_PAD)
     cells <- c(table_header(), plots)
     if (design) {
         cells <- map2(cells, str_c(rep(c("T", "B"), len(heights)), rep(seq_along(heights) - 1, each = 2)), design_mark)
@@ -448,18 +465,21 @@ consolidate_blocks <- function(group, axis) {
 }
 
 #
-# Flagged metrics not in the table, below the plots: every scanned
-# metric with a FAIL or WARN in this pair that is not a table row, worst
-# first, each drawn as a table row with its own axis. FLAG_SLOTS rows at
-# most (the rest are in the flag table after the pair pages); unused
-# slots are blank, so a row is as tall as a table row whatever the count.
+# Flagged metrics not in the table, bottom right: every scanned metric
+# with a FAIL or WARN in this pair that is not a table row, worst first,
+# each drawn as a table row with its own axis. FLAG_SLOTS rows at most
+# (the rest are in the flag table after the pair pages); the slots share
+# the block's height, and unused slots are blank, so a row's height does
+# not depend on the count.
 #
-FLAG_SLOTS <- 10
-# A wider text column than the table's, with the values further right:
-# metric names run to about 40 characters
-FLAG_WIDTHS <- c(3.4, PAIR_PLOTS_WIDTH - 3.4)
-FLAG_TEXT_X <- c(LABEL = 0.02, Tumor = 0.76, Normal = 0.92, Pair = 0.84)
-FLAG_CELL_W <- 0.15
+FLAG_SLOTS <- 8
+# Text and box columns (relative widths). The text column is narrow
+# (1.6 in), so metric names wrap at FLAG_LABEL_WRAP characters, onto two
+# lines at most for most names
+FLAG_WIDTHS <- c(1.6, 2.81)
+FLAG_TEXT_X <- c(LABEL = 0.02, Tumor = 0.64, Normal = 0.875, Pair = 0.755)
+FLAG_CELL_W <- 0.225
+FLAG_LABEL_WRAP <- 16
 FLAG_TITLE <- "Flagged metrics not in the table"
 ODDS_BREAKS <- c(1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999)
 
@@ -566,7 +586,8 @@ flag_panel <- function(metrics, bg, boxes, vals, lims, info, design = FALSE) {
     cells <- shown |>
         imap(\(m, i) {
             infoRow <- info |> filter(METRIC == m) |> slice_head(n = 1)
-            rows <- tibble(GROUP = FLAG_TITLE, AXIS = "flag", METRIC = m, LABEL = infoRow$LABEL)
+            rows <- tibble(GROUP = FLAG_TITLE, AXIS = "flag", METRIC = m,
+                           LABEL = str_wrap(infoRow$LABEL, FLAG_LABEL_WRAP))
             v <- vals |>
                 filter(METRIC == m) |>
                 mutate(TEXT = flag_text(VALUE, infoRow$KIND, infoRow$SCALE_BY))
@@ -905,23 +926,25 @@ pair_page <- function(p, ctx) {
         ctx$flagBg, ctx$flagBoxes, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
     )
 
-    # QSee's grid: coverage and insert size in the first row, GC bias and
-    # duplicate frequency in the second, the genes over both rows in the
-    # third column; the flagged metrics not in the table below. Heights
-    # are relative panel heights (inch units do not mix with the nested
-    # table), so the last row gets the rest of the body's height
+    # The grid: coverage and insert size in the first row, GC bias and
+    # duplicate frequency in the second; below them the genes plot beside
+    # the flagged metrics not in the table. The genes plot is one element
+    # (wrap_elements), so its gene names do not widen the axes of the
+    # plots above it. Heights are relative panel heights (inch units do
+    # not mix with the nested table), so the last row gets the rest of the
+    # body's height
     bodyIn <- PAIR_PAGE_HEIGHT - header$height - 0.25
-    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = mvlhPlot, D = gcPlot, E = dupPlot,
-                                  F = flagPanel),
-                     layout = "ABC\nDEC\nFFF")
+    restIn <- bodyIn - PAIR_PLOT_DECOR_IN - sum(PAIR_PLOT_ROWS_IN)
+    plotGrid <- list(cells = list(A = covPlot, B = insPlot, C = wrap_elements(full = mvlhPlot), D = gcPlot,
+                                  E = dupPlot, F = flagPanel),
+                     layout = "AAB\nDDE\nCFF")
     top <- wrap_elements(full = header$grob)
     if (ctx$design) {
         plotGrid <- design_grid(plotGrid$cells, plotGrid$layout)
         top <- design_mark(top, "H")
     }
-    right <- wrap_plots(plotGrid$cells, design = plotGrid$layout,
-                        heights = c(PAIR_PLOT_ROW_IN, PAIR_PLOT_ROW_IN,
-                                    bodyIn - PAIR_PLOT_DECOR_IN - 2 * PAIR_PLOT_ROW_IN))
+    right <- wrap_plots(plotGrid$cells, design = plotGrid$layout, widths = PAIR_GRID_WIDTHS,
+                        heights = c(PAIR_PLOT_ROWS_IN, restIn))
     body <- wrap_plots(table, right, widths = c(sum(PAIR_TABLE_WIDTHS), PAIR_PLOTS_WIDTH))
     wrap_plots(top, body, ncol = 1, heights = grid::unit(c(header$height, 1), c("in", "null")))
 }
