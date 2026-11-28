@@ -3,7 +3,8 @@
 #
 # Stacked horizontal box plots of QC metrics: the QC background as one
 # box per type (Tumor, Normal, or Pair) and the project's samples as
-# points over the box of their type. Used by qcReport02.R; needs
+# points over the box of their type. Pair metrics of the tumor are drawn
+# as tumor values (draw_type). Used by qcReport02.R; needs
 # qc_metric_info.R.
 #
 # Plot style: colors, marks, theme and axis rules follow the tumor/normal
@@ -17,6 +18,20 @@ suppressPackageStartupMessages({
 
 TN_COLORS <- c(Tumor = "#C0392B", Normal = "#4F81BD")
 TYPE_COLORS <- c(TN_COLORS, Pair = "grey60")
+
+#
+# The type a value is drawn as. Pair metrics (TYPE "Pair": one value per
+# tumor/normal pair) other than PAIR_COMPARE_METRICS describe the tumor
+# (FACETS, Tempo's purity, mutations and TMB, Manta's SV counts), so they
+# are drawn as tumor values, in the tumor's color. Only the metrics that
+# compare the two samples are drawn as pairs, in grey. The data keep
+# TYPE "Pair".
+#
+PAIR_COMPARE_METRICS <- "CONPAIR_CONCORDANCE"
+
+draw_type <- function(metric, type) {
+    if_else(type == "Pair" & !metric %in% PAIR_COMPARE_METRICS, "Tumor", type)
+}
 # Rings and limit lines: dark yellow WARN, dark red FAIL
 LEVEL_COLORS <- c(WARN = "#C79A00", FAIL = "#9B1B1B")
 LIMIT_BASE_COLOR <- "grey80"
@@ -225,6 +240,9 @@ box_aes <- function() {
 # label.
 #
 qc_panel <- function(info, bg, proj, lims, fillTypes) {
+    bg <- bg |> mutate(TYPE = draw_type(info$METRIC, TYPE))
+    proj <- proj |> mutate(TYPE = draw_type(info$METRIC, TYPE))
+    lims <- lims |> mutate(TYPE = draw_type(info$METRIC, TYPE))
     # One row for pairs, or for a metric limited to one type
     rows <- if (any(bg$TYPE == "Pair")) "Pair" else intersect(c("Normal", "Tumor"), bg$TYPE)
     yLimits <- if (len(rows) == 1) c(0, 2) else c(0.5, len(rows) + 0.5)
@@ -333,6 +351,8 @@ qc_pages <- function(metrics, info, bgLong, projLong, limLong, title, subtitle, 
     imap(unname(chunks), function(chunk, i) {
         pageTypes <- bgLong |>
             filter(METRIC %in% chunk) |>
+            distinct(METRIC, TYPE) |>
+            mutate(TYPE = draw_type(METRIC, TYPE)) |>
             distinct(TYPE) |>
             pull(TYPE)
         fillTypes <- intersect(c("Tumor", "Normal", "Pair"), pageTypes)

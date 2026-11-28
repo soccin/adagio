@@ -6,9 +6,10 @@
 #
 #   top    the pair, its status and metadata, then the pair's worst FAIL
 #   left   a table of QC metrics: the pair's values (tumor red, normal
-#          blue, pair-level grey) and, in each row, the QC background of
-#          each type as a box with the pair's values as circles. Rows in
-#          one block share an x axis.
+#          blue; pair-level values red when they describe the tumor, as
+#          FACETS and TMB, grey for concordance: draw_type) and, in each
+#          row, the QC background of each type as a box with the pair's
+#          values as circles. Rows in one block share an x axis.
 #   right  two rows of two plots: target coverage and insert size
 #          (tumor up, normal down; the background's 5th-95th percentile
 #          as a band); GC bias and duplicate frequency (tumor and normal
@@ -284,7 +285,8 @@ text_block <- function(rows, vals, title, textX = TEXT_X, cellW = 0.2) {
                   height = 0.86) +
         geom_text(data = rows, aes(x = textX[["LABEL"]], y = ROW_Y, label = LABEL), hjust = 0,
                   size = TABLE_TEXT_SIZE) +
-        geom_text(data = cells, aes(x = X, y = ROW_Y, label = TEXT, colour = TYPE), size = TABLE_TEXT_SIZE) +
+        geom_text(data = cells, aes(x = X, y = ROW_Y, label = TEXT, colour = draw_type(METRIC, TYPE)),
+                  size = TABLE_TEXT_SIZE) +
         scale_fill_manual(values = CELL_FILLS, guide = "none") +
         scale_colour_manual(values = VALUE_COLORS, guide = "none") +
         scale_x_continuous(limits = c(0, 1), expand = expansion(0)) +
@@ -300,8 +302,10 @@ box_block <- function(rows, boxes, vals, lims, axisFn = \(v) pair_axis(rows$AXIS
     rows <- block_rows(rows)
     n <- nrow(rows)
     plotRows <- rows |> filter(!METRIC %in% TEXT_ROWS)
-    boxes <- boxes |> place_rows(plotRows)
-    vals <- vals |> filter(is.finite(VALUE)) |> place_rows(plotRows)
+    # Pair metrics of the tumor take the tumor's color (draw_type) but
+    # keep the pair's place in the row
+    boxes <- boxes |> place_rows(plotRows) |> mutate(TYPE = draw_type(METRIC, TYPE))
+    vals <- vals |> filter(is.finite(VALUE)) |> place_rows(plotRows) |> mutate(TYPE = draw_type(METRIC, TYPE))
     lims <- lims |> place_rows(plotRows)
     ax <- axisFn(c(boxes$WMIN, boxes$WMAX, vals$VALUE, lims$LIMIT))
     boxes <- boxes |> mutate(across(c(LOWER, MIDDLE, UPPER, WMIN, WMAX), ax$tx))
