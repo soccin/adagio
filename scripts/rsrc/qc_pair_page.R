@@ -186,7 +186,7 @@ logit_ticks_guide <- function() {
 
 #
 # x axis of one block of rows: tx (applied to values before plotting),
-# scale, and lim (the zoom). values: background 1st-99th percentiles,
+# scale, and lim (the zoom). values: the background boxes' whisker ends,
 # the pair's values and the limits shown.
 #
 odds_axis <- function(p, breaksP) {
@@ -235,8 +235,9 @@ pair_axis <- function(axis, values) {
 
 #
 # One block: the text cells (left) and the boxes (right) of rows that
-# share an axis. bg: METRIC, TYPE, VALUE. vals: METRIC, TYPE, VALUE,
-# LEVEL. lims: METRIC, TYPE, LEVEL, LIMIT. title: the group name, or NULL.
+# share an axis. boxes: background_boxes() of the rows' metrics. vals:
+# METRIC, TYPE, VALUE, LEVEL. lims: METRIC, TYPE, LEVEL, LIMIT. title:
+# the group name, or NULL.
 #
 block_rows <- function(rows) rows |> mutate(ROW_Y = rev(seq_len(n())))
 
@@ -278,19 +279,15 @@ text_block <- function(rows, vals, title, textX = TEXT_X, cellW = 0.2) {
 
 # axisFn: the axis (tx, scale, lim) for the values it must show; by
 # default the block's AXIS (pair_axis)
-box_block <- function(rows, bg, vals, lims, axisFn = \(v) pair_axis(rows$AXIS[1], v)) {
+box_block <- function(rows, boxes, vals, lims, axisFn = \(v) pair_axis(rows$AXIS[1], v)) {
     rows <- block_rows(rows)
     n <- nrow(rows)
     plotRows <- rows |> filter(!METRIC %in% TEXT_ROWS)
-    bg <- bg |> place_rows(plotRows)
+    boxes <- boxes |> place_rows(plotRows)
     vals <- vals |> filter(is.finite(VALUE)) |> place_rows(plotRows)
     lims <- lims |> place_rows(plotRows)
-    rangeValues <- c(
-        bg |> reframe(Q = quantile(VALUE, c(0.01, 0.99), names = FALSE), .by = c(METRIC, TYPE)) |> pull(Q),
-        vals$VALUE, lims$LIMIT
-    )
-    ax <- axisFn(rangeValues)
-    bg <- bg |> mutate(X = ax$tx(VALUE))
+    ax <- axisFn(c(boxes$WMIN, boxes$WMAX, vals$VALUE, lims$LIMIT))
+    boxes <- boxes |> mutate(across(c(LOWER, MIDDLE, UPPER, WMIN, WMAX), ax$tx))
     vals <- vals |> mutate(X = ax$tx(VALUE))
     lims <- lims |> mutate(X = ax$tx(LIMIT), LINE = LEVEL_COLORS[LEVEL])
     flagged <- vals |>
@@ -303,8 +300,8 @@ box_block <- function(rows, bg, vals, lims, axisFn = \(v) pair_axis(rows$AXIS[1]
         geom_segment(data = lims, tick, colour = LIMIT_BASE_COLOR, linewidth = 0.6) +
         geom_segment(data = lims, aes(x = X, xend = X, y = Y - 0.15, yend = Y + 0.15, colour = LINE),
                      linetype = "11", linewidth = 0.6) +
-        geom_boxplot(data = bg, aes(group = interaction(METRIC, TYPE), fill = TYPE), orientation = "y",
-                     width = 0.28, alpha = 0.3, colour = "grey65", linewidth = 0.3, outliers = FALSE) +
+        geom_boxplot(data = boxes, box_aes(), stat = "identity", inherit.aes = FALSE, orientation = "y",
+                     width = 0.28, alpha = 0.3, colour = "grey65", linewidth = 0.3) +
         geom_point(data = vals, aes(fill = TYPE), shape = 21, colour = "black", stroke = 0.4, size = POINT_SIZE) +
         geom_point(data = flagged, aes(colour = RING), shape = 21, fill = NA, size = RING_SIZE, stroke = RING_STROKE) +
         scale_fill_manual(values = TYPE_COLORS, guide = "none") +
@@ -373,15 +370,15 @@ design_grid <- function(cells, layout) {
 }
 
 # The whole table: a header row, then one text and one box plot per
-# block, aligned by patchwork
-pair_table <- function(bg, vals, lims, design = FALSE) {
+# block, aligned by patchwork. boxes: background_boxes() of the rows
+pair_table <- function(boxes, vals, lims, design = FALSE) {
     blocks <- PAIR_ROWS |>
         mutate(BLOCK = consolidate_blocks(GROUP, AXIS), FIRST_IN_GROUP = !duplicated(GROUP))
     plots <- blocks |>
         group_split(BLOCK) |>
         map(\(rows) list(
             text_block(rows, vals |> filter(METRIC %in% rows$METRIC), if (rows$FIRST_IN_GROUP[1]) rows$GROUP[1]),
-            box_block(rows, bg |> filter(METRIC %in% rows$METRIC), vals |> filter(METRIC %in% rows$METRIC),
+            box_block(rows, boxes |> filter(METRIC %in% rows$METRIC), vals |> filter(METRIC %in% rows$METRIC),
                       lims |> filter(METRIC %in% rows$METRIC))
         )) |>
         list_flatten()
@@ -491,11 +488,12 @@ blank_flag_slot <- function(title = NULL) {
 
 #
 # The block below the plots. metrics: the flagged metrics not in the
-# table, worst first. bg: TYPE, METRIC, VALUE; vals: SAMPLE, TYPE, METRIC,
-# VALUE, LEVEL of the pair; lims: as for the table; info: metric_info().
-# One element (wrap_elements), so the page grid treats it as one cell.
+# table, worst first. bg: TYPE, METRIC, VALUE; boxes: background_boxes()
+# of bg; vals: SAMPLE, TYPE, METRIC, VALUE, LEVEL of the pair; lims: as
+# for the table; info: metric_info(). One element (wrap_elements), so
+# the page grid treats it as one cell.
 #
-flag_panel <- function(metrics, bg, vals, lims, info, design = FALSE) {
+flag_panel <- function(metrics, bg, boxes, vals, lims, info, design = FALSE) {
     shown <- head(metrics, FLAG_SLOTS)
     title <- case_when(
         len(metrics) == 0 ~ str_c(FLAG_TITLE, ": none"),
@@ -512,7 +510,7 @@ flag_panel <- function(metrics, bg, vals, lims, info, design = FALSE) {
             b <- bg |> filter(METRIC == m)
             list(
                 text_block(rows, v, if (i == 1) title, FLAG_TEXT_X, FLAG_CELL_W),
-                box_block(rows, b, v, lims |> filter(METRIC == m),
+                box_block(rows, boxes |> filter(METRIC == m), v, lims |> filter(METRIC == m),
                           axisFn = \(r) flag_axis(infoRow, b, c(b$VALUE, v$VALUE), r))
             )
         }) |>
@@ -796,7 +794,7 @@ pair_page <- function(p, ctx) {
     hits <- ctx$hits |> filter(SAMPLE %in% ids)
     status <- pair_status(hits)
 
-    table <- pair_table(ctx$bg, vals, ctx$lims, ctx$design)
+    table <- pair_table(ctx$boxes, vals, ctx$lims, ctx$design)
 
     sampleType <- tibble(SAMPLE = c(p$TUMOR_ID, p$NORMAL_ID), TYPE = c("Tumor", "Normal"))
     covProj <- ctx$covBinned |> inner_join(sampleType, by = "SAMPLE")
@@ -841,7 +839,7 @@ pair_page <- function(p, ctx) {
     # Flags of metrics that are not table rows, below the plots
     flagPanel <- flag_panel(
         hits |> filter(!METRIC %in% PAIR_ROWS$METRIC) |> distinct(METRIC) |> pull(METRIC),
-        ctx$flagBg, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
+        ctx$flagBg, ctx$flagBoxes, ctx$flagVals |> filter(SAMPLE %in% ids), ctx$flagLims, ctx$info, ctx$design
     )
 
     # QSee's grid: coverage and insert size in the first row, GC bias and
@@ -937,7 +935,8 @@ pair_report_pages <- function(inputs) {
         bgRows <- bgLong |>
             filter(METRIC %in% PAIR_ROWS$METRIC) |>
             select(TYPE, METRIC, VALUE)
-        bg <- bind_rows(bgRows, bgDepth |> filter(!METRIC %in% bgRows$METRIC))
+        boxes <- bind_rows(bgRows, bgDepth |> filter(!METRIC %in% bgRows$METRIC)) |>
+            background_boxes(info)
 
         # Limits: only of the metrics the project report scans, in the
         # types it judges them in
@@ -957,6 +956,7 @@ pair_report_pages <- function(inputs) {
         flagBg <- bgLong |>
             filter(METRIC %in% flagMetrics) |>
             select(TYPE, METRIC, VALUE)
+        flagBoxes <- background_boxes(flagBg, info)
         flagLims <- limLong |>
             filter(METRIC %in% flagMetrics, METRIC %in% scanned) |>
             anti_join(keyDrop, by = c("METRIC", "TYPE"))
@@ -994,13 +994,13 @@ pair_report_pages <- function(inputs) {
         # pipeline), over the OncoKB genes, from project_gene_mvlh
         labels <- info |> select(METRIC, LABEL, KIND)
         ctx <- list(
-            bg = bg, vals = vals, lims = lims, hits = hits, labels = labels, genes = genes,
+            boxes = boxes, vals = vals, lims = lims, hits = hits, labels = labels, genes = genes,
             covBinned = covBinned, insBinned = insBinned, covBand = covBand, insBand = insBand,
             covBin = covBin, insBin = insBin, covMax = covMax, insMax = insMax,
             gcProj = gc_bias_bins(dists$target_gc_bias), gcBand = gcBand,
             dupProj = dup_fractions(dists$fastp_dup_hist), dupBand = dupBand, notes = notes,
             mvlh = mvlh, bgMvlh = bgMvlh |> select(SAMPLE, GENE, MVLH),
-            flagVals = flagVals, flagBg = flagBg, flagLims = flagLims, info = info,
+            flagVals = flagVals, flagBg = flagBg, flagBoxes = flagBoxes, flagLims = flagLims, info = info,
             sexTbl = sexTbl, sampleMeta = sampleMeta, design = isTRUE(inputs$design)
         )
         pages <- pairing |>

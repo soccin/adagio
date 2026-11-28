@@ -205,6 +205,16 @@ axis_spec <- function(info, bg, dataValues, rangeValues) {
 }
 
 #
+# Aesthetics of a background box drawn from background_boxes() (with Y,
+# and the columns already through the axis transform), for
+# geom_boxplot(stat = "identity", orientation = "y")
+#
+box_aes <- function() {
+    aes(xmin = WMIN, xlower = LOWER, xmiddle = MIDDLE, xupper = UPPER, xmax = WMAX, y = Y,
+        group = interaction(METRIC, TYPE), fill = TYPE)
+}
+
+#
 # One panel. info: the metric's row of metric_info(). bg: TYPE, VALUE
 # (background). proj: SAMPLE, LABEL, TYPE, VALUE, Z, LEVEL, IS_BAD
 # (project). lims: TYPE, LEVEL, LIMIT (WARN and FAIL limits on the bad
@@ -220,16 +230,13 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
     yLimits <- if (len(rows) == 1) c(0, 2) else c(0.5, len(rows) + 0.5)
     lims <- lims |> filter(TYPE %in% rows)
     # Background outliers are not drawn, so the axis covers only the
-    # whisker ends of each box (1.5 IQR, as geom_boxplot)
-    whiskers <- bg |>
-        filter(TYPE %in% rows) |>
-        reframe(VALUE = boxplot.stats(VALUE)$stats[c(1, 5)], .by = TYPE) |>
-        pull(VALUE)
-    ax <- axis_spec(info, bg, c(bg$VALUE, proj$VALUE), c(whiskers, proj$VALUE, lims$LIMIT))
+    # whisker ends of each box (background_boxes: they end at or before
+    # the WARN limits)
+    boxes <- background_boxes(bg |> filter(TYPE %in% rows) |> mutate(METRIC = info$METRIC), info)
+    ax <- axis_spec(info, bg, c(bg$VALUE, proj$VALUE), c(boxes$WMIN, boxes$WMAX, proj$VALUE, lims$LIMIT))
 
-    bg <- bg |>
-        filter(TYPE %in% rows) |>
-        mutate(X = ax$tx(VALUE), Y = match(TYPE, rows))
+    boxes <- boxes |>
+        mutate(across(c(LOWER, MIDDLE, UPPER, WMIN, WMAX), ax$tx), Y = match(TYPE, rows))
     lims <- lims |>
         filter(ax$valid(LIMIT)) |>
         mutate(X = ax$tx(LIMIT), Y = match(TYPE, rows))
@@ -261,16 +268,17 @@ qc_panel <- function(info, bg, proj, lims, fillTypes) {
         geom_segment(data = lims, limitSegment, colour = LIMIT_BASE_COLOR, linewidth = LIMIT_WIDTH) +
         geom_segment(data = lims, aes(x = X, xend = X, y = Y - halfHeight, yend = Y + halfHeight, colour = LINE),
                      linetype = "11", linewidth = LIMIT_WIDTH) +
+        # background outliers are neither drawn nor counted in the axis range
         geom_boxplot(
-            data = bg,
-            aes(group = TYPE, fill = TYPE),
+            data = boxes,
+            box_aes(),
+            stat = "identity",
+            inherit.aes = FALSE,
             orientation = "y",
             width = 0.22,
             alpha = 0.3,
             colour = "grey65",
             linewidth = 0.4,
-            # background outliers are neither drawn nor counted in the axis range
-            outliers = FALSE,
             show.legend = FALSE
         ) +
         # show.legend = TRUE draws every type in the legend, so pair and

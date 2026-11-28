@@ -43,13 +43,15 @@
 # shows only that type, and the other type's flags are dropped from the
 # scan and the table. The full report shows every type.
 #
-# A sample is WARN in a metric when it is beyond the 95th percentile of
-# the background of its type on the bad side of the metric, and FAIL
-# beyond the 99th (rsrc/metricInfo.tsv: low, high or both; both when not
-# listed; both-sided metrics use the central 95% and 99% intervals; see
-# rsrc/qc_metric_info.R). Flagged samples get a dark yellow (WARN) or
-# dark red (FAIL) ring and a label; short vertical lines in the same
-# colors mark the limits on the bad side. The Conpair metrics have fixed
+# A sample is WARN in a metric when it is more than 1.5 IQR past the
+# box of the background of its type on the bad side of the metric, and
+# FAIL more than 3 IQR past it (Tukey's fences; quartiles on a log-odds
+# scale for percentages; rsrc/metricInfo.tsv: low, high or both; both
+# when not listed; see rsrc/qc_metric_info.R). The whiskers of the
+# background boxes end at the last values inside the WARN fences.
+# Flagged samples get a dark yellow (WARN) or dark red (FAIL) ring and a
+# label; short vertical lines in the same colors mark the limits on the
+# bad side. The Conpair metrics have fixed
 # limits instead (FIXED_LIMITS in rsrc/qc_metric_info.R): contamination
 # WARN from 2%, FAIL from 5%; tumor/normal concordance FAIL below 95%.
 #
@@ -308,9 +310,8 @@ bgLong <- bgLong |> filter(!str_detect(METRIC, regex(discardRe)))
 projLong <- projLong |> filter(!str_detect(METRIC, regex(discardRe)))
 
 #
-# Units, display names and bad sides; background WARN and FAIL
-# percentiles by type; flag level, percentile and ranking z of each
-# project value
+# Units, display names and bad sides; background WARN and FAIL limits
+# by type; flag level, percentile and ranking z of each project value
 #
 info <- metric_info(bgLong, projLong, file.path(SDIR, "rsrc", "metricInfo.tsv"))
 stats <- background_stats(bgLong, info)
@@ -407,21 +408,21 @@ selfNote <- case_when(
 boxText <- str_c(
     glue("Boxes: QC background {meta$assay} version {meta$version}, {seqTech} samples only: {nBgTumor} tumors, ",
          "{nBgNormal} normals and {nrow(bgPairs)} pairs;"),
-    glue("whiskers 1.5 IQR, outliers not shown. Circles: the {nProj} samples of {projectId} ({seqTech}){selfNote}."),
+    glue("whiskers to the last value within {WARN_IQR} IQR of the box, outliers not shown. ",
+         "Circles: the {nProj} samples of {projectId} ({seqTech}){selfNote}."),
     sep = "\n"
 )
 subtitle <- str_c(
     boxText,
-    glue("Rings: dark yellow WARN, beyond the {pct_label(WARN_PCT)} percentile of the background of the same type ",
+    glue("Rings: dark yellow WARN, more than {WARN_IQR} IQR past the box of the background of the same type ",
          "on the bad side;"),
-    glue("dark red FAIL, beyond the {pct_label(FAIL_PCT)} (labeled, up to {N_LABEL} per panel, FAIL first)."),
+    glue("dark red FAIL, more than {FAIL_IQR} IQR past it (labeled, up to {N_LABEL} per panel, FAIL first)."),
     sep = "\n"
 )
 caption <- str_c(
-    glue("Short vertical lines: the WARN ({pct_label(WARN_PCT)} percentile, dark yellow) and FAIL ",
-         "({pct_label(FAIL_PCT)}, dark red) limits of the background of the same type"),
-    glue("(tumor, normal or pair), on the bad side only. Metrics bad on both sides: the central ",
-         "{100 * WARN_PCT}% and {100 * FAIL_PCT}% intervals."),
+    glue("Short vertical lines: the WARN ({WARN_IQR} IQR past the box, dark yellow) and FAIL ",
+         "({FAIL_IQR} IQR, dark red) limits of the background of the same type"),
+    glue("(tumor, normal or pair), on the bad side only. Quartiles and IQR on a log-odds scale for percentages."),
     sep = "\n"
 )
 
@@ -576,7 +577,7 @@ tableTitle <- glue("{projNo} QC summary: flagged samples")
 hitPages <- if (nrow(hits) == 0) {
     list(text_page(
         tableTitle,
-        glue("No sample is beyond the {pct_label(WARN_PCT)} percentile of the {seqTech} background of its type\n",
+        glue("No sample is more than {WARN_IQR} IQR past the box of the {seqTech} background of its type\n",
              "on the bad side of any scanned metric, and none crosses the fixed Conpair limits\n",
              "({fixed_limits_text()}).")
     ))
@@ -586,9 +587,9 @@ hitPages <- if (nrow(hits) == 0) {
         tableTitle,
         str_c(
             glue("{nFail} FAIL and {nWarn} WARN cases in {n_distinct(hits$METRIC)} metrics, FAIL first. ",
-                 "FAIL: beyond the {pct_label(FAIL_PCT)} percentile of the background"),
-            glue("of the same type on the bad side; WARN: beyond the {pct_label(WARN_PCT)}. ",
-                 "Metrics bad on both sides: the central {100 * WARN_PCT}% and {100 * FAIL_PCT}% intervals."),
+                 "FAIL: more than {FAIL_IQR} IQR past the box of the background"),
+            glue("of the same type on the bad side; WARN: more than {WARN_IQR} IQR. ",
+                 "Quartiles and IQR on a log-odds scale for percentages."),
             glue("Fixed limits instead for Conpair: {fixed_limits_text()}."),
             glue("Background: the {seqTech} samples of QC background version {meta$version}. ",
                  "Median: background median. Limit: the limit crossed."),

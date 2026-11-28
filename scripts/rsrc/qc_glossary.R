@@ -117,7 +117,6 @@ self_text <- function(n) {
 # one type, e.g. "% Target Bases at 100X: tumors"), nScanned, xlsxName.
 #
 summary_glossary_entries <- function(ctx) {
-    central <- \(p) str_c(100 * (1 - p) / 2, "-", 100 * (1 + p) / 2, "%")
     typeLimitedRows <- if (len(ctx$typeLimited) > 0) {
         tibble(
             section = "Metrics and pages",
@@ -132,17 +131,21 @@ summary_glossary_entries <- function(ctx) {
         tribble(
             ~section, ~term, ~text, ~key,
             "Flags", "FAIL",
-            glue("Beyond the {pct_label(FAIL_PCT)} percentile of the background of the same type, on the bad ",
-                 "side of the metric. Conpair metrics have fixed limits instead."),
+            glue("More than {FAIL_IQR} IQR past the box of the background of the same type, on the bad side ",
+                 "of the metric (Tukey's outer fence). Conpair metrics have fixed limits instead."),
             "ringFail",
             "Flags", "WARN",
-            glue("Beyond the {pct_label(WARN_PCT)} percentile but not the {pct_label(FAIL_PCT)}, on the bad ",
-                 "side. Conpair metrics have fixed limits instead."),
+            glue("More than {WARN_IQR} IQR past the box but not more than {FAIL_IQR}, on the bad side ",
+                 "(Tukey's inner fence). Conpair metrics have fixed limits instead."),
             "ringWarn",
+            "Flags", "IQR",
+            str_c("The box width: the 75th minus the 25th percentile of the background of the same type. For ",
+                  "percentages the quartiles and the IQR are on a log-odds scale, so the limits stay inside ",
+                  "0-100% and follow the skew near either end."),
+            NA,
             "Flags", "Bad side",
-            glue("The side of a metric where values mean a problem: low (coverage), high (duplicates) or ",
-                 "both. A metric bad on both sides is WARN outside the central {central(WARN_PCT)} of the ",
-                 "background and FAIL outside {central(FAIL_PCT)}."),
+            str_c("The side of a metric where values mean a problem: low (coverage), high (duplicates) or ",
+                  "both. A metric bad on both sides is flagged past either end of the box."),
             NA,
             "Flags", "Fixed limits",
             glue("Conpair limits that do not depend on the background: contamination WARN from ",
@@ -229,8 +232,9 @@ summary_glossary_entries <- function(ctx) {
                  "{CONCORD_FAIL}% or more has lost Y; with lower concordance it is probably a swap."),
             NA,
             "Marks on the pages", "Box",
-            str_c("The background of one type: the box holds the middle half of the values and the line in ",
-                  "it is the median; whiskers reach 1.5 times the box width; background outliers are not drawn."),
+            glue("The background of one type: the box holds the middle half of the values and the line in ",
+                 "it is the median; whiskers reach the last value within {WARN_IQR} IQR of the box, so a ",
+                 "value past a whisker is flagged; background outliers are not drawn."),
             "box",
             "Marks on the pages", "Circles",
             "Project samples: red tumor, blue normal, grey tumor/normal pair.", "circles",

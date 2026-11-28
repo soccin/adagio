@@ -2,14 +2,18 @@
 # qc_metric_info.R
 #
 # Per-metric information for the QC report (qcReport02.R): units, the
-# display name, the bad side, and the background percentiles of the
-# WARN and FAIL rule (see background_stats).
+# display name, the bad side, and the WARN and FAIL limits of the
+# background (see background_stats).
 #
-# A project value is WARN beyond the background 95th percentile of its
-# type on the bad side and FAIL beyond the 99th: below the 5th / 1st
-# percentile for metrics bad when low, above the 95th / 99th for
-# metrics bad when high. Metrics bad on both sides use the central
-# intervals: outside 2.5-97.5% WARN, outside 0.5-99.5% FAIL.
+# The limits are Tukey's fences around the background box of each type.
+# A project value is WARN more than WARN_IQR box widths (IQR) past the
+# box on the bad side of the metric, and FAIL more than FAIL_IQR past
+# it: below Q1 - k IQR for metrics bad when low, above Q3 + k IQR for
+# metrics bad when high, either for metrics bad on both sides. The
+# quartiles are taken in the metric's z space: log-odds for
+# percentages, the values themselves otherwise. The whiskers of the
+# background boxes end at the last values inside the WARN fences
+# (background_boxes), so a value past a whisker is flagged.
 #
 # The Conpair metrics have fixed limits instead (FIXED_LIMITS below).
 #
@@ -17,11 +21,8 @@
 # percentages) only ranks flagged cases; it does not flag them.
 #
 
-WARN_PCT <- 0.95
-FAIL_PCT <- 0.99
-
-# 0.95 -> "95th", for report text
-pct_label <- function(p) str_c(100 * p, "th")
+WARN_IQR <- 1.5
+FAIL_IQR <- 3
 
 #
 # Metrics judged against fixed limits instead of background
@@ -199,8 +200,22 @@ read_metric_table <- function(file) {
 }
 
 #
-# One row per metric: KIND, SCALE_BY (100 for 0-100 values), ZSPACE
-# (logit for percentages, linear otherwise), BAD and LABEL
+# One row per metric of df (METRIC, VALUE): KIND, SCALE_BY (100 for
+# 0-100 values) and ZSPACE (logit for percentages, linear otherwise)
+#
+metric_spaces <- function(df) {
+    df |>
+        filter(is.finite(VALUE)) |>
+        summarize(KIND = metric_kind(METRIC[1], VALUE), .by = METRIC) |>
+        mutate(
+            SCALE_BY = if_else(KIND == "pct100", 100, 1),
+            ZSPACE = if_else(KIND %in% PERCENT_KINDS, "logit", "linear")
+        )
+}
+
+#
+# One row per metric: KIND, SCALE_BY, ZSPACE (metric_spaces), BAD and
+# LABEL
 #
 metric_info <- function(bgLong, projLong, tableFile) {
     tbl <- read_metric_table(tableFile)
@@ -208,12 +223,7 @@ metric_info <- function(bgLong, projLong, tableFile) {
         bgLong |> select(METRIC, VALUE),
         projLong |> select(METRIC, VALUE)
     ) |>
-        filter(is.finite(VALUE)) |>
-        summarize(KIND = metric_kind(METRIC[1], VALUE), .by = METRIC) |>
-        mutate(
-            SCALE_BY = if_else(KIND == "pct100", 100, 1),
-            ZSPACE = if_else(KIND %in% PERCENT_KINDS, "logit", "linear")
-        ) |>
+        metric_spaces() |>
         left_join(tbl, by = "METRIC") |>
         mutate(
             BAD = coalesce(BAD, "both"),
@@ -230,19 +240,16 @@ from_z_space <- function(x, zspace, scaleBy) {
 }
 
 #
-# Background per metric and type: the WARN and FAIL limits (percentiles,
-# see the top of this file), the median, and the robust center MU and
-# spread SIGMA in z space for ranking: MU = median, SIGMA = MAD_TO_SD x
-# the mean absolute deviation from the median (1.2533 = sqrt(pi/2) makes
-# it estimate the SD for normal data). VALUES keeps the sorted values for
-# the percentile of each project value. FIXED: the limits come from
-# FIXED_LIMITS.
+# Background per metric and type: the WARN and FAIL limits (the fences,
+# see the top of this file) in the metric's units, the median, the
+# smallest value, and the robust center MU and spread SIGMA in z space
+# for ranking: MU = median, SIGMA = MAD_TO_SD x the mean absolute
+# deviation from the median (1.2533 = sqrt(pi/2) makes it estimate the
+# SD for normal data). IQR_Z: the box width in z space. VALUES keeps the
+# sorted values for the percentile of each project value. FIXED: the
+# limits come from FIXED_LIMITS.
 #
 MAD_TO_SD <- 1.2533
-
-# Lower-tail probability of the limit on each side: one-sided for low
-# or high, central interval for both
-tail_prob <- function(pct, bad) if_else(bad == "both", (1 - pct) / 2, 1 - pct)
 
 background_stats <- function(bgLong, info) {
     bgLong |>
@@ -252,13 +259,20 @@ background_stats <- function(bgLong, info) {
             MU = median(ZV),
             SIGMA = MAD_TO_SD * mean(abs(ZV - median(ZV))),
             MEDIAN = median(VALUE),
-            WARN_LOW = quantile(VALUE, tail_prob(WARN_PCT, BAD[1]), names = FALSE),
-            WARN_HIGH = quantile(VALUE, 1 - tail_prob(WARN_PCT, BAD[1]), names = FALSE),
-            FAIL_LOW = quantile(VALUE, tail_prob(FAIL_PCT, BAD[1]), names = FALSE),
-            FAIL_HIGH = quantile(VALUE, 1 - tail_prob(FAIL_PCT, BAD[1]), names = FALSE),
+            MIN_VALUE = min(VALUE),
+            Q1_Z = quantile(ZV, 0.25, names = FALSE),
+            Q3_Z = quantile(ZV, 0.75, names = FALSE),
             VALUES = list(sort(VALUE)),
             .by = c(METRIC, TYPE, ZSPACE, SCALE_BY, BAD)
         ) |>
+        mutate(
+            IQR_Z = Q3_Z - Q1_Z,
+            WARN_LOW = from_z_space(Q1_Z - WARN_IQR * IQR_Z, ZSPACE, SCALE_BY),
+            WARN_HIGH = from_z_space(Q3_Z + WARN_IQR * IQR_Z, ZSPACE, SCALE_BY),
+            FAIL_LOW = from_z_space(Q1_Z - FAIL_IQR * IQR_Z, ZSPACE, SCALE_BY),
+            FAIL_HIGH = from_z_space(Q3_Z + FAIL_IQR * IQR_Z, ZSPACE, SCALE_BY)
+        ) |>
+        select(-Q1_Z, -Q3_Z) |>
         left_join(FIXED_LIMITS |> rename_with(\(n) str_c(n, "_FIXED"), -METRIC), by = "METRIC") |>
         mutate(
             FIXED = METRIC %in% FIXED_LIMITS$METRIC,
@@ -272,17 +286,21 @@ background_stats <- function(bgLong, info) {
 
 #
 # The limits on the bad side, for the short vertical lines: LEVEL WARN
-# or FAIL, LIMIT. None for a background with no spread, unless the
-# limits are fixed.
+# or FAIL, LIMIT. None for a background box of no width, unless the
+# limits are fixed. A limit below 0 of a metric with no negative
+# background value is left out: counts and depths cannot cross it.
 #
+has_box <- function(iqrZ) is.finite(iqrZ) & iqrZ > 0
+
 limit_lines <- function(stats) {
     stats |>
-        filter(FIXED | (is.finite(SIGMA) & SIGMA > 0)) |>
+        filter(FIXED | has_box(IQR_Z)) |>
         pivot_longer(c(WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH), names_to = c("LEVEL", "SIDE"),
                      names_sep = "_", values_to = "LIMIT") |>
         filter(
             !is.na(LIMIT),
-            (SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both"))
+            (SIDE == "LOW" & BAD %in% c("low", "both")) | (SIDE == "HIGH" & BAD %in% c("high", "both")),
+            !(LIMIT < 0 & MIN_VALUE >= 0)
         ) |>
         select(METRIC, TYPE, LEVEL, SIDE, LIMIT)
 }
@@ -291,14 +309,14 @@ limit_lines <- function(stats) {
 # Each project value against the background of its type: LEVEL (FAIL,
 # WARN or NA) on the bad side, LIMIT (the limit crossed), PCTILE (the
 # fraction of the background at or below the value), and Z for ranking.
-# IS_BAD: LEVEL is FAIL or WARN. No flags when the background has no
-# spread, unless the limits are fixed. A value at a fixed high limit is
-# flagged.
+# IS_BAD: LEVEL is FAIL or WARN. No flags when the background box has no
+# width (the fences would sit on the box), unless the limits are fixed.
+# A value at a fixed high limit is flagged.
 #
 score_project <- function(projLong, stats) {
     projLong |>
         left_join(
-            stats |> select(METRIC, TYPE, ZSPACE, SCALE_BY, BAD, MU, SIGMA, MEDIAN,
+            stats |> select(METRIC, TYPE, ZSPACE, SCALE_BY, BAD, MU, SIGMA, IQR_Z, MEDIAN,
                             WARN_LOW, WARN_HIGH, FAIL_LOW, FAIL_HIGH, FIXED, VALUES),
             by = c("METRIC", "TYPE")
         ) |>
@@ -311,7 +329,7 @@ score_project <- function(projLong, stats) {
             OVER_FAIL = if_else(FIXED, VALUE >= FAIL_HIGH, VALUE > FAIL_HIGH),
             OVER_WARN = if_else(FIXED, VALUE >= WARN_HIGH, VALUE > WARN_HIGH),
             LEVEL = case_when(
-                !(SPREAD | FIXED) | is.na(VALUE) ~ NA_character_,
+                !(has_box(IQR_Z) | FIXED) | is.na(VALUE) ~ NA_character_,
                 LOW_SIDE & VALUE < FAIL_LOW ~ "FAIL",
                 HIGH_SIDE & OVER_FAIL ~ "FAIL",
                 LOW_SIDE & VALUE < WARN_LOW ~ "WARN",
@@ -326,5 +344,42 @@ score_project <- function(projLong, stats) {
             PCTILE = map2_dbl(VALUES, VALUE, \(b, v) if (is.null(b) || is.na(v)) NA_real_ else mean(b <= v)),
             IS_BAD = !is.na(LEVEL)
         ) |>
-        select(-VALUES, -SPREAD, -LOW_SIDE, -HIGH_SIDE, -OVER_FAIL, -OVER_WARN)
+        select(-VALUES, -SPREAD, -IQR_Z, -LOW_SIDE, -HIGH_SIDE, -OVER_FAIL, -OVER_WARN)
+}
+
+#
+# The background boxes per metric and type, as the plots draw them:
+# LOWER, MIDDLE and UPPER (the quartiles and the median) and the whisker
+# ends WMIN and WMAX, the most extreme values inside the WARN fences.
+# The quartiles are background_stats' (in z space), so a whisker ends at
+# or before the WARN limit. In the metric's units. bg: METRIC, TYPE,
+# VALUE. Metrics not in info (the pair pages' extra depths) get their z
+# space from metric_spaces.
+#
+background_boxes <- function(bg, info) {
+    bg <- bg |> filter(is.finite(VALUE))
+    spaces <- bind_rows(
+        info |> select(METRIC, ZSPACE, SCALE_BY),
+        metric_spaces(bg) |>
+            filter(!METRIC %in% info$METRIC) |>
+            select(METRIC, ZSPACE, SCALE_BY)
+    )
+    bg |>
+        inner_join(spaces, by = "METRIC") |>
+        mutate(ZV = to_z_space(VALUE, ZSPACE, SCALE_BY)) |>
+        summarize(
+            Q1_Z = quantile(ZV, 0.25, names = FALSE),
+            MID_Z = median(ZV),
+            Q3_Z = quantile(ZV, 0.75, names = FALSE),
+            WMIN = min(VALUE[ZV >= Q1_Z - WARN_IQR * (Q3_Z - Q1_Z)]),
+            WMAX = max(VALUE[ZV <= Q3_Z + WARN_IQR * (Q3_Z - Q1_Z)]),
+            .by = c(METRIC, TYPE, ZSPACE, SCALE_BY)
+        ) |>
+        transmute(
+            METRIC, TYPE,
+            LOWER = from_z_space(Q1_Z, ZSPACE, SCALE_BY),
+            MIDDLE = from_z_space(MID_Z, ZSPACE, SCALE_BY),
+            UPPER = from_z_space(Q3_Z, ZSPACE, SCALE_BY),
+            WMIN, WMAX
+        )
 }
